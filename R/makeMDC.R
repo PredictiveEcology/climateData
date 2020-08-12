@@ -5,7 +5,6 @@
 #'
 #' @param years years to use. i.e. c(2011:2100).
 #'
-#' @param outputFilenamePrefix filename of the output raster stack - years will be appended
 #'
 #' @param droughtMonths Numeric. Months to calculate Monthly Drought Code (MDC). Must be 4:9
 #'
@@ -22,7 +21,6 @@
 #' @rdname makeMDC
 makeMDC <- function(inputPath,
 										years = NULL,
-										outputFilenamePrefix,
 										droughtMonths = 4:9){
 	
 	# 1. Make sure it has all defaults
