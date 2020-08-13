@@ -103,5 +103,5 @@ makeMDC <- function(inputPath,
 		return(mdcAnnual)
 	})
 	names(annualMDC) <- paste0("mdc", years)
-	return(annualMDC)
+	annualMDC <- stack(annualMDC)
 }
