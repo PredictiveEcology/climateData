@@ -20,6 +20,9 @@
 #' @rdname makeClimateDEM
 makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 180, DEMdestinationPath,
 													 destinationPath, filename2) {
+	if (Sys.info()["sysname"] != "Windows")
+		stop("ClimateNA will only accept .asc files created by Windows.")
+	
 	gtopo30N <- prepInputs(url = 'https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/view?usp=sharing',
 												 destinationPath = DEMdestinationPath, 
 												 overwrite = TRUE)
