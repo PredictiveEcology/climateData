@@ -6,8 +6,8 @@
 \usage{
 makeClimateDEM(
   studyArea,
-  arcSecRes = c(210, 210),
-  bufferArcSec,
+  arcSecRes = c(180, 180),
+  bufferArcSec = 180,
   DEMdestinationPath,
   destinationPath,
   filename2
