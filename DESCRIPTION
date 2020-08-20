@@ -1,14 +1,29 @@
 Package: climateData
-Title: What the Package Does (One Line, Title Case)
+Title: Utilities For Working With North American Climate Data
+Description: Utilities for working with North American climate data from
+    'ClimateNA' <http://climatena.ca/>.
+URL: https://github.com/PredictiveEcology/climateData
+Date: 2020-08-20
 Version: 0.0.0.9000
-Authors@R: 
-    person(given = "First",
-           family = "Last",
-           role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: What license it uses
+Authors@R: c(
+    person("Alex M", "Chubaty", email = "achubaty@for-cast.ca",
+           role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7146-8135")),
+    person("Ian", "Eddy", email = "ian.eddy@canada.com",
+           role = c("aut"), comment = c(ORCID = "0000-0001-7397-2116"))
+    )
+Depends:
+    R (>= 3.6)
+Imports:
+    data.table,
+    raster,
+    reproducible,
+    sp,
+    stats,
+    utils
+BugReports: https://github.com/PredictiveEcology/climateData/issues
 Encoding: UTF-8
+Language: en-CA
+License: GPL-3
+ByteCompile: yes
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1

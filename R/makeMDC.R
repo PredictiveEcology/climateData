@@ -1,3 +1,7 @@
+utils::globalVariables(c(
+	':=', 'mdc_0', 'mdc_m'
+))
+
 #' Function to create raster stack for of Monthly Drought Code (MDC)
 #'
 #'
@@ -14,15 +18,12 @@
 #' @author Tati Micheletti
 #' @export
 #' @importFrom data.table data.table
-#' @importFrom raster crs crs<- getValues raster setValues stack
+#' @importFrom raster crs crs<- getValues ncell raster setValues stack
 #' @importFrom sp CRS
 #' @importFrom stats na.omit
 #'
 #' @rdname makeMDC
-makeMDC <- function(inputPath,
-										years = NULL,
-										droughtMonths = 4:9){
-	
+makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	# 1. Make sure it has all defaults
 	if (!all(droughtMonths %in% 4:9)) {
 		stop("Drought calculation for Months other than April to June is not yet supported") # TODO

@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeClimateDEM.R
 \name{makeClimateDEM}
 \alias{makeClimateDEM}
-\title{Function to create a DEM for use in climateNA}
+\title{Create a DEM for use with ClimateNA}
 \usage{
 makeClimateDEM(
   studyArea,
@@ -21,17 +21,17 @@ makeClimateDEM(
 \item{bufferArcSec}{numeric  - arc seconds by which to buffer the studyArea to ensure seamless coverage.
 Recommended to be at least the same as \code{res}}
 
+\item{DEMdestinationPath}{DESCRIPTION NEEDED}
+
 \item{destinationPath}{the directory to save the output raster}
 
 \item{filename2}{the name of the output DEM without the .ASC suffix}
-
-\item{dataPath}{the directory to which gtopo30Canada is downloaded}
 }
 \value{
-a DEM in ascii format
+a DEM in ASCII format
 }
 \description{
-Function to create a DEM for use in climateNA
+Create a DEM for use with ClimateNA
 }
 \author{
 Ian Eddy
