@@ -27,3 +27,7 @@ License: GPL-3
 ByteCompile: yes
 LazyData: true
 RoxygenNote: 7.1.1
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
