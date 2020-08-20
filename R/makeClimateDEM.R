@@ -18,7 +18,7 @@
 #' @importFrom sp spTransform CRS
 #' 
 #' @rdname makeClimateDEM
-makeClimateDEM <- function(studyArea, arcSecRes = c(210, 210), bufferArcSec, DEMdestinationPath,
+makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 180, DEMdestinationPath,
 													 destinationPath, filename2) {
 	gtopo30N <- prepInputs(url = 'https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/view?usp=sharing',
 												 destinationPath = DEMdestinationPath, 
