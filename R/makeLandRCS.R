@@ -13,7 +13,7 @@
 #'
 #' @author Ian Eddy
 #' @export
-#' @importFrom raster crop mask getValues raster writeRaster setValues crs stack 
+#' @importFrom raster crop mask getValues raster writeRaster setValues crs stack trim
 #' @importFrom magrittr "%>%"
 #'
 #' @rdname makeLandRCS
