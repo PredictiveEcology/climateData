@@ -69,7 +69,7 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
   MATrasters <- crop(MATrasters, y = origTemplate) %>%
     mask(., mask = origTemplate)
  
-  names(MATrasters) <- paste0(rasterPrefix, "MAT", 2011:2100)
+  names(MATrasters) <- paste0(rasterPrefix, "MAT", years)
   MATrasters <- stack(MATrasters) #some functions is converting to brick 
 
   #ATA rasters
