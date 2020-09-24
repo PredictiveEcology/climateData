@@ -92,9 +92,9 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			dt <- data.table(ppt = getValues(ppt), tmax = getValues(tmax), pixID = 1:ncell(tmax))
 			dt <- na.omit(dt)
 			dt[, mdc_0 := 0]
-			dt[, mdc_m := pmax(mdc_0 + .25 * nDays(num) * (.36 * tmax + L_f(num)) - 
+			dt[, mdc_m := as.integer(round(pmax(mdc_0 + .25 * nDays(num) * (.36 * tmax + L_f(num)) - 
 												 	400 * log(1 + 3.937 * .83 * ppt/(800 * exp(-mdc_0/400))) + 
-												 	.25 * nDays(num) * (.36 * tmax + L_f(num)), 0)]
+												 	.25 * nDays(num) * (.36 * tmax + L_f(num)), 0)))]
 			mdc <- setValues(tmax, NA)
 			mdc[dt$pixID] <- dt$mdc_m 
 			return(mdc)
