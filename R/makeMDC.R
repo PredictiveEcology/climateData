@@ -104,4 +104,6 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	})
 	names(annualMDC) <- paste0("mdc", years)
 	annualMDC <- stack(annualMDC)
+	
+	return(annualMDC)
 }
