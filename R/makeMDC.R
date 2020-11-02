@@ -48,14 +48,13 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	
 	#set values to actual degrees and not tenths
 	MDCstacks <- lapply(MDCstacks, FUN = function(x) {
-		
 		tempRasters <- grep(names(x), pattern = "*Tmax")
 		ppRasters <- grep(names(x), pattern = '*PP')
 		temp <- x[[names(x)[tempRasters]]]
 		PPT <- x[[names(x)[ppRasters]]]
-		temp <- lapply(names(temp), function(Raster, Stack = temp){
+		temp <- lapply(names(temp), function(Raster, Stack = temp) {
 			Raster <- Stack[[Raster]]
-			Raster <- setValues(Raster, as.numeric(getValues(Raster)/10))
+			Raster <- setValues(Raster, as.numeric(getValues(Raster) / 10))
 		})
 		temp <- stack(temp)
 		annualMDCvars <- raster::stack(temp, PPT)
@@ -63,7 +62,7 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	})
 	#Now we have a list of the corrected variables	
 	
-	# Day length adjustement L_f in Drought Code (taken from Van Wagner 1987)
+	# Day length adjustment L_f in Drought Code (taken from Van Wagner 1987)
 	L_f <- function(Month) {
 		c('4' = 0.9,
 			'5' = 3.8,
@@ -74,7 +73,7 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 		## TODO: [ FIX ] Update for all Months, check latitude problem. Ideally, bring original table in here.
 	}
 	
-	nDays <- function(Month){
+	nDays <- function(Month) {
 		c('4' = 30,
 			'5' = 31,
 			'6' = 30,
@@ -84,17 +83,17 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	}
 	
 	rm(MDCrasters, AllClimateRasters)
-	annualMDC <- lapply(MDCstacks, FUN = function(x){
+	annualMDC <- lapply(MDCstacks, FUN = function(x) {
 		months <- 4:9
-		mdc <- lapply(months, FUN = function(num, MDCstack = x){
-			ppt <- MDCstack[[paste0("PPT", '0',num)]]
+		mdc <- lapply(months, FUN = function(num, MDCstack = x) {
+			ppt <- MDCstack[[paste0("PPT", '0', num)]]
 			tmax <- MDCstack[[paste0("Tmax", '0', num)]]
 			dt <- data.table(ppt = getValues(ppt), tmax = getValues(tmax), pixID = 1:ncell(tmax))
 			dt <- na.omit(dt)
 			dt[, mdc_0 := 0]
-			dt[, mdc_m := as.integer(round(pmax(mdc_0 + .25 * nDays(num) * (.36 * tmax + L_f(num)) - 
-												 	400 * log(1 + 3.937 * .83 * ppt/(800 * exp(-mdc_0/400))) + 
-												 	.25 * nDays(num) * (.36 * tmax + L_f(num)), 0)))]
+			dt[, mdc_m := as.integer(round(pmax(mdc_0 + 0.25 * nDays(num) * (0.36 * tmax + L_f(num)) - 
+																						400 * log(1 + 3.937 * 0.83 * ppt/(800 * exp(-mdc_0/400))) + 
+																						0.25 * nDays(num) * (0.36 * tmax + L_f(num)), 0)))]
 			mdc <- setValues(tmax, NA)
 			mdc[dt$pixID] <- dt$mdc_m 
 			return(mdc)
