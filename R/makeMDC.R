@@ -37,7 +37,7 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	})
 	AllClimateRasters <- as.list(sort(unlist(AllClimateRasters)))
 	MDCrasters <- lapply(years, FUN  = function(year, rasters = AllClimateRasters) {
-		toReturn <- grep(pattern = paste0("Year_", year, "M"), x = rasters, value = TRUE)
+		toReturn <- grep(pattern = paste0("_", year, "M"), x = rasters, value = TRUE)
 	})
 	
 	MDCstacks <- lapply(MDCrasters, FUN = raster::stack)
