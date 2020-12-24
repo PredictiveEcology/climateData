@@ -23,11 +23,11 @@ makeLandRCS(
 
 \item{rasterPrefix}{name of raster file, to be followed by e.g. ATA_2011-2100.grd. Put climate model here}
 
+\item{outputDir}{file path to directory where raster stacks will be written}
+
 \item{origTemplate}{the original DEM used to create the climate files}
 
 \item{years}{years included in the climate data}
-
-\item{outptuDir}{file path to directory where raster stacks will be written}
 }
 \description{
 Function to create raster stack for of Monthly Drought Code (MDC)

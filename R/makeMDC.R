@@ -24,6 +24,8 @@ utils::globalVariables(c(
 #'
 #' @rdname makeMDC
 makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
+	stopifnot(dir.exists(inputPath))
+	
 	# 1. Make sure it has all defaults
 	if (!all(droughtMonths %in% 4:9)) {
 		stop("Drought calculation for Months other than April to June is not yet supported") # TODO
