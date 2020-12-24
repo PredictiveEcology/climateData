@@ -24,6 +24,8 @@ utils::globalVariables(c(
 #'
 #' @rdname makeMDC
 makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
+	stopifnot(dir.exists(inputPath))
+	
 	# 1. Make sure it has all defaults
 	if (!all(droughtMonths %in% 4:9)) {
 		stop("Drought calculation for Months other than April to June is not yet supported") # TODO
@@ -33,11 +35,15 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	
 	# 2. Check if we have the years chosen (we should lapply through years)
 	AllClimateRasters <- lapply(variables, FUN = function(y, Path = inputPath) {
-		relevantRasters <- list.files(path = Path, recursive = TRUE, pattern = paste0("*", y), full.names = TRUE)
+		list.files(path = Path, recursive = TRUE, pattern = paste0("*", y), full.names = TRUE)
 	})
 	AllClimateRasters <- as.list(sort(unlist(AllClimateRasters)))
+	if (length(unlist(AllClimateRasters)) != length(years)*length(variables)) {
+		stop("Some files may be missing from:\n  ", inputPath)
+	}
+	
 	MDCrasters <- lapply(years, FUN  = function(year, rasters = AllClimateRasters) {
-		toReturn <- grep(pattern = paste0("_", year, "M"), x = rasters, value = TRUE)
+		grep(pattern = paste0("_", year, "M"), x = rasters, value = TRUE)
 	})
 	
 	MDCstacks <- lapply(MDCrasters, FUN = raster::stack)
