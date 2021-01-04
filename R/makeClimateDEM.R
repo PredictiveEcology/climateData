@@ -23,16 +23,16 @@ makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 18
 	if (Sys.info()["sysname"] != "Windows")
 		stop("ClimateNA will only accept .asc files created by Windows.")
 	
-	gtopo30N <- prepInputs(url = 'https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/view?usp=sharing',
+	gtopo30N <- prepInputs(url = "https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/",
 												 destinationPath = DEMdestinationPath, 
 												 overwrite = TRUE)
 	
 	if (arcSecRes[1] != arcSecRes[2]) {
-		stop('.asc format requires x and y dimensions to be equal. Please adjust arcSecRes')
+		stop(".asc format requires x and y dimensions to be equal. Please adjust arcSecRes.")
 	}
 	
 	if (!is.null(bufferArcSec)) {
-		studyArea <- spTransform(studyArea, CRSobj = sp::CRS(paste0('+proj=longlat +datum=WGS84')))
+		studyArea <- spTransform(studyArea, CRSobj = sp::CRS(paste0("+proj=longlat +datum=WGS84")))
 		studyArea <- buffer(studyArea, bufferArcSec/60/60)
 	}
 	
