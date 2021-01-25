@@ -10,6 +10,7 @@ utils::globalVariables(c("."))
 #' @param origTemplate the original DEM used to create the climate files
 #' @param outputDir file path to directory where raster stacks will be written
 #' @param years years included in the climate data
+#' @param writeCMINormal write the CMI normal to disk 
 #'
 #' @param rasterPrefix name of raster file, to be followed by e.g. ATA_2011-2100.grd. Put climate model here
 #'
@@ -20,8 +21,8 @@ utils::globalVariables(c("."))
 #' @importFrom utils tail
 #' @rdname makeLandRCS
 makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, outputDir,
-                        origTemplate, years = 2011:2100) {
-
+                        origTemplate, years = 2011:2100, writeCMINormal = FALSE) {
+  
   origTemplate <- trim(origTemplate)
   crs(origTemplate) <- "+init=epsg:4326 +proj=longlat"
   
@@ -115,11 +116,16 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
   })
   CMIstack <- stack(CMI)
   names(CMIstack) <- paste0("CMI", years)
-
+  
   writeRaster(ATAstack,
               filename = file.path(outputDir, paste0(rasterPrefix, "_ATA", years[1], "-",
                                                      tail(years, 1), ".grd")), datatype = "INT2S")
   writeRaster(CMIstack,
               filename = file.path(outputDir, paste0(rasterPrefix, "_CMI", years[1], "-",
                                                      tail(years, 1), ".grd")), datatype = "INT2S")
+  if (writeCMINormal){
+    
+    writeRaster(normalCMI, 
+                filename = file.path(outputDir, paste0(rasterPrefix, "CMInormal.tif")))
+  }
 }

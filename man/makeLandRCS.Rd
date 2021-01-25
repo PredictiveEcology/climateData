@@ -13,7 +13,8 @@ makeLandRCS(
   rasterPrefix,
   outputDir,
   origTemplate,
-  years = 2011:2100
+  years = 2011:2100,
+  writeCMINormal = FALSE
 )
 }
 \arguments{
