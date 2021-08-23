@@ -100,7 +100,9 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			dt[, mdc_m := as.integer(round(pmax(mdc_0 + 0.25 * nDays(num) * (0.36 * tmax + L_f(num)) - 
 																						400 * log(1 + 3.937 * 0.83 * ppt/(800 * exp(-mdc_0/400))) + 
 																						0.25 * nDays(num) * (0.36 * tmax + L_f(num)), 0)))]
-			mdc <- setValues(tmax, NA)
+			suppressWarnings({
+				mdc <- setValues(tmax, NA)
+			}) ## TODO: why is min/max raster values triggering -Inf/Inf ??
 			mdc[dt$pixID] <- dt$mdc_m 
 			return(mdc)
 		})
