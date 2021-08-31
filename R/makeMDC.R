@@ -97,6 +97,7 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			dt <- data.table(ppt = getValues(ppt), tmax = getValues(tmax), pixID = 1:ncell(tmax))
 			dt <- na.omit(dt)
 			dt[, mdc_0 := 0]
+			## TODO: where is this equation for adjusted MDC from?
 			dt[, mdc_m := as.integer(round(pmax(mdc_0 + 0.25 * nDays(num) * (0.36 * tmax + L_f(num)) - 
 																						400 * log(1 + 3.937 * 0.83 * ppt/(800 * exp(-mdc_0/400))) + 
 																						0.25 * nDays(num) * (0.36 * tmax + L_f(num)), 0)))]
