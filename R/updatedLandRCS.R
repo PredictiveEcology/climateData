@@ -18,14 +18,14 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	
 	#Normal CMI	
 	#normal MAP
-	normalMAPs <- list.files(path = pathToNormalRasters, pattern = "MAP.asc$",
+	normalMAPs <- list.files(path = pathToNormalRasters, pattern = "MAP[.]asc$",
 													 recursive = TRUE, full.names = TRUE)
 	normalMAPs <- stack(normalMAPs)
 	crs(normalMAPs) <- "+init=epsg:4326 +proj=longlat"
 	normalMAPVals <- (getValues(normalMAPs[[1]]) + getValues(normalMAPs[[2]]))/2
 	
 	#normal Eref
-	normalErefs <- list.files(path = pathToNormalRasters, pattern = "Eref.asc$",
+	normalErefs <- list.files(path = pathToNormalRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE) %>%
 		lapply(., FUN = raster) %>%
 		stack(.)
@@ -36,7 +36,7 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	#use raster to avoid FBR
 	normalCMI <- setValues(raster(normalMAPs[[1]]), normalMAPVals - normalErefVals)
 	
-	normalMATs <- list.files(path = pathToNormalRasters, pattern = "MAT.asc$",
+	normalMATs <- list.files(path = pathToNormalRasters, pattern = "MAT[.]asc$",
 													 recursive = TRUE, full.names = TRUE)
 	normalMATs <- stack(normalMATs)
 	normalMATvals <- (getValues(normalMATs[[1]]) + getValues(normalMATs[[2]]))/2
@@ -70,7 +70,7 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100) {
 	
-	MATrasters <- list.files(pathToFutureRasters, pattern = "MAT.asc",
+	MATrasters <- list.files(pathToFutureRasters, pattern = "MAT[.]asc$",
 													 recursive = TRUE, full.names = TRUE)
 	MATrasters <- stack(MATrasters)
 	crs(MATrasters) <- "+init=epsg:4326 +proj=longlat"
@@ -88,13 +88,13 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	names(ATAstack) <- paste0("ATA", years)
 
 	#MAP
-	ppRasters <- list.files(pathToFutureRasters, pattern = "MAP.asc",
+	ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
 													recursive = TRUE, full.names = TRUE)
 	ppRasters <- stack(ppRasters)
 	crs(ppRasters) <- "+init=epsg:4326 +proj=longlat"
 	
 	#Eref
-	ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref.asc",
+	ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE)
 	ErefRasters <- stack(ErefRasters)
 	crs(ErefRasters) <- "+init=epsg:4326 +proj=longlat"
