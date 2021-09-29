@@ -1,0 +1,4 @@
+"file" "checksum" "filesize" "algorithm"
+"annualFires525yrs.tif" "5cf6c7476d8c4b60" "14344987" "xxhash64"
+"ABMatureTreeData.csv" "390cb698b77d6c05" "144746159" "xxhash64"
+"RIA_THLB_rtm.tif" "839a93fe02e17912" "1671114" "xxhash64"
