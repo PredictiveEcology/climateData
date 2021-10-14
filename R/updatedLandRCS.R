@@ -1,12 +1,15 @@
 utils::globalVariables(c("."))
 
-
-#' Create 1950-2010 normals as arithmetic mean of 1950-1980 and 1980-2010 normals.
-#' Calculates CMI as MAP - Eref
-#' @param pathToNormalRasters file path of the directory containing climate normal data, assumed 1950-1980 and 1980-2010
+#' Create 1950-2010 normals as arithmetic mean of 1950-1980 and 1980-2010 normals
+#' 
+#' Calculates `CMI` as `MAP - Eref`.
+#' 
+#' @param pathToNormalRasters file path of the directory containing climate normal data,
+#'                            assumed 1950-1980 and 1980-2010
+#' 
 #' @param rasterToMatch an optional template raster
+#' 
 #' @return a raster stack of 1950-2010 normal CMI and MAT
-#'
 #'
 #' @author Ian Eddy
 #' @export
@@ -15,7 +18,6 @@ utils::globalVariables(c("."))
 #' @importFrom reproducible postProcess
 #' @rdname makeLandRCSnormals_1950_2010_normals
 makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = NULL) {
-	
 	#Normal CMI	
 	#normal MAP
 	normalMAPs <- list.files(path = pathToNormalRasters, pattern = "MAP[.]asc$",
@@ -55,13 +57,15 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	return(normals1950_2010)
 }
 	
-#' Create projected CMI and ATA - the annnual temperature anomaly
-#' Calculates CMI as MAP - Eref
+#' Create projected CMI and ATA - the annual temperature anomaly
+#' 
+#' Calculates `CMI` as `MAP - Eref`
+#' 
 #' @param normalMAT a raster representing normal MAT
-#' @param pathToFutureRasters directory of projected climate layers
+#' @param pathToFutureRasters directory of (annual) projected climate layers
 #' @param years the projection years (e.g. 2011)
+#' 
 #' @return a list of projected raster stacks - CMI and ATA
-#'
 #'
 #' @author Ian Eddy
 #' @export
@@ -69,7 +73,6 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' @importFrom reproducible postProcess
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100) {
-	
 	MATrasters <- list.files(pathToFutureRasters, pattern = "MAT[.]asc$",
 													 recursive = TRUE, full.names = TRUE)
 	MATrasters <- stack(MATrasters)
@@ -104,7 +107,7 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	
 	names(CMIstack) <- paste0("CMI", years)
 	
-	if (!compareCRS(CMIstack, normalMAT)){
+	if (!compareCRS(CMIstack, normalMAT)) {
 		CMIstack <- postProcess(CMIstack, 
 														rasterToMatch = normalMAT, 
 														method = 'bilinear')
@@ -114,5 +117,4 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 		"projectedCMI" = CMIstack,
 		"projectedATA" = ATAstack
 	))
-	
 }

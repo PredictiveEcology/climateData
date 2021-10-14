@@ -2,13 +2,13 @@
 % Please edit documentation in R/updatedLandRCS.R
 \name{makeLandRCS_1950_2010_normals}
 \alias{makeLandRCS_1950_2010_normals}
-\title{Create 1950-2010 normals as arithmetic mean of 1950-1980 and 1980-2010 normals.
-Calculates CMI as MAP - Eref}
+\title{Create 1950-2010 normals as arithmetic mean of 1950-1980 and 1980-2010 normals}
 \usage{
 makeLandRCS_1950_2010_normals(pathToNormalRasters, rasterToMatch = NULL)
 }
 \arguments{
-\item{pathToNormalRasters}{file path of the directory containing climate normal data, assumed 1950-1980 and 1980-2010}
+\item{pathToNormalRasters}{file path of the directory containing climate normal data,
+assumed 1950-1980 and 1980-2010}
 
 \item{rasterToMatch}{an optional template raster}
 }
@@ -16,8 +16,7 @@ makeLandRCS_1950_2010_normals(pathToNormalRasters, rasterToMatch = NULL)
 a raster stack of 1950-2010 normal CMI and MAT
 }
 \description{
-Create 1950-2010 normals as arithmetic mean of 1950-1980 and 1980-2010 normals.
-Calculates CMI as MAP - Eref
+Calculates `CMI` as `MAP - Eref`.
 }
 \author{
 Ian Eddy

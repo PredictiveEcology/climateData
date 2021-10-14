@@ -2,8 +2,7 @@
 % Please edit documentation in R/updatedLandRCS.R
 \name{makeLandRCS_projectedCMIandATA}
 \alias{makeLandRCS_projectedCMIandATA}
-\title{Create projected CMI and ATA - the annnual temperature anomaly
-Calculates CMI as MAP - Eref}
+\title{Create projected CMI and ATA - the annual temperature anomaly}
 \usage{
 makeLandRCS_projectedCMIandATA(
   normalMAT,
@@ -14,7 +13,7 @@ makeLandRCS_projectedCMIandATA(
 \arguments{
 \item{normalMAT}{a raster representing normal MAT}
 
-\item{pathToFutureRasters}{directory of projected climate layers}
+\item{pathToFutureRasters}{directory of (annual) projected climate layers}
 
 \item{years}{the projection years (e.g. 2011)}
 }
@@ -22,8 +21,7 @@ makeLandRCS_projectedCMIandATA(
 a list of projected raster stacks - CMI and ATA
 }
 \description{
-Create projected CMI and ATA - the annnual temperature anomaly
-Calculates CMI as MAP - Eref
+Calculates `CMI` as `MAP - Eref`
 }
 \author{
 Ian Eddy
