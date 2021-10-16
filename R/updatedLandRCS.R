@@ -1,56 +1,61 @@
 utils::globalVariables(c("."))
 
-#' Create 1950-2010 normals as arithmetic mean of 1950-1980 and 1980-2010 normals
+#' Create 1951-2010 normals as arithmetic mean of 1951-1980 and 1981-2010 normals
 #' 
 #' Calculates `CMI` as `MAP - Eref`.
 #' 
 #' @param pathToNormalRasters file path of the directory containing climate normal data,
-#'                            assumed 1950-1980 and 1980-2010
+#'                            assumed 1951-1980 and 1981-2010
 #' 
 #' @param rasterToMatch an optional template raster
 #' 
-#' @return a raster stack of 1950-2010 normal CMI and MAT
+#' @return a raster stack of 1951-2010 normal CMI and MAT
 #'
 #' @author Ian Eddy
 #' @export
-#' @importFrom raster crs getValues raster setValues stack 
+#' @importFrom raster crs getValues mean raster setValues stack 
 #' @importFrom magrittr %>%
-#' @importFrom reproducible postProcess
+#' @importFrom reproducible Cache postProcess
 #' @rdname makeLandRCSnormals_1950_2010_normals
 makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = NULL) {
-	#Normal CMI	
-	#normal MAP
 	normalMAPs <- list.files(path = pathToNormalRasters, pattern = "MAP[.]asc$",
 													 recursive = TRUE, full.names = TRUE)
-	normalMAPs <- stack(normalMAPs)
-	crs(normalMAPs) <- "+init=epsg:4326 +proj=longlat"
-	normalMAPVals <- (getValues(normalMAPs[[1]]) + getValues(normalMAPs[[2]]))/2
+	stopifnot(grepl("1951_1980", basename(dirname(normalMAPs[1]))) &
+							grepl("1981_2010", basename(dirname(normalMAPs[2]))))
 	
-	#normal Eref
+	lonlat <- "+init=epsg:4326 +proj=longlat"
+	
+	normalMAPs <- stack(normalMAPs)
+	crs(normalMAPs) <- lonlat
+	
+	normalMAPVals <- mean(normalMAPs)
+	
 	normalErefs <- list.files(path = pathToNormalRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE) %>%
-		lapply(., FUN = raster) %>%
-		stack(.)
-	crs(normalErefs) <- "+init=epsg:4326 +proj=longlat"
-	normalErefVals <- (getValues(normalErefs[[1]]) + getValues(normalErefs[[2]]))/2
+		stack()
+	crs(normalErefs) <- lonlat
+	normalErefVals <- mean(normalErefs)
 	
-	#Make CMI
-	#use raster to avoid FBR
-	normalCMI <- setValues(raster(normalMAPs[[1]]), normalMAPVals - normalErefVals)
+	## Make CMI -- use raster to avoid file based raster
+	normalCMI <- raster(normalMAPs[[1]])
+	normalCMI <- setValues(normalCMI, getValues(normalMAPVals - normalErefVals))
 	
 	normalMATs <- list.files(path = pathToNormalRasters, pattern = "MAT[.]asc$",
-													 recursive = TRUE, full.names = TRUE)
-	normalMATs <- stack(normalMATs)
-	normalMATvals <- (getValues(normalMATs[[1]]) + getValues(normalMATs[[2]]))/2
+													 recursive = TRUE, full.names = TRUE) %>%
+		stack()
+	crs(normalMATs) <- lonlat
+	normalMATvals <- mean(normalMATs)
 	
-	normalMAT <- setValues(raster(normalMATs[[1]]), normalMATvals)
+	normalMAT <- raster(normalMATs[[1]])
+	normalMAT <- setValues(normalMAT, getValues(normalMATvals))
 	
 	normals1950_2010 <- stack(normalCMI, normalMAT)
 	if (!is.null(rasterToMatch)) {
-		normals1950_2010 <- postProcess(normals1950_2010, 
-																		rasterToMatch = rasterToMatch, 
-																		filename2 = NULL, 
-																		method = "bilinear")
+		normals1950_2010 <- Cache(postProcess,
+															normals1950_2010,
+															rasterToMatch = rasterToMatch, 
+															filename2 = NULL, 
+															method = "bilinear")
 	}
 	
 	names(normals1950_2010) <- c("CMInormal", "MATnormal")
@@ -86,8 +91,6 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	}
 	
 	ATAstack <- MATrasters - normalMAT
-	
-	# ATAstack <- stack(ATArasters)
 	names(ATAstack) <- paste0("ATA", years)
 
 	#MAP
@@ -104,7 +107,6 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	
 	#Calc CMI
 	CMIstack <- ppRasters - ErefRasters
-	
 	names(CMIstack) <- paste0("CMI", years)
 	
 	if (!compareCRS(CMIstack, normalMAT)) {
