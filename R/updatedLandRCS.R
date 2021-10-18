@@ -93,7 +93,11 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 
 	if (!compareCRS(normalMAT, MATrasters)) {
 	  ## this takes a while...
-		MATrasters <- Cache(postProcess, MATrasters, rasterToMatch = normalMAT, method = "bilinear")
+		MATrasters <- Cache(postProcess,
+		                    MATrasters,
+		                    rasterToMatch = normalMAT,
+		                    datatype = "INT2U",
+		                    method = "bilinear")
 	}
 
 	ATAstack <- MATrasters - normalMAT
