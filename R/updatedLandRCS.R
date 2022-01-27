@@ -93,10 +93,10 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 
 	if (!compareCRS(normalMAT, MATrasters)) {
 	  ## this takes a while...
-		MATrasters <- Cache(postProcess,
+		MATrasters <- Cache(postProcessTerra,
 		                    MATrasters,
-		                    rasterToMatch = normalMAT,
-		                    datatype = "INT2U",
+		                    to = normalMAT,
+		                    # datatype = "INT2U", # not saved to disk
 		                    method = "bilinear")
 	}
 
@@ -120,9 +120,9 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	names(CMIstack) <- paste0("CMI", years)
 
 	if (!compareCRS(CMIstack, normalMAT)) {
-		CMIstack <- Cache(postProcess,
+		CMIstack <- Cache(postProcessTerra,
 											CMIstack,
-											rasterToMatch = normalMAT,
+											to = normalMAT,
 											method = "bilinear")
 	}
 

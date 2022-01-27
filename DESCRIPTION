@@ -17,10 +17,12 @@ Imports:
     data.table,
     magrittr,
     raster,
-    reproducible,
+    reproducible (>= 1.2.8.9014),
     sp,
     stats,
     utils
+Remotes:
+    PredictiveEcology/reproducible@terraInProjectInputs
 BugReports: https://github.com/PredictiveEcology/climateData/issues
 Encoding: UTF-8
 Language: en-CA
