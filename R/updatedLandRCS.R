@@ -86,7 +86,7 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	stopifnot(all(for (i in length(years)) {
 	  grepl(years[i], MATrasters[i])
 	})) ## TODO: update with change above
-  MATrasters <- stack(MATrasters)
+  MATrasters <- terra::rast(MATrasters)
   #MATrasters <- setMinMax(MATrasters) ## takes a while...is it necessary if just a metadata prob?
 	crs(MATrasters) <- lonlat
 	names(MATrasters) <- paste0("MAT", years)
@@ -94,25 +94,25 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	if (!compareCRS(normalMAT, MATrasters)) {
 	  ## this takes a while...
 		MATrasters <- postProcessTerra(
-		                    MATrasters,
+		                    terra::rast(MATrasters), # returns SpatRaster file, so arithmetic is faster below
 		                    to = normalMAT,
 		                    # datatype = "INT2U", # not saved to disk
 		                    method = "bilinear")
 	}
 
-	ATAstack <- MATrasters - normalMAT
+	ATAstack <- MATrasters - terra::rast(normalMAT)
 	names(ATAstack) <- paste0("ATA", years)
 
 	## MAP
 	ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
 													recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
-	ppRasters <- stack(ppRasters)
+	ppRasters <- terra::rast(ppRasters)
 	crs(ppRasters) <- lonlat
 
 	## Eref
 	ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
-	ErefRasters <- stack(ErefRasters)
+	ErefRasters <- terra::rast(ErefRasters)
 	crs(ErefRasters) <- lonlat
 
 	## CMI
@@ -121,13 +121,13 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 
 	if (!compareCRS(CMIstack, normalMAT)) {
 		CMIstack <- postProcessTerra(
-											CMIstack,
+											CMIstack, #
 											to = normalMAT,
 											method = "bilinear")
 	}
 
 	return(list(
-		"projectedCMI" = CMIstack,
-		"projectedATA" = ATAstack
+		"projectedCMI" = raster::stack(CMIstack),
+		"projectedATA" = raster::stack(ATAstack)
 	))
 }
