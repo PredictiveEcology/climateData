@@ -4,7 +4,7 @@ Description: Utilities for working with North American climate data from
     'ClimateNA' <http://climatena.ca/>.
 URL: https://github.com/PredictiveEcology/climateData
 Date: 2022-01-27
-Version: 0.0.0.9004
+Version: 0.0.0.9005
 Authors@R: c(
     person("Alex M", "Chubaty", email = "achubaty@for-cast.ca",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7146-8135")),

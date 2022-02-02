@@ -87,14 +87,13 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	  grepl(years[i], MATrasters[i])
 	})) ## TODO: update with change above
   MATrasters <- terra::rast(MATrasters)
-  #MATrasters <- setMinMax(MATrasters) ## takes a while...is it necessary if just a metadata prob?
 	crs(MATrasters) <- lonlat
 	names(MATrasters) <- paste0("MAT", years)
 
 	if (!compareCRS(normalMAT, MATrasters)) {
 	  ## this takes a while...
 		MATrasters <- postProcessTerra(
-		                    terra::rast(MATrasters), # returns SpatRaster file, so arithmetic is faster below
+		                    MATrasters, # returns SpatRaster file, so arithmetic is faster below
 		                    to = normalMAT,
 		                    # datatype = "INT2U", # not saved to disk
 		                    method = "bilinear")
