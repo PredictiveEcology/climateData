@@ -119,10 +119,7 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	names(CMIstack) <- paste0("CMI", years)
 
 	if (!compareCRS(CMIstack, normalMAT)) {
-		CMIstack <- postProcessTerra(
-											CMIstack, #
-											to = normalMAT,
-											method = "bilinear")
+		CMIstack <- postProcessTerra(CMIstack, to = normalMAT, method = "bilinear")
 	}
 
 	return(list(
