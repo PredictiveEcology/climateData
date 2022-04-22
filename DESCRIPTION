@@ -1,7 +1,7 @@
 Package: climateData
 Title: Utilities For Working With North American Climate Data
 Description: Utilities for working with North American climate data from
-    'ClimateNA' <http://climatena.ca/>.
+    'ClimateNA' <https://climatena.ca/>.
 URL: https://github.com/PredictiveEcology/climateData
 Date: 2022-01-27
 Version: 0.0.0.9005
