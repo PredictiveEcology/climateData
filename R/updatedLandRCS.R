@@ -74,8 +74,9 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #'
 #' @author Ian Eddy
 #' @export
-#' @importFrom raster compareCRS  crs getValues raster setValues stack
-#' @importFrom reproducible postProcess
+#' @importFrom raster compareCRS getValues stack
+#' @importFrom reproducible postProcessTerra
+#' @importFrom terra crs rast
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100) {
 	lonlat <- "+init=epsg:4326 +proj=longlat"
@@ -86,17 +87,16 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	stopifnot(all(for (i in length(years)) {
 	  grepl(years[i], MATrasters[i])
 	})) ## TODO: update with change above
-  MATrasters <- terra::rast(MATrasters)
+	MATrasters <- terra::rast(lapply(MATrasters, terra::rast))
 	crs(MATrasters) <- lonlat
 	names(MATrasters) <- paste0("MAT", years)
 
 	if (!compareCRS(normalMAT, MATrasters)) {
 	  ## this takes a while...
 		MATrasters <- postProcessTerra(
-		                    MATrasters, # returns SpatRaster file, so arithmetic is faster below
-		                    to = normalMAT,
-		                    # datatype = "INT2U", # not saved to disk
-		                    method = "bilinear")
+		  MATrasters, # returns SpatRaster file, so arithmetic is faster below
+		  to = normalMAT,
+		  method = "bilinear")
 	}
 
 	ATAstack <- MATrasters - terra::rast(normalMAT)
@@ -105,13 +105,13 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	## MAP
 	ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
 													recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
-	ppRasters <- terra::rast(ppRasters)
+	ppRasters <- terra::rast(lapply(ppRasters, terra::rast))
 	crs(ppRasters) <- lonlat
 
 	## Eref
 	ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
-	ErefRasters <- terra::rast(ErefRasters)
+	ErefRasters <- terra::rast(lapply(ErefRasters, terra::rast))
 	crs(ErefRasters) <- lonlat
 
 	## CMI

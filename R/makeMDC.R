@@ -25,14 +25,14 @@ utils::globalVariables(c(
 #' @rdname makeMDC
 makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	stopifnot(dir.exists(inputPath))
-	
+
 	# 1. Make sure it has all defaults
 	if (!all(droughtMonths %in% 4:9)) {
 		stop("Drought calculation for Months other than April to June is not yet supported") # TODO
 	}
-	
+
 	variables <- c(paste0("Tmax0", droughtMonths), paste0("PPT0", droughtMonths))
-	
+
 	# 2. Check if we have the years chosen (we should lapply through years)
 	AllClimateRasters <- lapply(variables, FUN = function(y, Path = inputPath) {
 		list.files(path = Path, recursive = TRUE, pattern = paste0("*", y), full.names = TRUE)
@@ -41,17 +41,17 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	if (length(unlist(AllClimateRasters)) != length(years)*length(variables)) {
 		stop("Some files may be missing from:\n  ", inputPath)
 	}
-	
+
 	MDCrasters <- lapply(years, FUN  = function(year, rasters = AllClimateRasters) {
 		grep(pattern = paste0("_", year, "M"), x = rasters, value = TRUE)
 	})
-	
+
 	MDCstacks <- lapply(MDCrasters, FUN = raster::stack)
 	MDCstacks <- lapply(MDCstacks, FUN = function(x){
 		crs(x) <- sp::CRS(paste0('+proj=longlat +datum=WGS84'))
 		return(x)
 	})
-	
+
 	#set values to actual degrees and not tenths
 	MDCstacks <- lapply(MDCstacks, FUN = function(x) {
 		tempRasters <- grep(names(x), pattern = "*Tmax")
@@ -66,8 +66,8 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 		annualMDCvars <- raster::stack(temp, PPT)
 		return(annualMDCvars)
 	})
-	#Now we have a list of the corrected variables	
-	
+	#Now we have a list of the corrected variables
+
 	# Day length adjustment L_f in Drought Code (taken from Van Wagner 1987)
 	L_f <- function(Month) {
 		c('4' = 0.9,
@@ -78,7 +78,7 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			'9' = 2.4)[[as.character(Month)]]
 		## TODO: [ FIX ] Update for all Months, check latitude problem. Ideally, bring original table in here.
 	}
-	
+
 	nDays <- function(Month) {
 		c('4' = 30,
 			'5' = 31,
@@ -87,7 +87,7 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			'8' = 31,
 			'9' = 30)[[as.character(Month)]]
 	}
-	
+
 	rm(MDCrasters, AllClimateRasters)
 	annualMDC <- lapply(MDCstacks, FUN = function(x) {
 		months <- 4:9
@@ -102,13 +102,13 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			## 21st century burn rates in Canadian boreal forest outside of its natural variability:
 			## collating global climate model experiments with sedimentary charcoal data. International
 			## Journal of Wildland Fire, 19(8), pp.1127-1139.
-			dt[, mdc_m := as.integer(round(pmax(mdc_0 + 0.25 * nDays(num) * (0.36 * tmax + L_f(num)) - 
-																						400 * log(1 + 3.937 * 0.83 * ppt/(800 * exp(-mdc_0/400))) + 
+			dt[, mdc_m := as.integer(round(pmax(mdc_0 + 0.25 * nDays(num) * (0.36 * tmax + L_f(num)) -
+																						400 * log(1 + 3.937 * 0.83 * ppt/(800 * exp(-mdc_0/400))) +
 																						0.25 * nDays(num) * (0.36 * tmax + L_f(num)), 0)))]
 			suppressWarnings({
 				mdc <- setValues(tmax, NA)
 			}) ## TODO: why is min/max raster values triggering -Inf/Inf ??
-			mdc[dt$pixID] <- dt$mdc_m 
+			mdc[dt$pixID] <- dt$mdc_m
 			return(mdc)
 		})
 		mdc <- raster::stack(mdc)
