@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeClimateDEM.R
 \name{makeClimateDEM}
 \alias{makeClimateDEM}
-\title{Create a DEM for use with ClimateNA}
+\title{Create a DEM for use with \code{ClimateNA}}
 \usage{
 makeClimateDEM(
   studyArea,
@@ -14,11 +14,12 @@ makeClimateDEM(
 )
 }
 \arguments{
-\item{studyArea}{a studyArea for cropping the gtopo30 DEM}
+\item{studyArea}{a study area for cropping the \code{gtopo30} DEM}
 
-\item{arcSecRes}{the resolution of the output dem in arc seconds}
+\item{arcSecRes}{the resolution of the output DEM in arcseconds}
 
-\item{bufferArcSec}{numeric  - arc seconds by which to buffer the studyArea to ensure seamless coverage.
+\item{bufferArcSec}{numeric, arcseconds by which to buffer the \code{studyArea} to
+ensure seamless coverage.
 Recommended to be at least the same as \code{res}}
 
 \item{DEMdestinationPath}{DESCRIPTION NEEDED}
@@ -31,7 +32,7 @@ Recommended to be at least the same as \code{res}}
 a DEM in ASCII format
 }
 \description{
-Create a DEM for use with ClimateNA
+Create a DEM for use with \code{ClimateNA}
 }
 \author{
 Ian Eddy

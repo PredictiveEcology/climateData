@@ -18,7 +18,7 @@ makeLandRCS_projectedCMIandATA(
 \item{years}{the projection years (e.g. 2011)}
 }
 \value{
-a list of projected raster stacks - CMI and ATA
+a list of projected rasters - CMI and ATA
 }
 \description{
 Calculates \code{CMI} as \code{MAP - Eref}

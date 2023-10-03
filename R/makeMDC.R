@@ -1,5 +1,5 @@
 utils::globalVariables(c(
-	':=', 'mdc_0', 'mdc_m'
+	":=", "mdc_0", "mdc_m"
 ))
 
 #' Create raster of Monthly Drought Code (MDC)
@@ -18,10 +18,8 @@ utils::globalVariables(c(
 #' @author Tati Micheletti
 #' @export
 #' @importFrom data.table data.table
-#' @importFrom raster crs crs<- getValues ncell raster setValues stack
-#' @importFrom sp CRS
+#' @importFrom terra crs crs<- values ncell rast setValues
 #' @importFrom stats na.omit
-#'
 #' @rdname makeMDC
 makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	stopifnot(dir.exists(inputPath))
@@ -46,9 +44,9 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 		grep(pattern = paste0("_", year, "M"), x = rasters, value = TRUE)
 	})
 
-	MDCstacks <- lapply(MDCrasters, FUN = raster::stack)
+	MDCstacks <- lapply(MDCrasters, FUN = rast)
 	MDCstacks <- lapply(MDCstacks, FUN = function(x){
-		crs(x) <- sp::CRS(paste0('+proj=longlat +datum=WGS84'))
+		crs(x) <- crs("epsg:4326")
 		return(x)
 	})
 
@@ -60,10 +58,10 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 		PPT <- x[[names(x)[ppRasters]]]
 		temp <- lapply(names(temp), function(Raster, Stack = temp) {
 			Raster <- Stack[[Raster]]
-			Raster <- setValues(Raster, as.numeric(getValues(Raster) / 10))
+			Raster <- setValues(Raster, as.numeric(values(Raster, mat = FALSE) / 10))
 		})
-		temp <- raster::stack(temp)
-		annualMDCvars <- raster::stack(temp, PPT)
+		temp <- rast(temp)
+		annualMDCvars <- rast(temp, PPT)
 		return(annualMDCvars)
 	})
 	#Now we have a list of the corrected variables
@@ -80,12 +78,12 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	}
 
 	nDays <- function(Month) {
-		c('4' = 30,
-			'5' = 31,
-			'6' = 30,
-			'7' = 31,
-			'8' = 31,
-			'9' = 30)[[as.character(Month)]]
+		c("4" = 30,
+			"5" = 31,
+			"6" = 30,
+			"7" = 31,
+			"8" = 31,
+			"9" = 30)[[as.character(Month)]]
 	}
 
 	rm(MDCrasters, AllClimateRasters)
@@ -94,7 +92,9 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 		mdc <- lapply(months, FUN = function(num, MDCstack = x) {
 			ppt <- MDCstack[[paste0("PPT", "0", num)]]
 			tmax <- MDCstack[[paste0("Tmax", "0", num)]]
-			dt <- data.table(ppt = getValues(ppt), tmax = getValues(tmax), pixID = 1:ncell(tmax))
+			dt <- data.table(ppt = values(ppt, mat = FALSE),
+			                 tmax = values(tmax, mat = FALSE),
+			                 pixID = 1:ncell(tmax))
 			dt <- na.omit(dt)
 			dt[, mdc_0 := 0]
 			## adjusted MDC calculation from:
@@ -111,12 +111,12 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			mdc[dt$pixID] <- dt$mdc_m
 			return(mdc)
 		})
-		mdc <- raster::stack(mdc)
-		mdcAnnual <- raster::calc(x = mdc, fun = max)
+		mdc <- rast(mdc)
+		mdcAnnual <- max(mdc)
 		return(mdcAnnual)
 	})
 	names(annualMDC) <- paste0("mdc", years)
-	annualMDC <- raster::stack(annualMDC)
+	annualMDC <- rast(annualMDC)
 
 	return(annualMDC)
 }

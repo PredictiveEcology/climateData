@@ -19,13 +19,13 @@ utils::globalVariables(c("."))
 #'
 #' @author Ian Eddy
 #' @export
-#' @importFrom raster crop crs getValues mask raster setValues stack trim writeRaster
+#' @importFrom terra crop crs mask rast setValues trim values writeRaster
 #' @importFrom utils tail
 #' @rdname makeLandRCS
 makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, outputDir,
                         origTemplate, years = 2011:2100, writeCMINormal = FALSE) {
   origTemplate <- trim(origTemplate)
-  crs(origTemplate) <- "+init=epsg:4326 +proj=longlat"
+  crs(origTemplate) <- .lonlat
 
   # normalCMI
   # normal MAP
@@ -33,29 +33,29 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
     path = pathToNormalRasters, pattern = "MAP.asc$",
     recursive = TRUE, full.names = TRUE
   ) |>
-    lapply(FUN = raster) |>
-    stack()
-  crs(normalMAPs) <- "+init=epsg:4326 +proj=longlat"
+    lapply(FUN = rast) |>
+    rast()
+  crs(normalMAPs) <- .lonlat
   normalMAPs <- crop(normalMAPs, y = origTemplate) |>
     mask(mask = origTemplate)
-  normalMAPVals <- (getValues(normalMAPs[[1]]) + getValues(normalMAPs[[2]])) / 2
+  normalMAPVals <- (values(normalMAPs[[1]], mat = FALSE) + values(normalMAPs[[2]], mat = FALSE)) / 2
 
   # normal Eref
   normalErefs <- list.files(
     path = pathToNormalRasters, pattern = "Eref.asc$",
     recursive = TRUE, full.names = TRUE
   ) |>
-    lapply(FUN = raster) |>
-    stack()
-  crs(normalErefs) <- "+init=epsg:4326 +proj=longlat"
+    lapply(FUN = rast) |>
+    rast()
+  crs(normalErefs) <- .lonlat
   normalErefs <- crop(normalErefs, y = origTemplate) |>
     mask(mask = origTemplate)
-  normalErefVals <- (getValues(normalErefs[[1]]) + getValues(normalErefs[[2]])) / 2
+  normalErefVals <- (values(normalErefs[[1]], mat = FALSE) + values(normalErefs[[2]], mat = FALSE)) / 2
 
   # Make CMI
-  normalCMI <- raster(normalMAPs[[1]]) |>
+  normalCMI <- rast(normalMAPs[[1]]) |>
     setValues(normalMAPVals - normalErefVals)
-  crs(normalCMI) <- "+init=epsg:4326 +proj=longlat"
+  crs(normalCMI) <- .lonlat
   names(normalCMI) <- paste0(rasterPrefix, "normalCMI.grd")
 
   # normalMAT
@@ -63,37 +63,37 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
     path = pathToNormalRasters, pattern = "MAT.asc$",
     recursive = TRUE, full.names = TRUE
   ) |>
-    lapply(FUN = raster) |>
-    stack()
+    lapply(FUN = rast) |>
+    rast()
   normalMATs <- crop(normalMATs, y = origTemplate) |>
     mask(mask = origTemplate)
-  normalVals <- (getValues(normalMATs[[1]]) + getValues(normalMATs[[2]])) / 2
+  normalVals <- (values(normalMATs[[1]], mat = FALSE) + values(normalMATs[[2]], mat = FALSE)) / 2
 
   # Start with MATrasters
   MATrasters <- list.files(pathToFutureRasters,
     pattern = "MAT.asc",
     recursive = TRUE, full.names = TRUE
   ) |>
-    lapply(FUN = raster) |>
-    stack()
-  crs(MATrasters) <- "+init=epsg:4326 +proj=longlat"
+    lapply(FUN = rast) |>
+    rast()
+  crs(MATrasters) <- .lonlat
   MATrasters <- crop(MATrasters, y = origTemplate) |>
     mask( mask = origTemplate)
 
   names(MATrasters) <- paste0(rasterPrefix, "MAT", years)
-  MATrasters <- stack(MATrasters) # some functions is converting to brick
+  MATrasters <- rast(MATrasters) # some functions is converting to brick
 
   # ATA rasters
   ATArasters <- lapply(names(MATrasters), FUN = function(mat, normal = normalVals) {
     mat <- MATrasters[[mat]]
-    MATvals <- getValues(mat)
+    MATvals <- values(mat, mat = FALSE)
     ATA <- (MATvals - normal) # transform for saving as INT2S
     ATA <- setValues(mat, ATA)
-    crs(ATA) <- "+init=epsg:4326 +proj=longlat"
+    crs(ATA) <- .lonlat
     return(ATA)
   })
 
-  ATAstack <- stack(ATArasters)
+  ATAstack <- rast(ATArasters)
   names(ATAstack) <- paste0("ATA", years)
   print("completed ATA")
   # MAP
@@ -101,7 +101,7 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
     pattern = "MAP.asc",
     recursive = TRUE, full.names = TRUE
   ) |>
-    lapply(FUN = raster) |>
+    lapply(FUN = rast) |>
     lapply(FUN = "crop", y = origTemplate) |>
     lapply(FUN = "mask", mask = origTemplate)
 
@@ -110,7 +110,7 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
     pattern = "Eref.asc",
     recursive = TRUE, full.names = TRUE
   ) |>
-    lapply(FUN = raster) |>
+    lapply(FUN = rast) |>
     lapply(FUN = "crop", y = origTemplate) |>
     lapply(FUN = "mask", mask = origTemplate)
 
@@ -118,12 +118,12 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
   CMI <- lapply(1:length(ppRasters), FUN = function(year, ppStack = ppRasters, ErefStack = ErefRasters) {
     ppRaster <- ppStack[[year]]
     erefRaster <- ErefStack[[year]]
-    CMIvals <- getValues(ppRaster) - getValues(erefRaster)
+    CMIvals <- values(ppRaster, mat = FALSE) - values(erefRaster, mat = FALSE)
     CMI <- setValues(ppRaster, CMIvals)
-    crs(CMI) <- "+init=epsg:4326 +proj=longlat"
+    crs(CMI) <- .lonlat
     return(CMI)
   })
-  CMIstack <- stack(CMI)
+  CMIstack <- rast(CMI)
   names(CMIstack) <- paste0("CMI", years)
 
   writeRaster(ATAstack,

@@ -13,7 +13,7 @@ assumed 1951-1980 and 1981-2010}
 \item{rasterToMatch}{an optional template raster}
 }
 \value{
-a raster stack of 1951-2010 normal CMI and MAT
+a \code{SpatRaster} of 1951-2010 normal CMI and MAT
 }
 \description{
 Calculates \code{CMI} as \code{MAP - Eref}.

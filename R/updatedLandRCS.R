@@ -9,12 +9,12 @@ utils::globalVariables(c("."))
 #'
 #' @param rasterToMatch an optional template raster
 #'
-#' @return a raster stack of 1951-2010 normal CMI and MAT
+#' @return a `SpatRaster` of 1951-2010 normal CMI and MAT
 #'
 #' @author Ian Eddy
 #' @export
-#' @importFrom raster crs getValues mean raster setValues stack
 #' @importFrom reproducible Cache postProcess
+#' @importFrom terra crs values mean rast setValues
 #' @rdname makeLandRCSnormals_1950_2010_normals
 makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = NULL) {
 	normalMAPs <- list.files(path = pathToNormalRasters, pattern = "MAP[.]asc$",
@@ -22,37 +22,35 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	stopifnot(grepl("1951_1980", basename(dirname(normalMAPs[1]))) &
 							grepl("1981_2010", basename(dirname(normalMAPs[2]))))
 
-	lonlat <- "+init=epsg:4326 +proj=longlat"
-
-	normalMAPs <- stack(normalMAPs)
-	crs(normalMAPs) <- lonlat
+	normalMAPs <- rast(normalMAPs)
+	crs(normalMAPs) <- .lonlat
 
 	normalMAPVals <- mean(normalMAPs)
 
 	normalErefs <- list.files(path = pathToNormalRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE) |>
-		stack()
-	crs(normalErefs) <- lonlat
+		rast()
+	crs(normalErefs) <- .lonlat
 	normalErefVals <- mean(normalErefs)
 
 	## Make CMI -- use raster to avoid file based raster
-	normalCMI <- raster(normalMAPs[[1]])
-	normalCMI <- setValues(normalCMI, getValues(normalMAPVals - normalErefVals))
+	normalCMI <- rast(normalMAPs[[1]])
+	normalCMI <- setValues(normalCMI, values(normalMAPVals - normalErefVals, mat = FALSE))
 
 	normalMATs <- list.files(path = pathToNormalRasters, pattern = "MAT[.]asc$",
 													 recursive = TRUE, full.names = TRUE) |>
-		stack()
-	crs(normalMATs) <- lonlat
+		rast()
+	crs(normalMATs) <- .lonlat
 	normalMATvals <- mean(normalMATs)
 
-	normalMAT <- raster(normalMATs[[1]])
-	normalMAT <- setValues(normalMAT, getValues(normalMATvals))
+	normalMAT <- rast(normalMATs[[1]])
+	normalMAT <- setValues(normalMAT, values(normalMATvals, mat = FALSE))
 
-	normals1950_2010 <- stack(normalCMI, normalMAT)
+	normals1950_2010 <- rast(normalCMI, normalMAT)
 	if (!is.null(rasterToMatch)) {
 		normals1950_2010 <- Cache(postProcess,
 															normals1950_2010,
-															rasterToMatch = rasterToMatch,
+															to = rasterToMatch,
 															filename2 = NULL,
 															method = "bilinear")
 	}
@@ -69,28 +67,25 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' @param pathToFutureRasters directory of (annual) projected climate layers
 #' @param years the projection years (e.g. 2011)
 #'
-#' @return a list of projected raster stacks - CMI and ATA
+#' @return a list of projected rasters - CMI and ATA
 #'
 #' @author Ian Eddy
 #' @export
-#' @importFrom raster compareCRS getValues stack
 #' @importFrom reproducible postProcessTerra
-#' @importFrom terra crs rast
+#' @importFrom terra crs<- rast values
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100) {
-	lonlat <- "+init=epsg:4326 +proj=longlat"
-
 	MATrasters <- list.files(pathToFutureRasters, pattern = "MAT[.]asc$",
 													 recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
 	stopifnot(length(MATrasters) == length(years))
 	stopifnot(all(for (i in length(years)) {
 	  grepl(years[i], MATrasters[i])
 	})) ## TODO: update with change above
-	MATrasters <- terra::rast(lapply(MATrasters, terra::rast))
-	crs(MATrasters) <- lonlat
+	MATrasters <- rast(lapply(MATrasters, rast))
+	crs(MATrasters) <- .lonlat
 	names(MATrasters) <- paste0("MAT", years)
 
-	if (!compareCRS(normalMAT, MATrasters)) {
+	if (!compareGeom(normalMAT, MATrasters)) {
 	  ## this takes a while...
 		MATrasters <- postProcessTerra(
 		  MATrasters, # returns SpatRaster file, so arithmetic is faster below
@@ -98,31 +93,31 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 		  method = "bilinear")
 	}
 
-	ATAstack <- MATrasters - terra::rast(normalMAT)
+	ATAstack <- MATrasters - rast(normalMAT)
 	names(ATAstack) <- paste0("ATA", years)
 
 	## MAP
 	ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
 													recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
-	ppRasters <- terra::rast(lapply(ppRasters, terra::rast))
-	crs(ppRasters) <- lonlat
+	ppRasters <- rast(lapply(ppRasters, rast))
+	crs(ppRasters) <- .lonlat
 
 	## Eref
 	ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
-	ErefRasters <- terra::rast(lapply(ErefRasters, terra::rast))
-	crs(ErefRasters) <- lonlat
+	ErefRasters <- rast(lapply(ErefRasters, rast))
+	crs(ErefRasters) <- .lonlat
 
 	## CMI
 	CMIstack <- ppRasters - ErefRasters
 	names(CMIstack) <- paste0("CMI", years)
 
-	if (!compareCRS(CMIstack, normalMAT)) {
+	if (!same.crs(CMIstack, normalMAT)) {
 		CMIstack <- postProcessTerra(CMIstack, to = normalMAT, method = "bilinear")
 	}
 
 	return(list(
-		"projectedCMI" = raster::stack(CMIstack),
-		"projectedATA" = raster::stack(ATAstack)
+		"projectedCMI" = rast(CMIstack),
+		"projectedATA" = rast(ATAstack)
 	))
 }
