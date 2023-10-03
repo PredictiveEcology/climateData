@@ -2,12 +2,12 @@ utils::globalVariables(c(
 	':=', 'mdc_0', 'mdc_m'
 ))
 
-#' Function to create raster stack for of Monthly Drought Code (MDC)
+#' Create raster of Monthly Drought Code (MDC)
 #'
 #'
 #' @param inputPath the file path of the directory containing climate files
 #'
-#' @param years years to use. i.e. c(2011:2100).
+#' @param years years to use. i.e. `c(2011:2100)`.
 #'
 #'
 #' @param droughtMonths Numeric. Months to calculate Monthly Drought Code (MDC). Must be 4:9

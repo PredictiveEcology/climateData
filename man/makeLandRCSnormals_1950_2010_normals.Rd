@@ -16,7 +16,7 @@ assumed 1951-1980 and 1981-2010}
 a raster stack of 1951-2010 normal CMI and MAT
 }
 \description{
-Calculates `CMI` as `MAP - Eref`.
+Calculates \code{CMI} as \code{MAP - Eref}.
 }
 \author{
 Ian Eddy

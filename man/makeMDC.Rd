@@ -2,23 +2,23 @@
 % Please edit documentation in R/makeMDC.R
 \name{makeMDC}
 \alias{makeMDC}
-\title{Function to create raster stack for of Monthly Drought Code (MDC)}
+\title{Create raster of Monthly Drought Code (MDC)}
 \usage{
 makeMDC(inputPath, years = NULL, droughtMonths = 4:9)
 }
 \arguments{
 \item{inputPath}{the file path of the directory containing climate files}
 
-\item{years}{years to use. i.e. c(2011:2100).}
+\item{years}{years to use. i.e. \code{c(2011:2100)}.}
 
 \item{droughtMonths}{Numeric. Months to calculate Monthly Drought Code (MDC). Must be 4:9}
 }
 \value{
 A list of all years, with each year being the local path for the raster stack that
-        contains all variables.
+contains all variables.
 }
 \description{
-Function to create raster stack for of Monthly Drought Code (MDC)
+Create raster of Monthly Drought Code (MDC)
 }
 \author{
 Tati Micheletti

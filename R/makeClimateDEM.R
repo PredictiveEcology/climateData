@@ -3,7 +3,7 @@
 #'
 #' @param studyArea a studyArea for cropping the gtopo30 DEM
 #' @param bufferArcSec numeric  - arc seconds by which to buffer the studyArea to ensure seamless coverage.
-#' Recommended to be at least the same as \code{res}
+#' Recommended to be at least the same as `res`
 #' @param arcSecRes the resolution of the output dem in arc seconds
 #' @param DEMdestinationPath DESCRIPTION NEEDED
 #' @param destinationPath the directory to save the output raster

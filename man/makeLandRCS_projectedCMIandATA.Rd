@@ -21,7 +21,7 @@ makeLandRCS_projectedCMIandATA(
 a list of projected raster stacks - CMI and ATA
 }
 \description{
-Calculates `CMI` as `MAP - Eref`
+Calculates \code{CMI} as \code{MAP - Eref}
 }
 \author{
 Ian Eddy
