@@ -14,7 +14,6 @@ utils::globalVariables(c("."))
 #' @author Ian Eddy
 #' @export
 #' @importFrom raster crs getValues mean raster setValues stack
-#' @importFrom magrittr %>%
 #' @importFrom reproducible Cache postProcess
 #' @rdname makeLandRCSnormals_1950_2010_normals
 makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = NULL) {
@@ -31,7 +30,7 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	normalMAPVals <- mean(normalMAPs)
 
 	normalErefs <- list.files(path = pathToNormalRasters, pattern = "Eref[.]asc$",
-														recursive = TRUE, full.names = TRUE) %>%
+														recursive = TRUE, full.names = TRUE) |>
 		stack()
 	crs(normalErefs) <- lonlat
 	normalErefVals <- mean(normalErefs)
@@ -41,7 +40,7 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	normalCMI <- setValues(normalCMI, getValues(normalMAPVals - normalErefVals))
 
 	normalMATs <- list.files(path = pathToNormalRasters, pattern = "MAT[.]asc$",
-													 recursive = TRUE, full.names = TRUE) %>%
+													 recursive = TRUE, full.names = TRUE) |>
 		stack()
 	crs(normalMATs) <- lonlat
 	normalMATvals <- mean(normalMATs)

@@ -14,10 +14,9 @@ Authors@R: c(
            role = c("aut"), comment = c(ORCID = "0000-0002-6914-8316"))
     )
 Depends:
-    R (>= 3.6)
+    R (>= 4.2)
 Imports:
     data.table,
-    magrittr,
     raster,
     reproducible (>= 1.2.16.9018),
     sp,

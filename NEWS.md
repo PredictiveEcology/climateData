@@ -1,15 +1,13 @@
-0.0.0.9003
-
-Known issues: <https://github.com/PredictiveEcology/reproducible/issues>
-
-Version 0.0.1
-=============
+# climateData (development version)
 
 ## Dependency changes
-None
+- drop support for R < 4.2;
+- use native R pipe instead of `magrittr`;
+- use `terra` instead of `raster`;
+- use `sf` instead of `sp`;
 
 ## Enhancements
-* Uses `postProcessTerra` instead of `postProcess`, making these functions much faster. 
+- none
 
 ## Bug fixes
-None
+- none

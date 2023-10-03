@@ -20,7 +20,6 @@ utils::globalVariables(c("."))
 #' @author Ian Eddy
 #' @export
 #' @importFrom raster crop crs getValues mask raster setValues stack trim writeRaster
-#' @importFrom magrittr %>%
 #' @importFrom utils tail
 #' @rdname makeLandRCS
 makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, outputDir,
@@ -33,29 +32,29 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
   normalMAPs <- list.files(
     path = pathToNormalRasters, pattern = "MAP.asc$",
     recursive = TRUE, full.names = TRUE
-  ) %>%
-    lapply(., FUN = raster) %>%
-    stack(.)
+  ) |>
+    lapply(FUN = raster) |>
+    stack()
   crs(normalMAPs) <- "+init=epsg:4326 +proj=longlat"
-  normalMAPs <- crop(normalMAPs, y = origTemplate) %>%
-    mask(., mask = origTemplate)
+  normalMAPs <- crop(normalMAPs, y = origTemplate) |>
+    mask(mask = origTemplate)
   normalMAPVals <- (getValues(normalMAPs[[1]]) + getValues(normalMAPs[[2]])) / 2
 
   # normal Eref
   normalErefs <- list.files(
     path = pathToNormalRasters, pattern = "Eref.asc$",
     recursive = TRUE, full.names = TRUE
-  ) %>%
-    lapply(., FUN = raster) %>%
-    stack(.)
+  ) |>
+    lapply(FUN = raster) |>
+    stack()
   crs(normalErefs) <- "+init=epsg:4326 +proj=longlat"
-  normalErefs <- crop(normalErefs, y = origTemplate) %>%
-    mask(., mask = origTemplate)
+  normalErefs <- crop(normalErefs, y = origTemplate) |>
+    mask(mask = origTemplate)
   normalErefVals <- (getValues(normalErefs[[1]]) + getValues(normalErefs[[2]])) / 2
 
   # Make CMI
-  normalCMI <- raster(normalMAPs[[1]]) %>%
-    setValues(., normalMAPVals - normalErefVals)
+  normalCMI <- raster(normalMAPs[[1]]) |>
+    setValues(normalMAPVals - normalErefVals)
   crs(normalCMI) <- "+init=epsg:4326 +proj=longlat"
   names(normalCMI) <- paste0(rasterPrefix, "normalCMI.grd")
 
@@ -63,25 +62,23 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
   normalMATs <- list.files(
     path = pathToNormalRasters, pattern = "MAT.asc$",
     recursive = TRUE, full.names = TRUE
-  ) %>%
-    lapply(., FUN = raster) %>%
-    stack(.)
-  normalMATs <- crop(normalMATs, y = origTemplate) %>%
-    mask(., mask = origTemplate)
+  ) |>
+    lapply(FUN = raster) |>
+    stack()
+  normalMATs <- crop(normalMATs, y = origTemplate) |>
+    mask(mask = origTemplate)
   normalVals <- (getValues(normalMATs[[1]]) + getValues(normalMATs[[2]])) / 2
 
-
   # Start with MATrasters
-
   MATrasters <- list.files(pathToFutureRasters,
     pattern = "MAT.asc",
     recursive = TRUE, full.names = TRUE
-  ) %>%
-    lapply(., FUN = raster) %>%
-    stack(.)
+  ) |>
+    lapply(FUN = raster) |>
+    stack()
   crs(MATrasters) <- "+init=epsg:4326 +proj=longlat"
-  MATrasters <- crop(MATrasters, y = origTemplate) %>%
-    mask(., mask = origTemplate)
+  MATrasters <- crop(MATrasters, y = origTemplate) |>
+    mask( mask = origTemplate)
 
   names(MATrasters) <- paste0(rasterPrefix, "MAT", years)
   MATrasters <- stack(MATrasters) # some functions is converting to brick
@@ -103,20 +100,19 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
   ppRasters <- list.files(pathToFutureRasters,
     pattern = "MAP.asc",
     recursive = TRUE, full.names = TRUE
-  ) %>%
-    lapply(., FUN = raster) %>%
-    lapply(., FUN = "crop", y = origTemplate) %>%
-    lapply(., FUN = "mask", mask = origTemplate)
-
+  ) |>
+    lapply(FUN = raster) |>
+    lapply(FUN = "crop", y = origTemplate) |>
+    lapply(FUN = "mask", mask = origTemplate)
 
   # Eref
   ErefRasters <- list.files(pathToFutureRasters,
     pattern = "Eref.asc",
     recursive = TRUE, full.names = TRUE
-  ) %>%
-    lapply(., FUN = raster) %>%
-    lapply(., FUN = "crop", y = origTemplate) %>%
-    lapply(., FUN = "mask", mask = origTemplate)
+  ) |>
+    lapply(FUN = raster) |>
+    lapply(FUN = "crop", y = origTemplate) |>
+    lapply(FUN = "mask", mask = origTemplate)
 
   # Calc CMI
   CMI <- lapply(1:length(ppRasters), FUN = function(year, ppStack = ppRasters, ErefStack = ErefRasters) {
