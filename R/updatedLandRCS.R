@@ -17,7 +17,7 @@ utils::globalVariables(c("."))
 #' @importFrom terra crs values mean rast setValues
 #' @rdname makeLandRCSnormals_1950_2010_normals
 makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = NULL) {
-	normalMAPs <- list.files(path = pathToNormalRasters, pattern = "MAP[.]asc$",
+  normalMAPs <- list.files(path = pathToNormalRasters, pattern = "MAP[.]asc$",
 													 recursive = TRUE, full.names = TRUE)
 	stopifnot(grepl("1951_1980", basename(dirname(normalMAPs[1]))) &
 							grepl("1981_2010", basename(dirname(normalMAPs[2]))))
@@ -30,7 +30,6 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	normalErefs <- list.files(path = pathToNormalRasters, pattern = "Eref[.]asc$",
 														recursive = TRUE, full.names = TRUE) |>
 		rast()
-	crs(normalErefs) <- .lonlat
 	normalErefVals <- mean(normalErefs)
 
 	## Make CMI -- use raster to avoid file based raster
@@ -40,13 +39,12 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	normalMATs <- list.files(path = pathToNormalRasters, pattern = "MAT[.]asc$",
 													 recursive = TRUE, full.names = TRUE) |>
 		rast()
-	crs(normalMATs) <- .lonlat
 	normalMATvals <- mean(normalMATs)
 
 	normalMAT <- rast(normalMATs[[1]])
 	normalMAT <- setValues(normalMAT, values(normalMATvals, mat = FALSE))
 
-	normals1950_2010 <- rast(normalCMI, normalMAT)
+	normals1950_2010 <- c(normalCMI, normalMAT)
 	if (!is.null(rasterToMatch)) {
 		normals1950_2010 <- Cache(postProcess,
 															normals1950_2010,
@@ -56,6 +54,7 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	}
 
 	names(normals1950_2010) <- c("CMInormal", "MATnormal")
+
 	return(normals1950_2010)
 }
 
@@ -75,14 +74,13 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' @importFrom terra crs<- rast values
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100) {
-	MATrasters <- list.files(pathToFutureRasters, pattern = "MAT[.]asc$",
-													 recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
+  MATrasters <- list.files(pathToFutureRasters, pattern = "MAT[.]asc$",
+													 recursive = TRUE, full.names = TRUE)
+  ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(MATrasters)))
+  MATrasters <- MATrasters[ids]
 	stopifnot(length(MATrasters) == length(years))
-	stopifnot(all(for (i in length(years)) {
-	  grepl(years[i], MATrasters[i])
-	})) ## TODO: update with change above
+
 	MATrasters <- rast(lapply(MATrasters, rast))
-	crs(MATrasters) <- .lonlat
 	names(MATrasters) <- paste0("MAT", years)
 
 	if (!compareGeom(normalMAT, MATrasters)) {
@@ -93,20 +91,26 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 		  method = "bilinear")
 	}
 
-	ATAstack <- MATrasters - rast(normalMAT)
+	ATAstack <- MATrasters - normalMAT
 	names(ATAstack) <- paste0("ATA", years)
 
 	## MAP
 	ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
-													recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
+													recursive = TRUE, full.names = TRUE)
+	ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ppRasters)))
+	ppRasters <- ppRasters[ids]
+	stopifnot(length(ppRasters) == length(years))
+
 	ppRasters <- rast(lapply(ppRasters, rast))
-	crs(ppRasters) <- .lonlat
 
 	## Eref
 	ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref[.]asc$",
-														recursive = TRUE, full.names = TRUE) ## TODO: only get data for specified years
+														recursive = TRUE, full.names = TRUE)
+	ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ErefRasters)))
+	ErefRasters <- ErefRasters[ids]
+	stopifnot(length(ErefRasters) == length(years))
+
 	ErefRasters <- rast(lapply(ErefRasters, rast))
-	crs(ErefRasters) <- .lonlat
 
 	## CMI
 	CMIstack <- ppRasters - ErefRasters

@@ -21,5 +21,5 @@ contains all variables.
 Create raster of Monthly Drought Code (MDC)
 }
 \author{
-Tati Micheletti
+Tati Micheletti, Ian Eddy, Alex Chubaty
 }

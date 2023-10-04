@@ -14,51 +14,46 @@ utils::globalVariables(c("."))
 #' @param writeCMINormal write the CMI normal to disk
 #' @param rasterPrefix name of raster file, to be followed by e.g., \file{ATA_2011-2100.grd}.
 #'
-#' @note  The unit used by the output ATA is the same as the input MAT, i.e., 1/10th of a degree
-#'        in `climateNA `.
+#' @return `NULL` invisbly. Invoked for side effect of writing rasters to disk.
 #'
-#' @author Ian Eddy
+#' @author Ian Eddy, Alex Chubaty
 #' @export
 #' @importFrom terra crop crs mask rast setValues trim values writeRaster
 #' @importFrom utils tail
 #' @rdname makeLandRCS
 makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, outputDir,
                         origTemplate, years = 2011:2100, writeCMINormal = FALSE) {
+  browser()
   origTemplate <- trim(origTemplate)
-  crs(origTemplate) <- .lonlat
 
-  # normalCMI
-  # normal MAP
+  ## normal MAP
   normalMAPs <- list.files(
     path = pathToNormalRasters, pattern = "MAP.asc$",
     recursive = TRUE, full.names = TRUE
   ) |>
     lapply(FUN = rast) |>
     rast()
-  crs(normalMAPs) <- .lonlat
   normalMAPs <- crop(normalMAPs, y = origTemplate) |>
     mask(mask = origTemplate)
   normalMAPVals <- (values(normalMAPs[[1]], mat = FALSE) + values(normalMAPs[[2]], mat = FALSE)) / 2
 
-  # normal Eref
+  ## normal Eref
   normalErefs <- list.files(
     path = pathToNormalRasters, pattern = "Eref.asc$",
     recursive = TRUE, full.names = TRUE
   ) |>
     lapply(FUN = rast) |>
     rast()
-  crs(normalErefs) <- .lonlat
   normalErefs <- crop(normalErefs, y = origTemplate) |>
     mask(mask = origTemplate)
   normalErefVals <- (values(normalErefs[[1]], mat = FALSE) + values(normalErefs[[2]], mat = FALSE)) / 2
 
-  # Make CMI
+  ## normal CMI
   normalCMI <- rast(normalMAPs[[1]]) |>
     setValues(normalMAPVals - normalErefVals)
-  crs(normalCMI) <- .lonlat
   names(normalCMI) <- paste0(rasterPrefix, "normalCMI.grd")
 
-  # normalMAT
+  ## normalMAT
   normalMATs <- list.files(
     path = pathToNormalRasters, pattern = "MAT.asc$",
     recursive = TRUE, full.names = TRUE
@@ -69,58 +64,60 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
     mask(mask = origTemplate)
   normalVals <- (values(normalMATs[[1]], mat = FALSE) + values(normalMATs[[2]], mat = FALSE)) / 2
 
-  # Start with MATrasters
+  ## start with MAT rasters
   MATrasters <- list.files(pathToFutureRasters,
-    pattern = "MAT.asc",
+    pattern = "MAT[.]asc",
     recursive = TRUE, full.names = TRUE
-  ) |>
+  ) |> sort()
+  ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(MATrasters)))
+  MATrasters <- MATrasters[ids] |>
     lapply(FUN = rast) |>
-    rast()
-  crs(MATrasters) <- .lonlat
-  MATrasters <- crop(MATrasters, y = origTemplate) |>
+    rast() |>
+    crop(MATrasters, y = origTemplate) |>
     mask( mask = origTemplate)
 
   names(MATrasters) <- paste0(rasterPrefix, "MAT", years)
-  MATrasters <- rast(MATrasters) # some functions is converting to brick
 
-  # ATA rasters
+  ## ATA rasters
   ATArasters <- lapply(names(MATrasters), FUN = function(mat, normal = normalVals) {
     mat <- MATrasters[[mat]]
     MATvals <- values(mat, mat = FALSE)
     ATA <- (MATvals - normal) # transform for saving as INT2S
     ATA <- setValues(mat, ATA)
-    crs(ATA) <- .lonlat
     return(ATA)
   })
-
   ATAstack <- rast(ATArasters)
   names(ATAstack) <- paste0("ATA", years)
   print("completed ATA")
-  # MAP
+
+  ## MAP
   ppRasters <- list.files(pathToFutureRasters,
     pattern = "MAP.asc",
     recursive = TRUE, full.names = TRUE
-  ) |>
+  ) |> sort()
+  ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ppRasters)))
+  ppRasters <- ppRasters[ids] |>
     lapply(FUN = rast) |>
     lapply(FUN = "crop", y = origTemplate) |>
     lapply(FUN = "mask", mask = origTemplate)
 
-  # Eref
+  ## Eref
   ErefRasters <- list.files(pathToFutureRasters,
     pattern = "Eref.asc",
     recursive = TRUE, full.names = TRUE
-  ) |>
+  ) |> sort()
+  ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ErefRasters)))
+  ErefRasters <- ErefRasters[ids] |>
     lapply(FUN = rast) |>
     lapply(FUN = "crop", y = origTemplate) |>
     lapply(FUN = "mask", mask = origTemplate)
 
-  # Calc CMI
+  ## calc CMI
   CMI <- lapply(1:length(ppRasters), FUN = function(year, ppStack = ppRasters, ErefStack = ErefRasters) {
     ppRaster <- ppStack[[year]]
     erefRaster <- ErefStack[[year]]
     CMIvals <- values(ppRaster, mat = FALSE) - values(erefRaster, mat = FALSE)
     CMI <- setValues(ppRaster, CMIvals)
-    crs(CMI) <- .lonlat
     return(CMI)
   })
   CMIstack <- rast(CMI)
@@ -132,15 +129,19 @@ makeLandRCS <- function(pathToNormalRasters, pathToFutureRasters, rasterPrefix, 
       tail(years, 1), ".grd"
     )), datatype = "INT2S"
   )
+
   writeRaster(CMIstack,
     filename = file.path(outputDir, paste0(
       rasterPrefix, "_CMI", years[1], "-",
       tail(years, 1), ".grd"
     )), datatype = "INT2S"
   )
+
   if (writeCMINormal) {
     writeRaster(normalCMI,
       filename = file.path(outputDir, paste0(rasterPrefix, "CMInormal.tif"))
     )
   }
+
+  return(invisible(NULL))
 }

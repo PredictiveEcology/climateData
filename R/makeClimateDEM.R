@@ -1,13 +1,16 @@
 #' Create a DEM for use with `ClimateNA`
 #'
+#' **Windows only** due to limitations using `ClimateNA` with non-Windows
+#' created DEMs.
+#'
 #' @param studyArea a study area for cropping the `gtopo30` DEM
 #' @param bufferArcSec numeric, arcseconds by which to buffer the `studyArea` to
 #'                     ensure seamless coverage.
-#'                     Recommended to be at least the same as `res`
+#'                     Recommended to be at least the same as `res`.
 #' @param arcSecRes the resolution of the output DEM in arcseconds
-#' @param DEMdestinationPath DESCRIPTION NEEDED
-#' @param destinationPath the directory to save the output raster
-#' @param filename2 the name of the output DEM without the .ASC suffix
+#' @param DEMdestinationPath the directory to save the downloaded DEM raster
+#' @param destinationPath the directory to save the output `.asc` raster
+#' @param filename2 the name of the output DEM without the `.asc` suffix
 #'
 #' @return a DEM in ASCII format
 #'
@@ -18,7 +21,7 @@
 #' @rdname makeClimateDEM
 makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 180,
                            DEMdestinationPath, destinationPath, filename2) {
-	if (Sys.info()["sysname"] != "Windows")
+	if (identical(tolower(.Platform$OS.type), "windows"))
 		stop("ClimateNA will only accept .asc files created by Windows.")
 
   if (!is(studyArea, "SpatVector")) {
@@ -49,7 +52,6 @@ makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 18
 	gtopo30N <- mask(gtopo30N, studyArea)
 	outputFilename <- file.path(destinationPath, paste0(filename2, ".asc"))
 	gtopo30N <- project(gtopo30N, "epsg:4326", res = arcSecRes/60/60)
-	#resample doesn't have a res argument - really?
 	gtopo30N <- trim(gtopo30N)
 	writeRaster(gtopo30N,
 	            filename = file.path(destinationPath, paste0(filename2, ".asc")),

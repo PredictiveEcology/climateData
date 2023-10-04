@@ -20,19 +20,20 @@ makeClimateDEM(
 
 \item{bufferArcSec}{numeric, arcseconds by which to buffer the \code{studyArea} to
 ensure seamless coverage.
-Recommended to be at least the same as \code{res}}
+Recommended to be at least the same as \code{res}.}
 
-\item{DEMdestinationPath}{DESCRIPTION NEEDED}
+\item{DEMdestinationPath}{the directory to save the downloaded DEM raster}
 
-\item{destinationPath}{the directory to save the output raster}
+\item{destinationPath}{the directory to save the output \code{.asc} raster}
 
-\item{filename2}{the name of the output DEM without the .ASC suffix}
+\item{filename2}{the name of the output DEM without the \code{.asc} suffix}
 }
 \value{
 a DEM in ASCII format
 }
 \description{
-Create a DEM for use with \code{ClimateNA}
+\strong{Windows only} due to limitations using \code{ClimateNA} with non-Windows
+created DEMs.
 }
 \author{
 Ian Eddy

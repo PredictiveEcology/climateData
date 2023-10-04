@@ -15,7 +15,7 @@ utils::globalVariables(c(
 #' @return A list of all years, with each year being the local path for the raster stack that
 #'         contains all variables.
 #'
-#' @author Tati Micheletti
+#' @author Tati Micheletti, Ian Eddy, Alex Chubaty
 #' @export
 #' @importFrom data.table data.table
 #' @importFrom terra crs crs<- values ncell rast setValues
@@ -36,21 +36,20 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 		list.files(path = Path, recursive = TRUE, pattern = paste0("*", y), full.names = TRUE)
 	})
 	AllClimateRasters <- as.list(sort(unlist(AllClimateRasters)))
-	if (length(unlist(AllClimateRasters)) != length(years)*length(variables)) {
+	ClimateRasters <- grep(paste0("Year_", years, "M", collapse = "|"), AllClimateRasters, value = TRUE)
+	ClimateRasters <- as.list(ClimateRasters)
+
+	if (length(unlist(ClimateRasters)) != length(years) * length(variables)) {
 		stop("Some files may be missing from:\n  ", inputPath)
 	}
 
-	MDCrasters <- lapply(years, FUN  = function(year, rasters = AllClimateRasters) {
+	MDCrasters <- lapply(years, FUN  = function(year, rasters = ClimateRasters) {
 		grep(pattern = paste0("_", year, "M"), x = rasters, value = TRUE)
 	})
 
 	MDCstacks <- lapply(MDCrasters, FUN = rast)
-	MDCstacks <- lapply(MDCstacks, FUN = function(x){
-		crs(x) <- crs("epsg:4326")
-		return(x)
-	})
 
-	#set values to actual degrees and not tenths
+	## set values to actual degrees and not tenths
 	MDCstacks <- lapply(MDCstacks, FUN = function(x) {
 		tempRasters <- grep(names(x), pattern = "*Tmax")
 		ppRasters <- grep(names(x), pattern = '*PP')
@@ -61,12 +60,11 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			Raster <- setValues(Raster, as.numeric(values(Raster, mat = FALSE) / 10))
 		})
 		temp <- rast(temp)
-		annualMDCvars <- rast(temp, PPT)
-		return(annualMDCvars)
+		annualMDCvars <- c(temp, PPT)
+		return(annualMDCvars) ## list of the corrected variables
 	})
-	#Now we have a list of the corrected variables
 
-	# Day length adjustment L_f in Drought Code (taken from Van Wagner 1987)
+	## Day length adjustment L_f in Drought Code (taken from Van Wagner 1987)
 	L_f <- function(Month) {
 		c('4' = 0.9,
 			'5' = 3.8,

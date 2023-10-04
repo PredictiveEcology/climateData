@@ -22,9 +22,14 @@ Imports:
     stats,
     terra,
     utils
-Suggests: 
+Suggests:
+    archive,
+    geodata,
+    googledrive,
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0),
+    tools
 Remotes:
     PredictiveEcology/reproducible@development
 BugReports: https://github.com/PredictiveEcology/climateData/issues
@@ -36,3 +41,4 @@ LazyData: true
 RoxygenNote: 7.2.3
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
+Config/testthat/edition: 3
