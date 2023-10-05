@@ -24,6 +24,8 @@ makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 18
 	if (!identical(tolower(.Platform$OS.type), "windows"))
 		stop("ClimateNA will only accept .asc files created by Windows.")
 
+  stopifnot(requireNamespace("googledrive", quietly = TRUE))
+
   if (!is(studyArea, "SpatVector")) {
     studyArea <- vect(studyArea)
   }
