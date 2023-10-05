@@ -83,7 +83,7 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	MATrasters <- rast(lapply(MATrasters, rast))
 	names(MATrasters) <- paste0("MAT", years)
 
-	if (!compareGeom(normalMAT, MATrasters)) {
+	if (!compareGeom(normalMAT, MATrasters, stopOnError = FALSE)) {
 	  ## this takes a while...
 		MATrasters <- postProcessTerra(
 		  MATrasters, # returns SpatRaster file, so arithmetic is faster below
