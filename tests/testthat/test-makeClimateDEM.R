@@ -4,6 +4,8 @@ test_that("makeClimateDEM works", {
   skip_if_not_installed("geodata")
   skip_if_not_installed("googledrive")
 
+  googledrive::drive_deauth()
+
   dPath <- file.path(tempdir(), "test_makeClimateDEM")
 
   canProvs <- geodata::gadm(country = "CAN", level = 1, path = dPath)

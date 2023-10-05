@@ -41,15 +41,15 @@ makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 18
 	}
 
 	if (!is.null(bufferArcSec)) {
-		studyArea <- transform(studyArea, "epsg:4326")
+		studyArea <- project(studyArea, "epsg:4326")
 		studyArea <- buffer(studyArea, bufferArcSec/60/60)
 	}
 
 	if (!same.crs(studyArea, gtopo30N)) {
-		studyArea <- transform(studyArea, "epsg:4326")
+		studyArea <- project(studyArea, "epsg:4326")
 	}
 
-	studyArea <- transform(studyArea, crs(gtopo30N))
+	studyArea <- project(studyArea, crs(gtopo30N))
 	gtopo30N <- crop(gtopo30N, studyArea)
 	gtopo30N <- mask(gtopo30N, studyArea)
 	outputFilename <- file.path(destinationPath, paste0(filename2, ".asc"))
