@@ -121,7 +121,7 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 	}
 
 	return(list(
-		"projectedCMI" = rast(CMIstack),
-		"projectedATA" = rast(ATAstack)
+		"projectedCMI" = CMIstack,
+		"projectedATA" = ATAstack
 	))
 }
