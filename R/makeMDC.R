@@ -36,7 +36,7 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 		list.files(path = Path, recursive = TRUE, pattern = paste0("*", y), full.names = TRUE)
 	})
 	AllClimateRasters <- as.list(sort(unlist(AllClimateRasters)))
-	ClimateRasters <- grep(paste0("Year_", years, "M", collapse = "|"), AllClimateRasters, value = TRUE)
+	ClimateRasters <- grep(paste0("_", years, "M", collapse = "|"), AllClimateRasters, value = TRUE)
 	ClimateRasters <- as.list(ClimateRasters)
 
 	if (length(unlist(ClimateRasters)) != length(years) * length(variables)) {
