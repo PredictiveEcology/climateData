@@ -40,7 +40,14 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 	ClimateRasters <- as.list(ClimateRasters)
 
 	if (length(unlist(ClimateRasters)) != length(years) * length(variables)) {
-		stop("Some files may be missing from:\n  ", inputPath)
+	  patts <- apply(expand.grid(years, variables), 1, function(x) paste(x, collapse = ".*"))
+	  filesHave <- Map(pat = patts, function(pat) grep(ClimateRasters, pattern = pat))
+	  missingFiles <- patts[!patts %in% names(unlist(filesHave)) ]
+	  years2 <- substr(missingFiles, 1, 4)
+	  missingFiles <- gsub("^.{6,6}", "", missingFiles)
+	  message("The following year x climate variables are missing")
+	  print(split(missingFiles, years2)) # can't "message" a list
+	  stop(" ... from:\n  ", inputPath)
 	}
 
 	MDCrasters <- lapply(years, FUN  = function(year, rasters = ClimateRasters) {
