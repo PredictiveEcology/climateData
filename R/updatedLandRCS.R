@@ -45,7 +45,7 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 	normalMAT <- setValues(normalMAT, values(normalMATvals, mat = FALSE))
 
 	normals1950_2010 <- c(normalCMI, normalMAT)
-	if (!is.null(rasterToMatch)) {
+	if (!is.null(rasterToMatch) && !is.function(rasterToMatch)) {
 		normals1950_2010 <- Cache(postProcess,
 															normals1950_2010,
 															to = rasterToMatch,
