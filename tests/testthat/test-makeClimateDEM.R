@@ -13,7 +13,8 @@ test_that("makeClimateDEM works", {
 
   studyArea <- canProvs[canProvs$NAME_1 == "Alberta", ]
 
-  climateDEM <- makeClimateDEM(studyArea, DEMdestinationPath = dPath, destinationPath = dPath)
+  climateDEM <- makeClimateDEM(studyArea, DEMdestinationPath = dPath, destinationPath = dPath,
+                               filename2 = "Alberta")
   expect_s4_class(climateDEM, "SpatRaster")
 
   unlink(dPath, recursive = TRUE)
