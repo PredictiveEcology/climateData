@@ -33,6 +33,8 @@ makeLandRCS_projectedATA(
 \item{pathToFutureRasters}{directory of (annual) projected climate layers}
 
 \item{years}{the projection years (e.g. 2011)}
+
+\item{studyAreaForMask}{TODO}
 }
 \value{
 a list of projected rasters - CMI and ATA

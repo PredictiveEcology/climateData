@@ -65,6 +65,7 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' @param normalMAT a raster representing normal MAT
 #' @param pathToFutureRasters directory of (annual) projected climate layers
 #' @param years the projection years (e.g. 2011)
+#' @param studyAreaForMask TODO
 #'
 #' @return a list of projected rasters - CMI and ATA
 #'
@@ -86,9 +87,8 @@ makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years
 
 }
 
-#' Create projected CMI and ATA - the annual temperature anomaly
-#'
 #' @export
+#' @importFrom reproducible postProcessTo
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMI <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
                                            studyAreaForMask = NULL) {
@@ -126,6 +126,7 @@ makeLandRCS_projectedCMI <- function(normalMAT, pathToFutureRasters, years = 201
 }
 
 #' @export
+#' @importFrom reproducible postProcessTo
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
                                            studyAreaForMask = NULL) {
