@@ -4,3 +4,4 @@
 ^inst/extdata/README\.md$
 ^inst/extdata/CHECKSUMS\.txt$
 ^LICENSE$
+^\.github$
