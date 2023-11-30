@@ -3,6 +3,8 @@
 export(makeClimateDEM)
 export(makeLandRCS)
 export(makeLandRCS_1950_2010_normals)
+export(makeLandRCS_projectedATA)
+export(makeLandRCS_projectedCMI)
 export(makeLandRCS_projectedCMIandATA)
 export(makeMDC)
 import(methods)

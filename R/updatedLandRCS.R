@@ -73,55 +73,84 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' @importFrom reproducible postProcessTerra
 #' @importFrom terra crs<- rast values
 #' @rdname makeLandRCS_projectedCMIandATA
-makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100) {
+makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
+                                           studyAreaForMask = NULL) {
+
+  cmi <- Cache(makeLandRCS_projectedCMI(normalMAT = normalMAT, pathToFutureRasters = pathToFutureRasters,
+                                        years = years, studyAreaForMask = studyAreaForMask))
+  ata <- Cache(makeLandRCS_projectedATA(normalMAT = normalMAT, pathToFutureRasters = pathToFutureRasters,
+                                        years = years, studyAreaForMask = studyAreaForMask))
+
+  return(list("projectedCMI" = cmi,
+              "projectedATA" = ata))
+
+}
+
+#' Create projected CMI and ATA - the annual temperature anomaly
+#'
+#' @export
+#' @rdname makeLandRCS_projectedCMIandATA
+makeLandRCS_projectedCMI <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
+                                           studyAreaForMask = NULL) {
+
+  ## MAP
+  ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
+                          recursive = TRUE, full.names = TRUE)
+  ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ppRasters)))
+  ppRasters <- ppRasters[ids]
+  stopifnot(length(ppRasters) == length(years))
+
+  ppRasters <- rast(lapply(ppRasters, rast))
+
+  ## Eref
+  ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref[.]asc$",
+                            recursive = TRUE, full.names = TRUE)
+  ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ErefRasters)))
+  ErefRasters <- ErefRasters[ids]
+  stopifnot(length(ErefRasters) == length(years))
+
+  ErefRasters <- rast(lapply(ErefRasters, rast))
+
+  ## CMI
+  CMIstack <- ppRasters - ErefRasters
+  names(CMIstack) <- paste0("CMI", years)
+
+  if (!same.crs(CMIstack, normalMAT)) {
+    CMIstack <- postProcessTo(CMIstack,
+                              to = normalMAT,
+                              maskTo = if (is.null(studyAreaForMask)) normalMAT else studyAreaForMask,
+                              method = "bilinear")
+  }
+
+  CMIstack
+}
+
+#' @export
+#' @rdname makeLandRCS_projectedCMIandATA
+makeLandRCS_projectedATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
+                                           studyAreaForMask = NULL) {
   MATrasters <- list.files(pathToFutureRasters, pattern = "MAT[.]asc$",
-													 recursive = TRUE, full.names = TRUE)
+                           recursive = TRUE, full.names = TRUE)
   ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(MATrasters)))
   MATrasters <- MATrasters[ids]
-	stopifnot(length(MATrasters) == length(years))
+  stopifnot(length(MATrasters) == length(years))
 
-	MATrasters <- rast(lapply(MATrasters, rast))
-	names(MATrasters) <- paste0("MAT", years)
+  MATrasters <- rast(lapply(MATrasters, rast))
+  names(MATrasters) <- paste0("MAT", years)
 
-	if (!compareGeom(normalMAT, MATrasters, stopOnError = FALSE)) {
-	  ## this takes a while...
-		MATrasters <- postProcessTerra(
-		  MATrasters, # returns SpatRaster file, so arithmetic is faster below
-		  to = normalMAT,
-		  method = "bilinear")
-	}
+  # opt <- options("reproducible.gdalwarp" = FALSE)
+  # on.exit(options(opt))
+  if (!compareGeom(normalMAT, MATrasters, stopOnError = FALSE)) {
+    ## this takes a while...
+    MATrasters <- postProcessTo(
+      MATrasters, # returns SpatRaster file, so arithmetic is faster below
+      to = normalMAT,
+      maskTo = if (is.null(studyAreaForMask)) normalMAT else studyAreaForMask,
+      method = "bilinear")
+  }
 
-	ATAstack <- MATrasters - normalMAT
-	names(ATAstack) <- paste0("ATA", years)
+  ATAstack <- MATrasters - normalMAT
+  names(ATAstack) <- paste0("ATA", years)
 
-	## MAP
-	ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
-													recursive = TRUE, full.names = TRUE)
-	ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ppRasters)))
-	ppRasters <- ppRasters[ids]
-	stopifnot(length(ppRasters) == length(years))
-
-	ppRasters <- rast(lapply(ppRasters, rast))
-
-	## Eref
-	ErefRasters <- list.files(pathToFutureRasters, pattern = "Eref[.]asc$",
-														recursive = TRUE, full.names = TRUE)
-	ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(ErefRasters)))
-	ErefRasters <- ErefRasters[ids]
-	stopifnot(length(ErefRasters) == length(years))
-
-	ErefRasters <- rast(lapply(ErefRasters, rast))
-
-	## CMI
-	CMIstack <- ppRasters - ErefRasters
-	names(CMIstack) <- paste0("CMI", years)
-
-	if (!same.crs(CMIstack, normalMAT)) {
-		CMIstack <- postProcessTerra(CMIstack, to = normalMAT, method = "bilinear")
-	}
-
-	return(list(
-		"projectedCMI" = CMIstack,
-		"projectedATA" = ATAstack
-	))
+  ATAstack
 }

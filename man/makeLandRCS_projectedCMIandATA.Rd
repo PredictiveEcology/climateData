@@ -2,12 +2,29 @@
 % Please edit documentation in R/updatedLandRCS.R
 \name{makeLandRCS_projectedCMIandATA}
 \alias{makeLandRCS_projectedCMIandATA}
+\alias{makeLandRCS_projectedCMI}
+\alias{makeLandRCS_projectedATA}
 \title{Create projected CMI and ATA - the annual temperature anomaly}
 \usage{
 makeLandRCS_projectedCMIandATA(
   normalMAT,
   pathToFutureRasters,
-  years = 2011:2100
+  years = 2011:2100,
+  studyAreaForMask = NULL
+)
+
+makeLandRCS_projectedCMI(
+  normalMAT,
+  pathToFutureRasters,
+  years = 2011:2100,
+  studyAreaForMask = NULL
+)
+
+makeLandRCS_projectedATA(
+  normalMAT,
+  pathToFutureRasters,
+  years = 2011:2100,
+  studyAreaForMask = NULL
 )
 }
 \arguments{
