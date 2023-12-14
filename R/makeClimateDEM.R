@@ -21,9 +21,6 @@
 #' @rdname makeClimateDEM
 makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 180,
                            DEMdestinationPath, destinationPath, filename2) {
-	if (!identical(tolower(.Platform$OS.type), "windows"))
-		stop("ClimateNA will only accept .asc files created by Windows.")
-
   stopifnot(requireNamespace("googledrive", quietly = TRUE))
 
   if (!is(studyArea, "SpatVector")) {
@@ -55,8 +52,10 @@ makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 18
 	outputFilename <- file.path(destinationPath, paste0(filename2, ".asc"))
 	gtopo30N <- project(gtopo30N, "epsg:4326", res = arcSecRes/60/60)
 	gtopo30N <- trim(gtopo30N)
-	writeRaster(gtopo30N,
-	            filename = file.path(destinationPath, paste0(filename2, ".asc")),
-	            overwrite = TRUE)
+	writeRaster(gtopo30N, filename = outputFilename, overwrite = TRUE)
+
+	## rewrite line endings in asc files for windows
+	rewrite_asc(outputFilename)
+
 	return(gtopo30N)
 }
