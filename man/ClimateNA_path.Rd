@@ -21,6 +21,10 @@ ClimateNA_path(
 \item{type}{character. one of 'normals', 'historic', or 'future'.}
 
 \item{msy}{character. one of 'MSY', 'M', or 'Y', corresponding to all, monthly, or yearly data.}
+
+\item{gcm}{character. name of GCM available in ClimateNA.}
+
+\item{ssp}{integer. one of the available SSPs in ClimateNA (e.g., \code{370} or \code{585})}
 }
 \value{
 character string representing the path to the target output directory

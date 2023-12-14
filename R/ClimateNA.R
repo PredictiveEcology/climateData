@@ -1,14 +1,18 @@
 hasClimateNA <- function() {
-  if (identical(tolower(.Platform$OS.type), "windows") &&
-      dir.exists()) {
+  ## TODO
+  if (identical(tolower(.Platform$OS.type), "windows")) {
     TRUE
   } else {
     FALSE
   }
 }
 
+#' Rewrite a `.asc` raster file to use Windows (CR) line-endings
+#'
+#' @param f character. path to a `.asc` raster file
+#'
 #' @export
-rewrite_asc <- function(f){
+rewrite_asc <- function(f) {
   readLines(f, warn = FALSE) |>
     gsub("\n", "\r", x = _) |>
     writeLines(f)
@@ -16,6 +20,10 @@ rewrite_asc <- function(f){
   return(invisible(NULL))
 }
 
+#' Get the tile ID of a DEM raster
+#'
+#' @param file character. path to a DEM raster tile file.
+#'
 #' @export
 tileID <- function(file) {
   basename(file) |>
@@ -30,6 +38,8 @@ tileID <- function(file) {
 #' @param tile integer. tile id (e.g., the output of `tileID()`).
 #' @param type character. one of 'normals', 'historic', or 'future'.
 #' @param msy character. one of 'MSY', 'M', or 'Y', corresponding to all, monthly, or yearly data.
+#' @param gcm character. name of GCM available in ClimateNA.
+#' @param ssp integer. one of the available SSPs in ClimateNA (e.g., `370` or `585`)
 #'
 #' @return character string representing the path to the target output directory
 #'
