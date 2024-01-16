@@ -18,7 +18,7 @@ ClimateNA_path(
 
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
-\item{type}{character. one of 'normals', 'historic', or 'future'.}
+\item{type}{character. one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
 
 \item{msy}{character. one of 'MSY', 'M', or 'Y', corresponding to all, monthly, or yearly data.}
 
