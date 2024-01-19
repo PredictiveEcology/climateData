@@ -1,12 +1,3 @@
-hasClimateNA <- function() {
-  ## TODO
-  if (identical(tolower(.Platform$OS.type), "windows")) {
-    TRUE
-  } else {
-    FALSE
-  }
-}
-
 #' Rewrite a `.asc` raster file to use Windows (CR) line-endings
 #'
 #' @param f character. path to a `.asc` raster file
@@ -60,4 +51,101 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
       if (!dir.exists(x)) dir.create(x, recursive = TRUE)
       x
     })()
+}
+
+
+#' Connect to ClimateNA tile sqlite database
+#'
+#' @param dbfile path to `.sqlite` database file
+#' @param type character. denotes the table in the sqlite database to access.
+#'             one of 'historic', 'future', 'historic_normals', or 'future_normals'.
+#'
+#' @return named list containing:
+#'        - `db`, the database connection;
+#'        - `df`, a lazy `tbl_dbi` object (see `dbplyr`).
+#'
+#' @export
+#' @importFrom DBI dbConnect
+#' @importFrom DBI dbCreateTable dbExecute dbExistsTable
+#' @importFrom dplyr tbl
+#' @importFrom RSQLite SQLite
+#' @importFrom tibble rowid_to_column
+ClimateNA_sql <- function(dbfile, type) {
+  firstRun <- file.exists(dbfile)
+
+  db <- DBI::dbConnect(
+    drv = RSQLite::SQLite(),
+    dbname = dbfile,
+    synchronous = "normal",
+    extended_types = TRUE ## for DATETIME
+  )
+
+  if (isTRUE(firstRun)) {
+    DBI::dbExecute(db, "PRAGMA journal_mode = WAL")   ## using WAL allows concurrency
+    DBI::dbExecute(db, "PRAGMA busy_timeout = 60000") ## set busy timeout (ms); allows concurrency.
+  }
+
+  df_template <- switch(
+    type,
+    historic_normals = data.frame(
+      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
+      period = NA_character_,  ## climate period
+      tileid = NA_integer_,    ## tile ID
+      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
+      zipfile = NA_character_, ## relative file path
+      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
+      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
+      stringsAsFactors = FALSE
+    ),
+    future_normals = data.frame(
+      gcm = NA_character_,     ## climate scenario GCM
+      ssp = NA_character_,     ## climate scenario SSP
+      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
+      period = NA_character_,  ## climate period
+      tileid = NA_integer_,    ## tile ID
+      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
+      zipfile = NA_character_, ## relative file path
+      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
+      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
+      stringsAsFactors = FALSE
+    ),
+    historic = data.frame(
+      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
+      year = NA_character_,    ## climate year
+      tileid = NA_integer_,    ## tile ID
+      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
+      zipfile = NA_character_, ## relative file path
+      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
+      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
+      stringsAsFactors = FALSE
+    ),
+    future = data.frame(
+      gcm = NA_character_,     ## climate scenario GCM
+      ssp = NA_character_,     ## climate scenario SSP
+      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
+      year = NA_character_,    ## climate year (or period)
+      tileid = NA_integer_,    ## tile ID
+      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
+      zipfile = NA_character_, ## relative file path
+      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
+      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
+      stringsAsFactors = FALSE
+    )
+  ) |>
+    tibble::rowid_to_column() |> ## add rowid column to use as table primary key
+    na.omit()
+
+  tbl <- type
+
+  if (!DBI::dbExistsTable(db, tbl)) {
+    DBI::dbCreateTable(db, tbl, df_template)
+  }
+
+  df <- dplyr::tbl(db, tbl)
+
+  return(list(db = db, df = df))
 }

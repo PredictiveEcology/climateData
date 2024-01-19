@@ -3,8 +3,8 @@ Title: Utilities For Working With North American Climate Data
 Description: Utilities for working with North American climate data from
     'ClimateNA' <https://climatena.ca/>.
 URL: https://github.com/PredictiveEcology/climateData
-Date: 2024-01-15
-Version: 1.0.8
+Date: 2024-01-18
+Version: 1.0.9
 Authors@R: c(
     person("Alex M", "Chubaty", email = "achubaty@for-cast.ca",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7146-8135")),
@@ -17,13 +17,18 @@ Depends:
     R (>= 4.2)
 Imports:
     data.table,
+    DBI,
+    dplyr,
     methods,
     reproducible (>= 2.0.8),
+    RSQLite,
     stats,
     terra,
+    tibble,
     utils
 Suggests:
     archive,
+    dbplyr (>= 2.2.1),
     geodata,
     googledrive,
     knitr,
@@ -38,7 +43,7 @@ Language: en-CA
 License: GPL-3
 ByteCompile: yes
 LazyData: true
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.0
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
