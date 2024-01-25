@@ -4,13 +4,12 @@ utils::globalVariables(c(
 
 #' Create raster of Monthly Drought Code (MDC)
 #'
+#' @template ClimateNA_srcdstdir
+#' @template ClimateNA_tile
+#' @template ClimateNA_years
+#' @template cl
 #'
-#' @param inputPath the file path of the directory containing climate files
-#'
-#' @param years years to use. i.e. `c(2011:2100)`.
-#'
-#'
-#' @param droughtMonths Numeric. Months to calculate Monthly Drought Code (MDC). Must be 4:9
+#' @param droughtMonths integer. months to calculate Monthly Drought Code (MDC). Must be `4:9`.
 #'
 #' @return A list of all years, with each year being the local path for the raster stack that
 #'         contains all variables.
@@ -21,64 +20,67 @@ utils::globalVariables(c(
 #' @importFrom terra crs crs<- values ncell rast setValues
 #' @importFrom stats na.omit
 #' @rdname makeMDC
-makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
-	stopifnot(dir.exists(inputPath))
-
+makeMDC <- function(srcdir, dstdir, tile = NULL, years = NULL, droughtMonths = 4:9, cl = NULL) {
 	# 1. Make sure it has all defaults
+  stopifnot(!missing(srcdir), !missing(dstdir), !is.null(tile), !is.null(years))
+
 	if (!all(droughtMonths %in% 4:9)) {
-		stop("Drought calculation for Months other than April to June is not yet supported") # TODO
+		stop("Drought calculation for Months other than April to June is not yet supported")
+	  ## TODO: we would need to update the day length adjustments etc. below for other months
 	}
 
-	variables <- c(paste0("Tmax0", droughtMonths), paste0("PPT0", droughtMonths))
+	climVars <- c("PPT", "Tmax")
+	climVarsByMonth <- lapply(climVars, function(cv) sprintf("%s%02d", cv, droughtMonths)) |> unlist()
 
 	# 2. Check if we have the years chosen (we should lapply through years)
-	AllClimateRasters <- lapply(variables, FUN = function(y, Path = inputPath) {
-		list.files(path = Path, recursive = TRUE, pattern = paste0("*", y), full.names = TRUE)
-	})
-	AllClimateRasters <- as.list(sort(unlist(AllClimateRasters)))
-	ClimateRasters <- grep(paste0("_", years, "M", collapse = "|"), AllClimateRasters, value = TRUE)
-	ClimateRasters <- as.list(ClimateRasters)
+	tifs <- buildClimateMosaics(tile, climVars, years, srcdir = srcdir, dstdir = dstdir, cl = cl)
+	tifs_monthly <- grep(paste0(climVarsByMonth, collapse = "|"), tifs, value = TRUE)
+	tifs_monthly <- as.list(tifs_monthly)
 
-	if (length(unlist(ClimateRasters)) != length(years) * length(variables)) {
-	  patts <- apply(expand.grid(years, variables), 1, function(x) paste(x, collapse = ".*"))
-	  filesHave <- Map(pat = patts, function(pat) grep(ClimateRasters, pattern = pat))
-	  missingFiles <- patts[!patts %in% names(unlist(filesHave)) ]
-	  years2 <- substr(missingFiles, 1, 4)
-	  missingFiles <- gsub("^.{6,6}", "", missingFiles)
-	  message("The following year x climate variables are missing")
-	  print(split(missingFiles, years2)) # can't "message" a list
-	  stop(" ... from:\n  ", inputPath)
+	if (!all(file.exists(tifs))) {
+	  ## TODO: is this strictly necessary; wouldn't GDAL buildvrt fail during buildClimateMosaics()?
+	  stop("The following mosaic rasters could not be found:\n",
+	       paste(basename(tifs[!file.exists(tifs)]), collapse = ", "), ".\n",
+	       "Please check that all source data files are present in ", dstdir, ".")
 	}
 
-	MDCrasters <- lapply(years, FUN  = function(year, rasters = ClimateRasters) {
-		grep(pattern = paste0("_", year, "M"), x = rasters, value = TRUE)
+	MDCrasters <- lapply(years, FUN  = function(year, rasters = tifs_monthly) {
+		grep(pattern = paste0("_", year, "_"), x = rasters, value = TRUE)
 	})
 
-	MDCstacks <- lapply(MDCrasters, FUN = rast)
+	MDCstacks <- lapply(MDCrasters, function(files) {
+	  r <- terra::rast(files)
+	  shortName <- vapply(basename(files), function(f) strsplit(f, "_")[[1]][1], character(1))
+	  terra::set.names(r, shortName)
 
-	## set values to actual degrees and not tenths
-	MDCstacks <- lapply(MDCstacks, FUN = function(x) {
-		tempRasters <- grep(names(x), pattern = "*Tmax")
-		ppRasters <- grep(names(x), pattern = '*PP')
-		temp <- x[[names(x)[tempRasters]]]
-		PPT <- x[[names(x)[ppRasters]]]
-		temp <- lapply(names(temp), function(Raster, Stack = temp) {
-			Raster <- Stack[[Raster]]
-			Raster <- setValues(Raster, as.numeric(values(Raster, mat = FALSE) / 10))
-		})
-		temp <- rast(temp)
-		annualMDCvars <- c(temp, PPT)
-		return(annualMDCvars) ## list of the corrected variables
+	  return(r)
 	})
+
+	## ClimateNA v7.41 (August 01, 2023) release note:
+	## Climate variables with decimals are no longer converted to integers in raster format.
+	# ## set values to actual degrees and not tenths
+	# MDCstacks <- lapply(MDCstacks, FUN = function(x) {
+	# 	tempRasters <- grep(names(x), pattern = "Tmax")
+	# 	pptRasters <- grep(names(x), pattern = "PPT")
+	# 	temp <- x[[names(x)[tempRasters]]]
+	# 	PPT <- x[[names(x)[pptRasters]]]
+	# 	temp <- lapply(names(temp), function(Raster, Stack = temp) {
+	# 		Raster <- Stack[[Raster]]
+	# 		Raster <- setValues(Raster, as.numeric(values(Raster, mat = FALSE) / 10))
+	# 	})
+	# 	temp <- rast(temp)
+	# 	annualMDCvars <- c(temp, PPT)
+	# 	return(annualMDCvars) ## list of the corrected variables
+	# })
 
 	## Day length adjustment L_f in Drought Code (taken from Van Wagner 1987)
 	L_f <- function(Month) {
-		c('4' = 0.9,
-			'5' = 3.8,
-			'6' = 5.8,
-			'7' = 6.4,
-			'8' = 5.0,
-			'9' = 2.4)[[as.character(Month)]]
+		c("4" = 0.9,
+			"5" = 3.8,
+			"6" = 5.8,
+			"7" = 6.4,
+			"8" = 5.0,
+			"9" = 2.4)[[as.character(Month)]]
 		## TODO: [ FIX ] Update for all Months, check latitude problem. Ideally, bring original table in here.
 	}
 
@@ -91,9 +93,8 @@ makeMDC <- function(inputPath, years = NULL, droughtMonths = 4:9) {
 			"9" = 30)[[as.character(Month)]]
 	}
 
-	rm(MDCrasters, AllClimateRasters)
 	annualMDC <- lapply(MDCstacks, FUN = function(x) {
-		months <- 4:9
+		months <- droughtMonths
 		mdc <- lapply(months, FUN = function(num, MDCstack = x) {
 			ppt <- MDCstack[[paste0("PPT", "0", num)]]
 			tmax <- MDCstack[[paste0("Tmax", "0", num)]]

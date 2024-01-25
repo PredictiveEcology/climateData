@@ -4,14 +4,29 @@
 \alias{makeMDC}
 \title{Create raster of Monthly Drought Code (MDC)}
 \usage{
-makeMDC(inputPath, years = NULL, droughtMonths = 4:9)
+makeMDC(
+  srcdir,
+  dstdir,
+  tile = NULL,
+  years = NULL,
+  droughtMonths = 4:9,
+  cl = NULL
+)
 }
 \arguments{
-\item{inputPath}{the file path of the directory containing climate files}
+\item{srcdir, dstdir}{character. vector of directory paths to source and destination raster files.}
 
-\item{years}{years to use. i.e. \code{c(2011:2100)}.}
+\item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
-\item{droughtMonths}{Numeric. Months to calculate Monthly Drought Code (MDC). Must be 4:9}
+\item{years}{integer. consecutive data years to use (e.g., \code{2011:2100}).}
+
+\item{droughtMonths}{integer. months to calculate Monthly Drought Code (MDC). Must be \code{4:9}.}
+
+\item{cl}{cluster object. if \code{NULL} (default), a cluster will be created using up to
+\code{length(climVar)} number of CPU cores for parallel computation.
+Users can pass their own \code{cl} object or specify option
+\code{parallelly.availableCores.fallback} to reduce the number of cores used.
+See \code{?parallelly.options}.}
 }
 \value{
 A list of all years, with each year being the local path for the raster stack that
