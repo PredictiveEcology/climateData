@@ -5,8 +5,7 @@
 #' @export
 rewrite_asc <- function(f) {
   readLines(f, warn = FALSE) |>
-    gsub("\n", "\r", x = _) |>
-    writeLines(f)
+    write.table(f, row.names = FALSE, col.names = FALSE, quote = FALSE, append = FALSE)
 
   return(invisible(NULL))
 }
