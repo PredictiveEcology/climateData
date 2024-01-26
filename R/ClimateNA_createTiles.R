@@ -22,18 +22,12 @@ ClimateNA_tiles_gpkg <- function() {
 
 #' Rewrite a `.asc` raster file to use Windows (CR) line-endings
 #'
-#' Also ensure that `NAflag` is set using `terra::writeRaster()`
-#'
 #' @param f character. path to a `.asc` raster file
 #'
 #' @export
-#' @importFrom terra rast writeRaster
 rewrite_asc <- function(f) {
-  rast(f) |> writeRaster(f, NAflag = -9999, overwrite = TRUE)
-
   readLines(f, warn = FALSE) |>
-    gsub("\n", "\r", x = _) |>
-    writeLines(f)
+    write.table(f, row.names = FALSE, col.names = FALSE, quote = FALSE, append = FALSE)
 
   return(invisible(NULL))
 }
