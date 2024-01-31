@@ -3,13 +3,18 @@
 #' **Windows only** due to limitations using `ClimateNA` with non-Windows
 #' created DEMs.
 #'
-#' @param studyArea a study area for cropping the `gtopo30` DEM
+#' @template studyArea
+#'
 #' @param bufferArcSec numeric, arcseconds by which to buffer the `studyArea` to
 #'                     ensure seamless coverage.
 #'                     Recommended to be at least the same as `res`.
+#'
 #' @param arcSecRes the resolution of the output DEM in arcseconds
+#'
 #' @param DEMdestinationPath the directory to save the downloaded DEM raster
+#'
 #' @param destinationPath the directory to save the output `.asc` raster
+#'
 #' @param filename2 the name of the output DEM without the `.asc` suffix
 #'
 #' @return a DEM in ASCII format

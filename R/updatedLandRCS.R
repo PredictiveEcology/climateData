@@ -63,9 +63,12 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' Calculates `CMI` as `MAP - Eref`
 #'
 #' @param normalMAT a raster representing normal MAT
+#'
 #' @param pathToFutureRasters directory of (annual) projected climate layers
+#'
 #' @param years the projection years (e.g. 2011)
-#' @param studyAreaForMask TODO
+#'
+#' @template studyArea
 #'
 #' @return a list of projected rasters - CMI and ATA
 #'
@@ -75,23 +78,24 @@ makeLandRCS_1950_2010_normals <- function(pathToNormalRasters, rasterToMatch = N
 #' @importFrom terra crs<- rast values
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMIandATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
-                                           studyAreaForMask = NULL) {
+                                           studyArea = NULL) {
 
-  cmi <- Cache(makeLandRCS_projectedCMI(normalMAT = normalMAT, pathToFutureRasters = pathToFutureRasters,
-                                        years = years, studyAreaForMask = studyAreaForMask))
-  ata <- Cache(makeLandRCS_projectedATA(normalMAT = normalMAT, pathToFutureRasters = pathToFutureRasters,
-                                        years = years, studyAreaForMask = studyAreaForMask))
+  cmi <- Cache(makeLandRCS_projectedCMI(normalMAT = normalMAT,
+                                        pathToFutureRasters = pathToFutureRasters,
+                                        years = years, studyArea = studyArea))
+  ata <- Cache(makeLandRCS_projectedATA(normalMAT = normalMAT,
+                                        pathToFutureRasters = pathToFutureRasters,
+                                        years = years, studyArea = studyArea))
 
   return(list("projectedCMI" = cmi,
               "projectedATA" = ata))
-
 }
 
 #' @export
 #' @importFrom reproducible postProcessTo
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedCMI <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
-                                           studyAreaForMask = NULL) {
+                                           studyArea = NULL) {
 
   ## MAP
   ppRasters <- list.files(pathToFutureRasters, pattern = "MAP[.]asc$",
@@ -118,7 +122,7 @@ makeLandRCS_projectedCMI <- function(normalMAT, pathToFutureRasters, years = 201
   if (!same.crs(CMIstack, normalMAT)) {
     CMIstack <- postProcessTo(CMIstack,
                               to = normalMAT,
-                              maskTo = if (is.null(studyAreaForMask)) normalMAT else studyAreaForMask,
+                              maskTo = if (is.null(studyArea)) normalMAT else studyArea,
                               method = "bilinear")
   }
 
@@ -129,7 +133,7 @@ makeLandRCS_projectedCMI <- function(normalMAT, pathToFutureRasters, years = 201
 #' @importFrom reproducible postProcessTo
 #' @rdname makeLandRCS_projectedCMIandATA
 makeLandRCS_projectedATA <- function(normalMAT, pathToFutureRasters, years = 2011:2100,
-                                           studyAreaForMask = NULL) {
+                                           studyArea = NULL) {
   MATrasters <- list.files(pathToFutureRasters, pattern = "MAT[.]asc$",
                            recursive = TRUE, full.names = TRUE)
   ids <- grep(paste0("_", years, "Y$", collapse = "|"), basename(dirname(MATrasters)))
@@ -146,7 +150,7 @@ makeLandRCS_projectedATA <- function(normalMAT, pathToFutureRasters, years = 201
     MATrasters <- postProcessTo(
       MATrasters, # returns SpatRaster file, so arithmetic is faster below
       to = normalMAT,
-      maskTo = if (is.null(studyAreaForMask)) normalMAT else studyAreaForMask,
+      maskTo = if (is.null(studyArea)) normalMAT else studyArea,
       method = "bilinear")
   }
 

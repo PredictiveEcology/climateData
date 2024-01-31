@@ -4,7 +4,7 @@ utils::globalVariables(c(
 
 #' Identify ClimateNA tiles overlapping a study area
 #'
-#' @param studyArea
+#' @template studyArea
 #'
 #' @return integer. vector of tile IDs.
 #'
@@ -87,18 +87,18 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
   stopifnot(requireNamespace("googledrive", quietly = TRUE))
 
   Map(
-    tileID = tile,
+    climateTile = tile,
     climateURL = climateURLs,
-    function(tileID, climateURL) {
+    function(climateTile, climateURL) {
       ## TODO: the zip files are being put inside the tile directory, but should be one level up
       preProcessOut <- lapply(climateURL, function(url) {
         preProcess(
           url = googledrive::as_id(url),
-          targetFile = NA_character_,
-          destinationPath = file.path(climatePath, tileID) ## keep tile dir structure
+          targetFile = NULL,
+          destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
         )
       })
-      names(preProcessOut) <- paste0("tile", tileID) ## TODO: why not working? getting NA names
+      names(preProcessOut) <- paste0("tile_", climateTile)
 
       return(preProcessOut)
     }
@@ -110,9 +110,9 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
 #'
 #' @template ClimateNA_tile
 #'
-#' @param climVar character. climate variables to use to construct mosaics.
+#' @param climVars character. climate variables to use to construct mosaics.
 #'
-#' @param climYrs integer. data years to use to assemble mosaic layers.
+#' @template ClimateNA_years
 #'
 #' @template ClimateNA_srcdstdir
 #'
@@ -128,7 +128,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
 #' @importFrom reproducible checkPath
 #' @importFrom sf gdal_utils
 #' @importFrom tools file_path_sans_ext
-buildClimateMosaics <- function(tile, climVar, climYrs, srcdir = NULL, dstdir = NULL, cl = NULL) {
+buildClimateMosaics <- function(tile, climVars, years, srcdir = NULL, dstdir = NULL, cl = NULL) {
   if (any(is.null(srcdir), is.null(dstdir))) {
     stop("both 'srcdir' and 'dstdir' must specified and non-NULL.")
   }
@@ -136,7 +136,7 @@ buildClimateMosaics <- function(tile, climVar, climYrs, srcdir = NULL, dstdir = 
   srcdir <- checkPath(srcdir, create = TRUE)
   dstdir <- checkPath(dstdir, create = TRUE)
 
-  cores <- min(length(climVar), parallelly::availableCores())
+  cores <- min(length(years), parallelly::availableCores())
 
   if (is.null(cl)) {
     cl <- parallelly::makeClusterPSOCK(cores,
@@ -145,8 +145,11 @@ buildClimateMosaics <- function(tile, climVar, climYrs, srcdir = NULL, dstdir = 
                                        autoStop = TRUE)
   }
 
-  tifs <- parallel::parLapply(cl, climVar, function(v) {
-    lapply(climYrs, function(y) {
+  parallel::clusterExport(cl, c("climVars", "dstdir", "srcdir", "tile"), envir = environment())
+
+  ## TODO: switch the loops so outputs a list of annual climate vars
+  tifs <- parallel::parLapply(cl, years, function(y) {
+    lapply(climVars, function(v) {
       srcfiles <- fs::dir_ls(srcdir, regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
         fs::dir_ls(regexp = y, type = "directory") |>
         fs::dir_ls(regexp = paste0(v, ".*[.]asc$"), type = "file") ## TODO: improve regex; e.g., bFFP, eFFP vs FFP
@@ -171,8 +174,9 @@ buildClimateMosaics <- function(tile, climVar, climYrs, srcdir = NULL, dstdir = 
         unlist()
     }) |>
       unlist()
-  }) |>
-    unlist()
+  }) ## don't flatten the out list; want to access list of climate variables per year
+
+  names(tifs) <- years
 
   return(tifs)
 }

@@ -10,21 +10,21 @@ makeLandRCS_projectedCMIandATA(
   normalMAT,
   pathToFutureRasters,
   years = 2011:2100,
-  studyAreaForMask = NULL
+  studyArea = NULL
 )
 
 makeLandRCS_projectedCMI(
   normalMAT,
   pathToFutureRasters,
   years = 2011:2100,
-  studyAreaForMask = NULL
+  studyArea = NULL
 )
 
 makeLandRCS_projectedATA(
   normalMAT,
   pathToFutureRasters,
   years = 2011:2100,
-  studyAreaForMask = NULL
+  studyArea = NULL
 )
 }
 \arguments{
@@ -34,7 +34,8 @@ makeLandRCS_projectedATA(
 
 \item{years}{the projection years (e.g. 2011)}
 
-\item{studyAreaForMask}{TODO}
+\item{studyArea}{an \code{sf} polygon delineating the boundaries of the study area.
+typically used to crop/mask rasters when \code{rasterToMatch} is not supplied.}
 }
 \value{
 a list of projected rasters - CMI and ATA

@@ -25,9 +25,10 @@ ClimateNA_tiles_gpkg <- function() {
 #' @param f character. path to a `.asc` raster file
 #'
 #' @export
+#' @importFrom utils write.table
 rewrite_asc <- function(f) {
   readLines(f, warn = FALSE) |>
-    write.table(f, row.names = FALSE, col.names = FALSE, quote = FALSE, append = FALSE)
+    utils::write.table(f, row.names = FALSE, col.names = FALSE, quote = FALSE, append = FALSE)
 
   return(invisible(NULL))
 }
@@ -45,6 +46,8 @@ tileID <- function(file) {
 }
 
 #' Construct target output paths for ClimateNA data
+#'
+#' @param dataPath TODO
 #'
 #' @template ClimateNA_tile
 #'

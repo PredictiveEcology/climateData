@@ -6,8 +6,8 @@
 \usage{
 buildClimateMosaics(
   tile,
-  climVar,
-  climYrs,
+  climVars,
+  years,
   srcdir = NULL,
   dstdir = NULL,
   cl = NULL
@@ -16,9 +16,9 @@ buildClimateMosaics(
 \arguments{
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
-\item{climVar}{character. climate variables to use to construct mosaics.}
+\item{climVars}{character. climate variables to use to construct mosaics.}
 
-\item{climYrs}{integer. data years to use to assemble mosaic layers.}
+\item{years}{integer. consecutive data years to use (e.g., \code{2011:2100}).}
 
 \item{srcdir, dstdir}{character. vector of directory paths to source and destination raster files.}
 

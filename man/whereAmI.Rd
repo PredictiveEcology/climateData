@@ -7,7 +7,8 @@
 whereAmI(studyArea)
 }
 \arguments{
-\item{studyArea}{}
+\item{studyArea}{an \code{sf} polygon delineating the boundaries of the study area.
+typically used to crop/mask rasters when \code{rasterToMatch} is not supplied.}
 }
 \value{
 integer. vector of tile IDs.

@@ -14,7 +14,8 @@ makeClimateDEM(
 )
 }
 \arguments{
-\item{studyArea}{a study area for cropping the \code{gtopo30} DEM}
+\item{studyArea}{an \code{sf} polygon delineating the boundaries of the study area.
+typically used to crop/mask rasters when \code{rasterToMatch} is not supplied.}
 
 \item{arcSecRes}{the resolution of the output DEM in arcseconds}
 

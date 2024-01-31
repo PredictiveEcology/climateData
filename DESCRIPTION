@@ -23,6 +23,7 @@ Imports:
     methods,
     parallel,
     parallelly,
+    purrr,
     reproducible (>= 2.0.8),
     RSQLite,
     stats,

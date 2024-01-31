@@ -14,6 +14,8 @@ ClimateNA_path(
 )
 }
 \arguments{
+\item{dataPath}{TODO}
+
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
 \item{type}{character. denotes the table in the sqlite database to access.
