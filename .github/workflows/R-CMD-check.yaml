@@ -48,9 +48,9 @@ jobs:
         with:
           extra-packages: |
             any::rcmdcheck
-            any::Rcpp
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
+
