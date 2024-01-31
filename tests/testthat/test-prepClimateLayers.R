@@ -19,7 +19,7 @@ test_that("prepClimateLayers works for multiple variable types", {
     # ATA = list(vars = c("Tmax_sm", "normal_Tmax"),  FUN = quote(calcATA(...))),
     # CMD_sm = list(vars = c("CMD_sm"), FUN = NULL),
     MDC = list(vars = c(sprintf("PPT%02d", 4:9), sprintf("Tmax%02d", 4:9)),
-               fun = quote(makeMDC))
+               fun = quote(calcMDC))
   )
 
   historicalClimateRasters <- prepClimateRasters(

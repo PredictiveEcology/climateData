@@ -16,8 +16,8 @@ utils::globalVariables(c(
 #' @importFrom data.table data.table
 #' @importFrom terra crs crs<- values ncell rast set.names setValues
 #' @importFrom stats na.omit
-#' @rdname makeMDC
-makeMDC <- function(stacks, layers, ...) {
+#' @rdname calcVars
+calcMDC <- function(stacks, layers, ...) {
 	# 1. Make sure it has all defaults
   stopifnot(!missing(stacks), !missing(layers),
             all(layers %in% sapply(stacks, names, simplify = TRUE)))
