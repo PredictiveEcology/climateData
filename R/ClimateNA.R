@@ -37,7 +37,7 @@ tileID <- function(file) {
 ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm = NULL, ssp = NULL) {
   stopifnot(type %in% c("historic", "historic_normals", "future", "future_normals"))
 
-  MSY <-  switch(msy, MSY = "all", M = "monthly", Y = "yearly")
+  MSY <-  switch(msy, MSY = "all", M = "monthly", S = "seasonal", Y = "yearly")
   switch(
     type,
     historic = file.path(dataPath, "historic", MSY, tile),
