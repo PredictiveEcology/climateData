@@ -2,25 +2,133 @@ utils::globalVariables(c(
 	":=", "mdc_0", "mdc_m"
 ))
 
-#' Create raster of Monthly Drought Code (MDC)
+#' Determine the type of climate variables
 #'
 #' @template stacks_layers
 #'
-#' @param ... additional arguments (not used).
+#' @return character string indicating the type (one of "historic" or "future")
 #'
-#' @return A list of all years, with each year being the local path for the raster stack that
-#'         contains all variables.
+#' @export
+#' @importFrom dplyr first
+calcStackLayersType <- function(stacks, layers) {
+  stopifnot(!missing(stacks), !missing(layers))
+
+  type <- vapply(layers, function(lyr) {
+    strsplit(lyr, "_")[[1]] |> dplyr::first()
+  }, character(1)) |>
+    unique()
+
+  return(type)
+}
+
+#' Check layer names within a list of raster stacks
 #'
-#' @author Tati Micheletti, Ian Eddy, Alex Chubaty
+#' @template stacks_layers
+#'
+#' @export
+#' @importFrom dplyr first
+checkCalcStackLayers <- function(stacks, layers) {
+  stopifnot(!missing(stacks), !missing(layers))
+
+  type <- calcStackLayersType(stacks, layers)
+  layers <- vapply(layers, function(l) {
+    gsub(paste0("(", paste0(type, "_"), ")", collapse = "|"), "", l)
+  }, character(1))
+  stackLayers <- lapply(stacks, names) |> unlist() |> unique()
+  stopifnot(all(layers %in% stackLayers)) ## TODO: too general; specific layers in specific rasters
+}
+
+#' Create raster stacks of climate variables
+#'
+#' Produce a `SpatRaster` object corresponding to a single climate variable,
+#' with layers corresponding to climate years or periods.
+#'
+#' - `calcAsIs()` returns the climate variable without modification;
+#' - `calcATA()` calculates Annual Temperature Anomaly (ATA) from `MAT` and `MAT_normal`;
+#' - `calcMDC()` calculates Monthly Drought Code (MDC) from `Tmax` and `PPT` for April-September;
+#'
+#' @template stacks_layers
+#'
+#' @template dots
+#'
+#' @template return_calcVars
+#'
+#' @author Alex Chubaty, Ian Eddy, Tati Micheletti
+#'
+#' @export
+#' @rdname calcVars
+calcAsIs <- function(stacks, layers, .dots = NULL) {
+  stopifnot(length(layers) == 1)
+
+  type <- calcStackLayersType(stacks, layers)
+  type_years <- grep(paste0("(", paste0(type, collapse = "|"), ")_years"), names(.dots), value = TRUE)
+  type_periods <- grep(paste0("(", paste0(type, collapse = "|"), ")_period"), names(.dots), value = TRUE)
+
+  stack_years <- list()
+  stack_periods <- list()
+
+  if (length(type_years) > 0) {
+    names_years <- paste0(gsub("_years", "", type_years), "_", .dots[[type_years]])
+    if (all(names_years %in% names(stacks))) {
+      stack_years <- stacks[names_years]
+    }
+  }
+
+  if (length(type_periods) > 0) {
+    names_periods <- paste0(gsub("_period", "", type_periods), "_", .dots[[type_periods]])
+    if (all(names_periods %in% names(stacks))) {
+      stack_periods <- stacks[names_periods]
+    }
+  }
+
+  stks <- append(stack_years, stack_periods)
+
+  checkCalcStackLayers(stks, layers)
+
+  newStk <- lapply(stks, function(x) {
+      x[[gsub(paste0(type, "_"), "", layers)]]
+    }) |>
+      rast()
+  set.names(newStk, paste0(gsub(paste0(type, "_"), "", layers), "_", names(newStk))) ## years or period
+
+  return(newStk)
+}
+
+#' @export
+#' @importFrom terra app
+#' @rdname calcVars
+calcATA <- function(stacks, layers, .dots = NULL) {
+  type <- calcStackLayersType(stacks, layers)
+  type_years <- grep(paste0("(", paste0(type, collapse = "|"), ")_years"), names(.dots), value = TRUE)
+  type_periods <- grep(paste0("(", paste0(type, collapse = "|"), ")_period"), names(.dots), value = TRUE)
+  stack_years <- stacks[paste0(gsub("_years", "", type_years), "_", .dots[[type_years]])]
+  stack_periods <- stacks[paste0(gsub("_period", "", type_periods), "_", .dots[[type_periods]])]
+  checkCalcStackLayers(append(stack_years, stack_periods), layers)
+
+  MAT_norm_mean <- rast(stack_periods) |> terra::app(fun = mean, na.rm = TRUE)
+
+  ATAstack <- lapply(stack_years,  function(x) {
+      ata <- MAT_norm_mean - x[["MAT"]]
+      set.names(ata, "ATA")
+      return(ata)
+    }) |>
+    rast()
+  set.names(ATAstack, paste0("ATA_", names(stack_years))) ## years
+
+  return(ATAstack)
+}
+
+#' Create raster of Monthly Drought Code (MDC)
+#'
 #' @export
 #' @importFrom data.table data.table
 #' @importFrom terra crs crs<- values ncell rast set.names setValues
 #' @importFrom stats na.omit
 #' @rdname calcVars
-calcMDC <- function(stacks, layers, ...) {
-	# 1. Make sure it has all defaults
-  stopifnot(!missing(stacks), !missing(layers),
-            all(layers %in% sapply(stacks, names, simplify = TRUE)))
+calcMDC <- function(stacks, layers, .dots = NULL) {
+  type <- calcStackLayersType(stacks, layers)
+  stack_years <- stacks[paste0(type, "_", .dots[[paste0(type, "_years")]])]
+  checkCalcStackLayers(stack_years, layers)
 
   droughtMonths <- sapply(layers, function(x) substr(x, nchar(x) - 1, nchar(x))) |>
     as.integer() |>
@@ -53,7 +161,7 @@ calcMDC <- function(stacks, layers, ...) {
 			"9" = 30)[[as.character(Month)]]
 	}
 
-	annualMDC <- lapply(stacks, FUN = function(x) {
+	annualMDC <- lapply(stack_years, FUN = function(x) {
 	  mdc <- lapply(droughtMonths, FUN = function(mnth, MDCstack = x) {
 			ppt <- MDCstack[[sprintf("PPT%02d", mnth)]]
 			tmax <- MDCstack[[sprintf("Tmax%02d", mnth)]]
@@ -86,7 +194,7 @@ calcMDC <- function(stacks, layers, ...) {
 		return(mdc)
 	}) |>
 	  rast()
-	set.names(annualMDC, paste0("MDC_", names(stacks))) ## years
+	set.names(annualMDC, paste0("MDC_", names(stack_years))) ## years
 
 	return(annualMDC)
 }

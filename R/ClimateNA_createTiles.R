@@ -89,15 +89,14 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
 #'        - `df`, a lazy `tbl_dbi` object (see `dbplyr`).
 #'
 #' @export
-#' @importFrom DBI dbConnect
 #' @importFrom DBI dbCreateTable dbExecute dbExistsTable
 #' @importFrom dplyr tbl
-#' @importFrom RSQLite SQLite
+#' @importFrom RSQLite dbConnect SQLite
 #' @importFrom tibble rowid_to_column
 ClimateNA_sql <- function(dbfile, type) {
   firstRun <- file.exists(dbfile)
 
-  db <- DBI::dbConnect(
+  db <- RSQLite::dbConnect(
     drv = RSQLite::SQLite(),
     dbname = dbfile,
     synchronous = "normal",

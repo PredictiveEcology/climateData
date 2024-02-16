@@ -14,8 +14,9 @@ makeClimateDEM(
 )
 }
 \arguments{
-\item{studyArea}{an \code{sf} polygon delineating the boundaries of the study area.
-typically used to crop/mask rasters when \code{rasterToMatch} is not supplied.}
+\item{studyArea}{an \code{sf} or \code{SpatVect} polygon delineating the boundaries of the study area.
+typically used to crop/mask rasters when \code{rasterToMatch} is not supplied.
+passed to \code{\link[reproducible:postProcessTo]{reproducible::postProcessTo()}}.}
 
 \item{arcSecRes}{the resolution of the output DEM in arcseconds}
 

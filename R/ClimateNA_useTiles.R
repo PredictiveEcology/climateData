@@ -1,5 +1,5 @@
 utils::globalVariables(c(
-  "gid", "tileid", "year"
+  "gid", "period", "tileid", "year"
 ))
 
 #' Identify ClimateNA tiles overlapping a study area
@@ -17,7 +17,7 @@ whereAmI <- function(studyArea) {
     (function(x) x$id)()
 }
 
-#' Look up the URLs for a set of climate tiles
+#' Extract a table from the ClimateNA sqlite databose
 #'
 #' @template ClimateNA_type
 #' @template ClimateNA_tile
@@ -25,25 +25,26 @@ whereAmI <- function(studyArea) {
 #' @template ClimateNA_msy
 #' @template ClimateNA_gcmssp
 #'
-#' @return list of Google Drive ids, with names corresponding the tile ids.
+#' @return `data.frame`
 #'
 #' @export
-#' @importFrom data.table .SD as.data.table
 #' @importFrom DBI dbDisconnect
 #' @importFrom dplyr collect filter
-getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
-                           gcm = NULL, ssp = NULL) {
+getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
+                            gcm = NULL, ssp = NULL) {
   stopifnot(
     type %in% .allowedClimateTypes,
     !is.null(tile),
-    !is.null(years),
     !is.null(msy)
   )
+
+  if (isFALSE(grepl("normals", type))) {
+    stopifnot(!is.null(years))
+  }
 
   dbdf <- ClimateNA_sql(ClimateNA_tiles_sqlite(), type)
   climate_db <- dbdf[["db"]]
   climate_df <- dbdf[["df"]]
-  rm(dbdf)
   on.exit(DBI::dbDisconnect(climate_db), add = TRUE)
 
   climate_dt <- if (type == "historic") {
@@ -57,11 +58,49 @@ getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
   } else if (type == "future_normals") {
     ## all periods in single zip per gcm_ssp
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy,
-                  gcm == !!gcm, ssp == !!(as.character(ssp)))
+                  gcm == !!gcm, ssp == !!(as.character(ssp)) )
   }
-  climate_dt <- dplyr::collect(climate_dt) |>
-    as.data.table()
+  climate_dt <- dplyr::collect(climate_dt)
+}
 
+#' Get historic or future climate normals periods
+#'
+#' @template ClimateNA_type
+#' @template ClimateNA_tile
+#' @template ClimateNA_msy
+#' @template ClimateNA_gcmssp
+#'
+#' @return character.
+#'
+#' @export
+#' @importFrom dplyr pull
+getNormalsPeriods <- function(type = NULL, tile = NULL, msy = "Y", gcm = NULL, ssp = NULL) {
+  if (type %in% c("historic", "future")) {
+    type <- paste0(type, "_normals")
+  }
+
+  getClimateTable(type = type, tile = tile, msy = msy, gcm = gcm, ssp = ssp) |>
+    dplyr::pull(period) |>
+    unique()
+}
+
+#' Look up the URLs for a set of climate tiles
+#'
+#' @template ClimateNA_type
+#' @template ClimateNA_tile
+#' @template ClimateNA_years
+#' @template ClimateNA_msy
+#' @template ClimateNA_gcmssp
+#'
+#' @return list of Google Drive ids, with names corresponding the tile ids.
+#'
+#' @export
+#' @importFrom data.table .SD as.data.table
+getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
+                           gcm = NULL, ssp = NULL) {
+  climate_dt <- getClimateTable(type = type, tile = tile, years = years, msy = msy,
+                                gcm = gcm, ssp = ssp) |>
+    as.data.table()
   subsetdt <- climate_dt[, .SD, .SDcols = c("tileid", "gid")] |> unique()
   url <- lapply(unique(subsetdt$tileid), function(t) {
     subsetdt[tileid == t, gid]
@@ -108,11 +147,15 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
 
 #' Build climate mosaic rasters from ClimateNA tiles
 #'
+#' @template ClimateNA_type
+#'
 #' @template ClimateNA_tile
 #'
-#' @param climVars character. climate variables to use to construct mosaics.
+#' @template ClimateNA_climVars
 #'
 #' @template ClimateNA_years
+#'
+#' @template ClimateNA_gcmssp
 #'
 #' @template ClimateNA_srcdstdir
 #'
@@ -128,7 +171,16 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
 #' @importFrom reproducible checkPath
 #' @importFrom sf gdal_utils
 #' @importFrom tools file_path_sans_ext
-buildClimateMosaics <- function(tile, climVars, years, srcdir = NULL, dstdir = NULL, cl = NULL) {
+#'
+#' @rdname buildClimateMosaics
+buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = NULL,
+                                srcdir = NULL, dstdir = NULL, cl = NULL) {
+
+  if (any(grepl("_normal$", climVars))) {
+    stop("At least one of 'climVars' is a climate normal variable; ",
+         "use buildClimateMosaicsNormals() for these.")
+  }
+
   if (any(is.null(srcdir), is.null(dstdir))) {
     stop("both 'srcdir' and 'dstdir' must specified and non-NULL.")
   }
@@ -147,12 +199,12 @@ buildClimateMosaics <- function(tile, climVars, years, srcdir = NULL, dstdir = N
 
   parallel::clusterExport(cl, c("climVars", "dstdir", "srcdir", "tile"), envir = environment())
 
-  ## TODO: switch the loops so outputs a list of annual climate vars
   tifs <- parallel::parLapply(cl, years, function(y) {
     lapply(climVars, function(v) {
-      srcfiles <- fs::dir_ls(srcdir, regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
+      srcfiles <- srcdir |>
+        fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
         fs::dir_ls(regexp = y, type = "directory") |>
-        fs::dir_ls(regexp = paste0(v, ".*[.]asc$"), type = "file") ## TODO: improve regex; e.g., bFFP, eFFP vs FFP
+        fs::dir_ls(regexp = paste0("(/|\\\\)", v, "[.]asc$"), type = "file")
 
       stopifnot(length(srcfiles) > 0)
 
@@ -175,8 +227,140 @@ buildClimateMosaics <- function(tile, climVars, years, srcdir = NULL, dstdir = N
     }) |>
       unlist()
   }) ## don't flatten the out list; want to access list of climate variables per year
-
-  names(tifs) <- years
+  names(tifs) <- paste0(type, "_", years)
 
   return(tifs)
+}
+
+#' @template ClimateNA_period
+#'
+#' @export
+#' @rdname buildClimateMosaics
+buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL, ssp = NULL,
+                                       srcdir = NULL, dstdir = NULL, cl = NULL) {
+
+  if (!all(grepl("_normal$", climVars))) {
+    stop("At least one of 'climVars' is not a climate normal variable; ",
+         "use buildClimateMosaics() for these.")
+  }
+
+  if (any(is.null(srcdir), is.null(dstdir))) {
+    stop("both 'srcdir' and 'dstdir' must specified and non-NULL.")
+  }
+
+  srcdir <- checkPath(srcdir, create = TRUE)
+  dstdir <- checkPath(dstdir, create = TRUE)
+
+  cores <- min(length(period), parallelly::availableCores())
+
+  if (is.null(cl)) {
+    cl <- parallelly::makeClusterPSOCK(cores,
+                                       default_packages = c("fs", "sf", "terra"),
+                                       rscript_libs = .libPaths(),
+                                       autoStop = TRUE)
+  }
+
+  parallel::clusterExport(cl, c("climVars", "dstdir", "srcdir", "tile"), envir = environment())
+
+  tifs <- parallel::parLapply(cl, period, function(p) {
+    lapply(climVars, function(v) {
+      nv <- strsplit(v, "_normal")[[1]]
+      srcfiles <- srcdir |>
+        fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
+        fs::dir_ls(regexp = p, type = "directory") |>
+        fs::dir_ls(regexp = paste0(nv, ".*[.]asc$"), type = "file") ## TODO: improve regex; e.g., bFFP, eFFP vs FFP
+
+      stopifnot(length(srcfiles) > 0)
+
+      ## vrts must be a single layer, so need to do e.g. monthly climVars by each month
+      lapply(unique(basename(srcfiles)), function(mv) {
+        mv <- tools::file_path_sans_ext(mv)
+        fname <- paste(mv, basename(basename(srcdir)), p, "t", paste(tile, collapse = "-"), sep = "_")
+        dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
+        dsttif <- file.path(dstdir, paste0(fname, ".tif"))
+
+        ## TODO: by default, layer name is filename; update this to be `mv`
+        sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
+        sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
+
+        on.exit(file.remove(dstvrt), add = TRUE)
+
+        return(dsttif)
+      }) |>
+        unlist()
+    }) |>
+      unlist()
+  }) ## don't flatten the out list; want to access list of climate variables per year
+  names(tifs) <- paste0(type, "_", period)
+
+  return(tifs)
+}
+
+
+#' Climate Stacks by Year
+#'
+#' @param tifs TODO
+#'
+#' @template ClimateNA_type
+#'
+#' @template ClimateNA_climVars
+#'
+#' @template ClimateNA_years
+#'
+#' @return list of `SpatRaster`s
+#'
+#' @export
+#' @importFrom terra rast set.names
+#' @rdname climateStacksByYear
+climateStacksByYear <- function(tifs, climVars, type, years) {
+  if (length(tifs) > 0) {
+    namesPerYear <- paste0(type, "_", years)
+    climStacks_msy <- lapply(namesPerYear, function(y) {
+      rs <- lapply(tifs[[y]], function(files) {
+        r <- terra::rast(files)
+        shortName <- vapply(basename(files), function(f) strsplit(f, "_")[[1]][1], character(1))
+        terra::set.names(r, shortName)
+
+        return(r)
+      }) |>
+        terra::rast()
+      terra::set.names(rs, climVars)
+
+      return(rs)
+    })
+    names(climStacks_msy) <- namesPerYear
+  } else {
+    climStacks_msy <- list()
+  }
+
+  return(climStacks_msy)
+}
+
+#' @template ClimateNA_period
+#'
+#' @export
+#' @importFrom terra rast set.names
+#' @rdname climateStacksByYear
+climateStacksByPeriod <- function(tifs, climVars, type, period) {
+  if (length(tifs) > 0) {
+    namesPerPeriod <- paste0(type, "_", period)
+    climStacks_nrm <- lapply(namesPerPeriod, function(p) {
+      rs <- lapply(tifs[[p]], function(files) {
+        r <- terra::rast(files)
+        shortName <- vapply(basename(files), function(f) strsplit(f, "_")[[1]][1], character(1))
+        terra::set.names(r, shortName)
+
+        return(r)
+      }) |>
+        terra::rast()
+      terra::set.names(rs, climVars)
+
+      return(rs)
+    })
+    names(climStacks_nrm) <- namesPerPeriod
+  } else {
+    climStacks_nrm <- list()
+  }
+
+  return(climStacks_nrm)
 }

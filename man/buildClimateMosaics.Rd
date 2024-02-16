@@ -2,23 +2,47 @@
 % Please edit documentation in R/ClimateNA_useTiles.R
 \name{buildClimateMosaics}
 \alias{buildClimateMosaics}
+\alias{buildClimateMosaicsNormals}
 \title{Build climate mosaic rasters from ClimateNA tiles}
 \usage{
 buildClimateMosaics(
+  type,
   tile,
   climVars,
   years,
+  gcm = NULL,
+  ssp = NULL,
+  srcdir = NULL,
+  dstdir = NULL,
+  cl = NULL
+)
+
+buildClimateMosaicsNormals(
+  type,
+  tile,
+  climVars,
+  period,
+  gcm = NULL,
+  ssp = NULL,
   srcdir = NULL,
   dstdir = NULL,
   cl = NULL
 )
 }
 \arguments{
+\item{type}{character. denotes the table in the sqlite database to access.
+one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
+
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
-\item{climVars}{character. climate variables to use to construct mosaics.}
+\item{climVars}{character. CLimateNA climate variables to use.
+see \url{https://climatena.ca/Help2#_var} for full list of variables.}
 
 \item{years}{integer. consecutive data years to use (e.g., \code{2011:2100}).}
+
+\item{gcm}{character. name of GCM available in ClimateNA.}
+
+\item{ssp}{integer. one of the available SSPs in ClimateNA (e.g., \code{370} or \code{585})}
 
 \item{srcdir, dstdir}{character. vector of directory paths to source and destination raster files.}
 
@@ -27,6 +51,8 @@ buildClimateMosaics(
 Users can pass their own \code{cl} object or specify option
 \code{parallelly.availableCores.fallback} to reduce the number of cores used.
 See \code{?parallelly.options}.}
+
+\item{period}{character. climate normal periods to use (e.g., \code{c("1951_1980", "1981_2010")}).}
 }
 \value{
 character. filepaths corresponding to the raster mosaic files for each \code{climVar}.
