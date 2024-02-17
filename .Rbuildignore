@@ -6,3 +6,4 @@
 ^climateData\.Rproj$
 ^LICENSE$
 ^man-roxygen$
+^data-raw$
