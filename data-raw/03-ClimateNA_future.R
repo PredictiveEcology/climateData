@@ -12,18 +12,9 @@ future_climate_df <- dbdf[["df"]]
 rm(dbdf)
 
 MSYs <- c("MSY", "M", "S", "Y")
-GCMs <- c(
-  # "8GCMs_ensemble", ## see http://climatena.ca/downloads/ClimateNA_8ModelRationale_Mahony_07May2022.pdf
-  "CanESM5",
-  "CNRM-ESM2-1"
-)
-SSPs <- c(
-  # "126",
-  "245",
-  "370",
-  "585"
-)
-future_years <- 2011L:2100L
+GCMs <- available("future")[["gcms"]]
+SSPs <- available("future")[["ssps"]]
+future_years <- available("future")[["years"]]
 future_decades <- (future_years %/% 10 * 10) |> unique() |> as.integer()
 
 runClimateNA <- FALSE ## TRUE

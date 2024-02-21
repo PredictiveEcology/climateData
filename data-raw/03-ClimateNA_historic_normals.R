@@ -1,5 +1,5 @@
 ## 1. Create tiles for Canada for use with ClimateNA;
-## 2. Download and process historic, projected, and normals data for each tile using ClimateNA;
+## 2. Download and process data for each tile using ClimateNA;
 ## 3. Archive and upload each set of tiles for use with canClimateData.
 
 # setup ---------------------------------------------------------------------------------------
@@ -12,17 +12,8 @@ climate_hist_normals_df <- dbdf[["df"]]
 rm(dbdf)
 
 MSYs <- c("Y")
-period_nrm <- c(
-  "Normal_1901_1930.nrm",
-  "Normal_1911_1940.nrm",
-  "Normal_1921_1950.nrm",
-  "Normal_1931_1960.nrm",
-  "Normal_1941_1970.nrm",
-  "Normal_1951_1980.nrm", ## LandR.CS/fireSense
-  "Normal_1971_2000.nrm",
-  "Normal_1981_2010.nrm", ## LandR.CS/fireSense
-  "Normal_1991_2020.nrm"
-)
+hist_nrm_prds <- available("historic_normals")[["periods"]]
+period_nrm <- paste0("Normal_", hist_nrm_prds, ".nrm")
 
 runClimateNA <- FALSE ## TRUE
 createZips <- FALSE ## TRUE
@@ -34,21 +25,6 @@ if (!exists("dem_ff")) {
 }
 
 plan("callr", workers = min(length(dem_ff), parallelly::availableCores()))
-
-# use ClimateNA to fetch and process climate data ---------------------------------------------
-
-## TODO: currently, the package is of very low quality,
-##       offering little more than a clumsy wrapper around system2()
-
-# if (!"ClimateNAr" %in% row.names(installed.packages())) {
-#   dlDir <- file.path("C:/Users", Sys.info()[["user"]], "Downloads")
-#   pkgurl <- "https://climatena.ca/downloads/ClimateNAr_1.2.0.zip"
-#   pkglcl <- file.path(dlDir, basename(pkgurl))
-#   download.file(pkgurl, pkglcl)
-#   install.packages(pkglcl, repos = NULL)
-# }
-#
-# library(ClimateNAr)
 
 # get ClimateNA historic normals --------------------------------------------------------------
 
