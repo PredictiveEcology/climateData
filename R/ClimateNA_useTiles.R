@@ -30,6 +30,14 @@ whereAmI <- function(studyArea) {
 #' @export
 #' @importFrom DBI dbDisconnect
 #' @importFrom dplyr collect filter
+#'
+#' @examples
+#' (getClimateTable(type = "historic", tile = 1, msy = "M", years = 2011:2020))
+#' (getClimateTable(type = "future", tile = 1, msy = "Y", years = 2051:2060,
+#'                  gcm = "CanESM5", ssp = 370))
+#' (getClimateTable(type = "historic_normals", tile = 1, msy = "Y"))
+#' (getClimateTable(type = "future_normals", tile = 1, msy = "Y",
+#'                  gcm = "CanESM5", ssp = 370)) ## none yet available
 getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
                             gcm = NULL, ssp = NULL) {
   stopifnot(
@@ -37,6 +45,10 @@ getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
     !is.null(tile),
     !is.null(msy)
   )
+
+  if (isTRUE(grepl("future", type))) {
+    stopifnot(!is.null(gcm), !is.null(ssp))
+  }
 
   if (isFALSE(grepl("normals", type))) {
     stopifnot(!is.null(years))
@@ -51,14 +63,14 @@ getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy, year %in% !!years)
   } else if (type == "future") {
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy, year %in% !!years,
-                  gcm == !!gcm, ssp == !!(as.character(ssp)))
+                  gcm == !!gcm, ssp == !!as.character(ssp))
   } else if (type == "historic_normals") {
     ## all periods in single zip
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy)
   } else if (type == "future_normals") {
     ## all periods in single zip per gcm_ssp
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy,
-                  gcm == !!gcm, ssp == !!(as.character(ssp)) )
+                  gcm == !!gcm, ssp == !!as.character(ssp))
   }
   climate_dt <- dplyr::collect(climate_dt)
 }

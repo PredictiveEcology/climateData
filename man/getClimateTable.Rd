@@ -33,3 +33,11 @@ one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
 \description{
 Extract a table from the ClimateNA sqlite databose
 }
+\examples{
+(getClimateTable(type = "historic", tile = 1, msy = "M", years = 2011:2020))
+(getClimateTable(type = "future", tile = 1, msy = "Y", years = 2051:2060,
+                 gcm = "CanESM5", ssp = 370))
+(getClimateTable(type = "historic_normals", tile = 1, msy = "Y"))
+(getClimateTable(type = "future_normals", tile = 1, msy = "Y",
+                 gcm = "CanESM5", ssp = 370)) ## none yet available
+}
