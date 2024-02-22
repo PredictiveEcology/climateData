@@ -6,7 +6,7 @@
 
 source("data-raw/01-ClimateNA_setup.R")
 
-dbdf <- ClimateNA_sql(tempDBfile, "future_normals")
+dbdf <- ClimateNA_sql(wrkngDBfile, "future_normals")
 climate_db <- dbdf[["db"]]
 climate_futu_normals_df <- dbdf[["df"]]
 rm(dbdf)
@@ -31,7 +31,7 @@ plan("callr", workers = min(length(dem_ff), parallelly::availableCores()))
 # get ClimateNA future normals --------------------------------------------------------------
 
 new_rows_futu_normals <- future_lapply(dem_ff, function(f) {
-  dbdf <- ClimateNA_sql(tempDBfile, "future_normals")
+  dbdf <- ClimateNA_sql(wrkngDBfile, "future_normals")
   climate_db <- dbdf[["db"]]
   climate_futu_normals_df <- dbdf[["df"]]
   rm(dbdf)
@@ -96,14 +96,14 @@ if (!"rowid" %in% colnames(new_rows_futu_normals)) {
 
 dbDisconnect(climate_db)
 
-file.copy(tempDBfile, primaryDBfile, overwrite = TRUE)
+file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
 # archive tilesets ----------------------------------------------------------------------------
 
 if (createZips) {
   ## future normals
   new_rows_futu_normals <- future_lapply(dem_ff, function(f) {
-    dbdf <- ClimateNA_sql(tempDBfile, "future_normals")
+    dbdf <- ClimateNA_sql(wrkngDBfile, "future_normals")
     climate_db <- dbdf[["db"]]
     climate_futu_normals_df <- dbdf[["df"]]
     rm(dbdf)
@@ -139,7 +139,7 @@ if (createZips) {
 
   dbDisconnect(climate_db)
 
-  file.copy(tempDBfile, primaryDBfile, overwrite = TRUE)
+  file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }
 
 # upload tilesets -----------------------------------------------------------------------------
@@ -155,7 +155,7 @@ if (uploadArchives) {
   new_rows_futu_normals <- future_lapply(dem_ff, function(f) {
     googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 
-    dbdf <- ClimateNA_sql(tempDBfile, "future_normals")
+    dbdf <- ClimateNA_sql(wrkngDBfile, "future_normals")
     climate_db <- dbdf[["db"]]
     climate_futu_normals_df <- dbdf[["df"]]
     rm(dbdf)
@@ -191,8 +191,8 @@ if (uploadArchives) {
 
   dbDisconnect(climate_db)
 
-  file.copy(tempDBfile, primaryDBfile, overwrite = TRUE)
+  file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }
 
 ## copy updated db to module data folder
-file.copy(primaryDBfile, pkgDBfile, overwrite = TRUE)
+file.copy(addlDBfile, pkgDBfile, overwrite = TRUE)

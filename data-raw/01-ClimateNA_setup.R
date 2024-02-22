@@ -21,9 +21,10 @@ library(sf)
 library(terra)
 
 library(reproducible)
+library(rprojroot)
 
-# library(climateData)
-devtools::load_all()
+prjDir <- find_root(has_file("climateData.Rproj"))
+devtools::load_all(prjDir)
 
 # setup ---------------------------------------------------------------------------------------
 
@@ -36,19 +37,21 @@ ClimateNAdata <- switch(Sys.info()[["sysname"]],
                         Windows = "C:/ClimateNA_data")
 stopifnot(dir.exists(ClimateNAdata))
 
-extdataPath <- system.file("extdata", package = "climateData")
-
 userEmail <- "achubaty@for-cast.ca"
-oauthCachePath <- file.path(".secrets")
+oauthCachePath <- file.path(pkgDir, ".secrets")
 googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 
 ## database tracks which data already processed / uploaded
+##
+##   NOTE: the package version should be the canonical one,
+##         although it is useful to work on the shared one (addlDBfile)
+##         to allow multiple machines to use/update accordingly,
+##         sqlite databases can't always be opened from a network drive.
+dbfile <- "ClimateNA_tiles.sqlite"
+pkgDBfile <- file.path(prjDir, "inst", "extdata", dbfile)
+addlDBfile <- file.path(ClimateNAdata, dbfile)
+wrkngDBfile <- file.path(prjDir, dbfile) ## local copy in current directory
 
-## TODO: make the package version the canonical one?
-primaryDBfile <- file.path(ClimateNAdata, "ClimateNA_tiles.sqlite")
-pkgDBfile <- file.path(extdataPath, basename(primaryDBfile))
-tempDBfile <- file.path("ClimateNA_tiles.sqlite") ## local copy; primary on network drive 'locked'.
-
-if (file.exists(primaryDBfile)) {
-  file.copy(primaryDBfile, tempDBfile) ## always work on a copy
+if (file.exists(addlDBfile)) {
+  file.copy(pkgDBfile, wrkngDBfile) ## always work on a copy
 }

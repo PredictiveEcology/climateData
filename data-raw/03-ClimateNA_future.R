@@ -6,7 +6,7 @@
 
 source("data-raw/01-ClimateNA_setup.R")
 
-dbdf <- ClimateNA_sql(tempDBfile, "future")
+dbdf <- ClimateNA_sql(wrkngDBfile, "future")
 climate_db <- dbdf[["db"]]
 future_climate_df <- dbdf[["df"]]
 rm(dbdf)
@@ -47,7 +47,7 @@ plan("callr", workers = min(length(dem_ff), parallelly::availableCores()))
 # get ClimateNA future time series ------------------------------------------------------------
 
 new_rows_future <- future_lapply(dem_ff, function(f) {
-  dbdf <- ClimateNA_sql(tempDBfile, "future")
+  dbdf <- ClimateNA_sql(wrkngDBfile, "future")
   climate_db <- dbdf[["db"]]
   future_climate_df <- dbdf[["df"]]
   rm(dbdf)
@@ -118,14 +118,14 @@ if (!"rowid" %in% colnames(new_rows_future)) {
 
 dbDisconnect(climate_db)
 
-file.copy(tempDBfile, primaryDBfile, overwrite = TRUE)
+file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
 # archive tilesets ----------------------------------------------------------------------------
 
 if (createZips) {
   ## future time series
   new_rows_future <- future_lapply(dem_ff, function(f) {
-    dbdf <- ClimateNA_sql(tempDBfile, "future")
+    dbdf <- ClimateNA_sql(wrkngDBfile, "future")
     climate_db <- dbdf[["db"]]
     future_climate_df <- dbdf[["df"]]
     rm(dbdf)
@@ -178,7 +178,7 @@ if (createZips) {
 
   dbDisconnect(climate_db)
 
-  file.copy(tempDBfile, primaryDBfile, overwrite = TRUE)
+  file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }
 
 # upload tilesets -----------------------------------------------------------------------------
@@ -197,7 +197,7 @@ if (uploadArchives) {
 
   ## future time series
   new_rows_future <- future_lapply(dem_ff, function(f) {
-    dbdf <- ClimateNA_sql(tempDBfile, "future")
+    dbdf <- ClimateNA_sql(wrkngDBfile, "future")
     climate_db <- dbdf[["db"]]
     future_climate_df <- dbdf[["df"]]
     rm(dbdf)
@@ -258,8 +258,8 @@ if (uploadArchives) {
 
   dbDisconnect(climate_db)
 
-  file.copy(tempDBfile, primaryDBfile, overwrite = TRUE)
+  file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }
 
 ## copy updated db to module data folder
-file.copy(primaryDBfile, pkgDBfile, overwrite = TRUE)
+file.copy(addlDBfile, pkgDBfile, overwrite = TRUE)
