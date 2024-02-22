@@ -121,6 +121,7 @@ calcATA <- function(stacks, layers, .dots = NULL) {
 
 #' @export
 #' @importFrom terra app set.names
+#' @importFrom utils head
 #' @rdname calcVars
 calcCMInormal <- function(stacks, layers, .dots = NULL) {
   type <- calcStackLayersType(stacks, layers)
