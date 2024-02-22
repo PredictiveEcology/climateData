@@ -99,12 +99,12 @@ whichTypes <- function(climVars) {
 #'     historic_CMI = list(
 #'       vars = "historic_CMI",
 #'       fun = quote(calcAsIs),
-#'       .dots = list(historic_period = historic_prd, historic_years = historic_yrs)
+#'       .dots = list(historic_years = historic_yrs)
 #'     ),
 #'     historic_CMI_normal = list(
 #'       vars = "historic_CMI_normal",
 #'       fun = quote(calcCMInormal),
-#'       .dots = list(historic_years = historic_yrs)
+#'       .dots = list(historic_period = historic_prd, historic_years = historic_yrs)
 #'     ),
 #'     future_FFP = list(
 #'       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
