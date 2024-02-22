@@ -43,7 +43,7 @@ googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 
 ## database tracks which data already processed / uploaded
 ##
-##   NOTE: the package version should be the canonical one,
+##   NOTE: the package version should be the canonical one.
 ##         although it is useful to work on the shared one (addlDBfile)
 ##         to allow multiple machines to use/update accordingly,
 ##         sqlite databases can't always be opened from a network drive.
