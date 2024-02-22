@@ -79,22 +79,26 @@ test_that("prepClimateLayers works for multiple variable types", {
   rasterToMatch <- terra::rast(studyArea, resolution = 250) |>
     terra::rasterize(studyArea, y = _)
 
-  climateRastersStudyArea <- prepClimateLayers(
-    climateVarsList = climateVariables,
-    srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
-    dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
-    # tile = tileIDs, ## when passing `studyArea`/`rasterToMatch` then `tile` isn't needed
-    historic_years = historic_yrs,
-    future_years = future_yrs,
-    historic_period = historic_prd,
-    future_period = NULL,
-    gcm = GCM,
-    ssp = SSP,
-    cl = NULL,
-    studyArea = studyArea,
-    studyAreaName = "test_study_area",
-    rasterToMatch = rasterToMatch
-  )
+  ## spurious warning:
+  ## attribute variables are assumed to be spatially constant throughout all geometries
+  climateRastersStudyArea <- suppressWarnings({
+    prepClimateLayers(
+      climateVarsList = climateVariables,
+      srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
+      dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
+      # tile = tileIDs, ## when passing `studyArea`/`rasterToMatch` then `tile` isn't needed
+      historic_years = historic_yrs,
+      future_years = future_yrs,
+      historic_period = historic_prd,
+      future_period = NULL,
+      gcm = GCM,
+      ssp = SSP,
+      cl = NULL,
+      studyArea = studyArea,
+      studyAreaName = "test_study_area",
+      rasterToMatch = rasterToMatch
+    )
+  })
 
   lapply(climateRastersStudyArea, function(x) {
     expect_s4_class(x, "SpatRaster")
