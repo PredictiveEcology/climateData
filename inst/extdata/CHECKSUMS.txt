@@ -1,3 +1,0 @@
-"file" "checksum" "filesize" "algorithm"
-"gtopo30Canada.tif" "47a427c2e0167f85" "93389436" "xxhash64"
-"gtopo30Canada.zip" "e7991edaa95eef70" "89066458" "xxhash64"
