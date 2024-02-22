@@ -45,6 +45,7 @@ checkCalcStackLayers <- function(stacks, layers) {
 #'
 #' - `calcAsIs()` returns the climate variable without modification;
 #' - `calcATA()` calculates Annual Temperature Anomaly (ATA) from `MAT` and `MAT_normal`;
+#' - `calcCMInormal()` calculates mean CMI over multiple normals periods;
 #' - `calcMDC()` calculates Monthly Drought Code (MDC) from `Tmax` and `PPT` for April-September;
 #'
 #' @template stacks_layers
@@ -116,6 +117,23 @@ calcATA <- function(stacks, layers, .dots = NULL) {
   set.names(ATAstack, paste0("ATA_", names(stack_years))) ## years
 
   return(ATAstack)
+}
+
+#' @export
+#' @importFrom terra app
+#' @rdname calcVars
+calcCMInormal <- function(stacks, layers, .dots = NULL) {
+  type <- calcStackLayersType(stacks, layers)
+  type_years <- grep(paste0("(", paste0(type, collapse = "|"), ")_years"), names(.dots), value = TRUE)
+  type_periods <- grep(paste0("(", paste0(type, collapse = "|"), ")_period"), names(.dots), value = TRUE)
+  stack_years <- stacks[paste0(gsub("_years", "", type_years), "_", .dots[[type_years]])]
+  stack_periods <- stacks[paste0(gsub("_period", "", type_periods), "_", .dots[[type_periods]])]
+  checkCalcStackLayers(append(stack_years, stack_periods), layers)
+
+  CMI_norm_mean <- rast(stack_periods) |> terra::app(fun = mean, na.rm = TRUE)
+  set.names(CMI_norm_mean, "CMI_normal") ## TODO: include total period?
+
+  return(CMI_norm_mean)
 }
 
 #' Create raster of Monthly Drought Code (MDC)
