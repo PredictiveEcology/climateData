@@ -61,7 +61,8 @@ whichTypes <- function(climVars) {
 #' @importFrom dplyr first last
 #' @importFrom purrr transpose
 #' @importFrom reproducible .robustDigest Cache postProcessTo
-#' @importFrom terra set.names rast
+#' @importFrom sf st_union
+#' @importFrom terra aggregate rast set.names
 #'
 #' @examples
 #' if (require("archive", quietly = TRUE) &&
@@ -144,6 +145,15 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
 
   climatePath <- srcdir
   climatePathOut <- dstdir
+
+  ## need full study area perimeter w/o subpolygons
+  if (!is.null(studyArea)) {
+    if (is(studyArea, "sf")) {
+      studyArea <- sf::st_union(studyArea)
+    } else if (is(studyArea, "SpatVector")) {
+      studyArea <- terra::aggregate(studyArea)
+    }
+  }
 
   if (is.null(tile) && !is.null(studyArea) && !is.null(rasterToMatch)) {
     tile <- whereAmI(studyArea)
