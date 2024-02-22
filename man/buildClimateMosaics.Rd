@@ -50,6 +50,8 @@ see \url{https://climatena.ca/Help2#_var} for full list of variables.}
 \code{length(climVar)} number of CPU cores for parallel computation.
 Users can pass their own \code{cl} object or specify option
 \code{parallelly.availableCores.fallback} to reduce the number of cores used.
+Users may also need to specify setting up the cluster using 'sequential',
+rather than the default 'parallel', via \code{parallelly.makeNodePSOCK.setup_strategy}.
 See \code{?parallelly.options}.}
 
 \item{period}{character. climate normal periods to use (e.g., \code{c("1951_1980", "1981_2010")}).}

@@ -43,6 +43,8 @@ climate normal periods to use (e.g., \code{c("1951_1980", "1981_2010")}).}
 \code{length(climVar)} number of CPU cores for parallel computation.
 Users can pass their own \code{cl} object or specify option
 \code{parallelly.availableCores.fallback} to reduce the number of cores used.
+Users may also need to specify setting up the cluster using 'sequential',
+rather than the default 'parallel', via \code{parallelly.makeNodePSOCK.setup_strategy}.
 See \code{?parallelly.options}.}
 
 \item{studyArea}{an \code{sf} or \code{SpatVect} polygon delineating the boundaries of the study area.
