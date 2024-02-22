@@ -67,7 +67,8 @@ whichTypes <- function(climVars) {
 #' @examples
 #' if (require("archive", quietly = TRUE) &&
 #'     require("googledrive", quietly = TRUE) &&
-#'     require("SpaDES.tools", quietly = TRUE)) {
+#'     require("SpaDES.tools", quietly = TRUE) &&
+#'     !isTRUE(as.logical(Sys.getenv("CI", "false")))) {
 #'   dPath <- file.path(tempdir(), "test_prepClimateLayers")
 #'   climateType <- "historic"
 #'   climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
