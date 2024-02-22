@@ -120,7 +120,7 @@ calcATA <- function(stacks, layers, .dots = NULL) {
 }
 
 #' @export
-#' @importFrom terra app
+#' @importFrom terra app set.names
 #' @rdname calcVars
 calcCMInormal <- function(stacks, layers, .dots = NULL) {
   type <- calcStackLayersType(stacks, layers)
@@ -131,7 +131,10 @@ calcCMInormal <- function(stacks, layers, .dots = NULL) {
   checkCalcStackLayers(append(stack_years, stack_periods), layers)
 
   CMI_norm_mean <- rast(stack_periods) |> terra::app(fun = mean, na.rm = TRUE)
-  set.names(CMI_norm_mean, "CMI_normal") ## TODO: include total period?
+
+  paste0("CMI_normal_", substr(head(.dots[[type_periods]], 1), 1, 4), "-",
+         substr(head(rev(.dots[[type_periods]]), 1), 6, 9)) |>
+    set.names(CMI_norm_mean, value = _)
 
   return(CMI_norm_mean)
 }
