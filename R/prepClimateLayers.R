@@ -390,6 +390,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
 
     return(climRast)
   })
+  names(climData) <- names(climDataFun) ## TODO: verify
 
   return(climData)
 }
