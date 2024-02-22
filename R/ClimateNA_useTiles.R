@@ -200,7 +200,7 @@ buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = N
   srcdir <- checkPath(srcdir, create = TRUE)
   dstdir <- checkPath(dstdir, create = TRUE)
 
-  cores <- min(length(years), parallelly::availableCores())
+  cores <- min(length(years), parallelly::availableCores(constraints = "connections"))
 
   if (is.null(cl)) {
     cl <- parallelly::makeClusterPSOCK(cores,
@@ -263,7 +263,7 @@ buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL,
   srcdir <- checkPath(srcdir, create = TRUE)
   dstdir <- checkPath(dstdir, create = TRUE)
 
-  cores <- min(length(period), parallelly::availableCores())
+  cores <- min(length(period), parallelly::availableCores(constraints = "connections"))
 
   if (is.null(cl)) {
     cl <- parallelly::makeClusterPSOCK(cores,
