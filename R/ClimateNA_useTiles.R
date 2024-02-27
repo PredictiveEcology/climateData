@@ -178,7 +178,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
 #'
 #' @export
 #' @importFrom fs dir_ls
-#' @importFrom parallel parLapply
+#' @importFrom parallel parLapply stopCluster
 #' @importFrom parallelly availableCores
 #' @importFrom reproducible checkPath
 #' @importFrom sf gdal_utils
@@ -207,6 +207,7 @@ buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = N
                                        default_packages = c("fs", "sf", "terra"),
                                        rscript_libs = .libPaths(),
                                        autoStop = TRUE)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
   }
 
   parallel::clusterExport(cl, c("climVars", "dstdir", "srcdir", "tile"), envir = environment())
