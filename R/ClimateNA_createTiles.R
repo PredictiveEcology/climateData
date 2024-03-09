@@ -129,7 +129,28 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
     })()
 }
 
-#' Connect to ClimateNA tile sqlite database
+#' @keywords internal
+#' @importFrom DBI dbExecute
+#' @importFrom RSQLite dbConnect SQLite
+sqlite_connect_db <- function(dbfile) {
+  firstRun <- file.exists(dbfile)
+
+  db <- RSQLite::dbConnect(
+    drv = RSQLite::SQLite(),
+    dbname = dbfile,
+    synchronous = "normal",
+    extended_types = TRUE ## for DATETIME
+  )
+
+  if (isTRUE(firstRun)) {
+    DBI::dbExecute(db, "PRAGMA journal_mode = WAL")   ## using WAL allows concurrency
+    DBI::dbExecute(db, "PRAGMA busy_timeout = 60000") ## set busy timeout (ms); allows concurrency.
+  }
+
+  return(db)
+}
+
+#' Connect to ClimateNA tile and checksums database
 #'
 #' @template ClimateNA_dbfile
 #'
@@ -144,20 +165,9 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
 #' @importFrom dplyr tbl
 #' @importFrom RSQLite dbConnect SQLite
 #' @importFrom tibble rowid_to_column
+#' @rdname ClimateNA_sql
 ClimateNA_sql <- function(dbfile, type) {
-  firstRun <- file.exists(dbfile)
-
-  db <- RSQLite::dbConnect(
-    drv = RSQLite::SQLite(),
-    dbname = dbfile,
-    synchronous = "normal",
-    extended_types = TRUE ## for DATETIME
-  )
-
-  if (isTRUE(firstRun)) {
-    DBI::dbExecute(db, "PRAGMA journal_mode = WAL")   ## using WAL allows concurrency
-    DBI::dbExecute(db, "PRAGMA busy_timeout = 60000") ## set busy timeout (ms); allows concurrency.
-  }
+  db <- sqlite_connect_db(dbfile)
 
   df_template <- switch(
     type,
@@ -214,6 +224,64 @@ ClimateNA_sql <- function(dbfile, type) {
     na.omit()
 
   tbl <- type
+
+  if (!DBI::dbExistsTable(db, tbl)) {
+    DBI::dbCreateTable(db, tbl, df_template)
+  }
+
+  df <- dplyr::tbl(db, tbl)
+
+  return(list(db = db, df = df))
+}
+
+#' @export
+#' @rdname ClimateNA_sql
+checksums_sql <- function(dbfile, type) {
+  db <- sqlite_connect_db(dbfile)
+
+  df_template <- switch(
+    type,
+    historic_normals = data.frame(
+      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
+      period = NA_character_,   ## climate period
+      tileid = NA_integer_,     ## tile ID
+      filename = NA_character_, ## file name
+      filehash = NA_character_, ## file hash (checksum)
+      stringsAsFactors = FALSE
+    ),
+    future_normals = data.frame(
+      gcm = NA_character_,      ## climate scenario GCM
+      ssp = NA_character_,      ## climate scenario SSP
+      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
+      period = NA_character_,   ## climate period
+      tileid = NA_integer_,     ## tile ID
+      filename = NA_character_, ## file name
+      filehash = NA_character_, ## file hash (checksum)
+      stringsAsFactors = FALSE
+    ),
+    historic = data.frame(
+      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
+      year = NA_character_,     ## climate year
+      tileid = NA_integer_,     ## tile ID
+      filename = NA_character_, ## file name
+      filehash = NA_character_, ## file hash (checksum)
+      stringsAsFactors = FALSE
+    ),
+    future = data.frame(
+      gcm = NA_character_,      ## climate scenario GCM
+      ssp = NA_character_,      ## climate scenario SSP
+      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
+      year = NA_character_,     ## climate year (or period)
+      tileid = NA_integer_,     ## tile ID
+      filename = NA_character_, ## file name
+      filehash = NA_character_, ## file hash (checksum)
+      stringsAsFactors = FALSE
+    )
+  ) |>
+    tibble::rowid_to_column() |> ## add rowid column to use as table primary key
+    na.omit()
+
+  tbl <- paste0("checksums_", type)
 
   if (!DBI::dbExistsTable(db, tbl)) {
     DBI::dbCreateTable(db, tbl, df_template)

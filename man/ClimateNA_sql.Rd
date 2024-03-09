@@ -2,9 +2,12 @@
 % Please edit documentation in R/ClimateNA_createTiles.R
 \name{ClimateNA_sql}
 \alias{ClimateNA_sql}
-\title{Connect to ClimateNA tile sqlite database}
+\alias{checksums_sql}
+\title{Connect to ClimateNA tile and checksums database}
 \usage{
 ClimateNA_sql(dbfile, type)
+
+checksums_sql(dbfile, type)
 }
 \arguments{
 \item{dbfile}{path to \code{.sqlite} database file}
@@ -18,5 +21,5 @@ named list containing:
 - \code{df}, a lazy \code{tbl_dbi} object (see \code{dbplyr}).
 }
 \description{
-Connect to ClimateNA tile sqlite database
+Connect to ClimateNA tile and checksums database
 }

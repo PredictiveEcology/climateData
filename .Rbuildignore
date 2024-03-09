@@ -3,8 +3,9 @@
 ^inst/extdata/CHECKSUMS\.txt$
 ^\.github$
 ^\.Rproj\.user$
+^\.secrets$
 ^climateData\.Rproj$
 ^LICENSE$
 ^man-roxygen$
 ^data-raw$
-^\.secrets$
+^tmp$

@@ -38,7 +38,7 @@ ClimateNAdata <- switch(Sys.info()[["sysname"]],
 stopifnot(dir.exists(ClimateNAdata))
 
 userEmail <- "achubaty@for-cast.ca"
-oauthCachePath <- file.path(pkgDir, ".secrets")
+oauthCachePath <- file.path(prjDir, ".secrets")
 googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 
 ## database tracks which data already processed / uploaded
@@ -50,8 +50,8 @@ googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 dbfile <- "ClimateNA_tiles.sqlite"
 pkgDBfile <- file.path(prjDir, "inst", "extdata", dbfile)
 addlDBfile <- file.path(ClimateNAdata, dbfile)
-wrkngDBfile <- file.path(prjDir, dbfile) ## local copy in current directory
+wrkngDBfile <- file.path(prjDir, "tmp", dbfile) ## local copy in current project
 
-if (file.exists(addlDBfile)) {
+if (!file.exists(wrkngDBfile)) {
   file.copy(pkgDBfile, wrkngDBfile) ## always work on a copy
 }

@@ -147,7 +147,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
           url = googledrive::as_id(url),
           targetFile = NULL,
           destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
-        )
+        ) ## TODO: how to best use Cache here?
       })
       names(preProcessOut) <- paste0("tile_", climateTile)
 
