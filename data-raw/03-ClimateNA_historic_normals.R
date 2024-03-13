@@ -6,12 +6,19 @@
 
 source("data-raw/01-ClimateNA_setup.R")
 
+runClimateNA <- FALSE ## TRUE
+fileChecksums <- TRUE
+createZips <- FALSE ## TRUE
+uploadArchives <- FALSE ## TRUE
+
 climateType <- "historic_normals"
 
-csdb <- checksums_sql(wrkngDBfile, climateType)
-checksums_db <- csdb[["db"]]
-checksums_hist_normals_df <- csdb[["df"]]
-rm(csdb)
+if (isTRUE(fileChecksums)) {
+  csdb <- checksums_sql(wrkngDBfile, climateType)
+  checksums_db <- csdb[["db"]]
+  checksums_hist_normals_df <- csdb[["df"]]
+  rm(csdb)
+}
 
 dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
 climate_db <- dbdf[["db"]]
@@ -22,16 +29,12 @@ MSYs <- c("Y")
 hist_nrm_prds <- available(climateType)[["periods"]]
 period_nrm <- paste0("Normal_", hist_nrm_prds, ".nrm")
 
-runClimateNA <- FALSE ## TRUE
-createZips <- FALSE ## TRUE
-uploadArchives <- FALSE ## TRUE
-
 if (!exists("dem_ff")) {
   dem_ff <- list.files(file.path(ClimateNAdata, "dem"), pattern = "[.]asc$", full.names = TRUE)
   stopifnot(length(dem_ff) > 0)
 }
 
-plan("callr", workers = min(length(dem_ff), parallelly::availableCores()))
+plan("callr", workers = min(length(dem_ff), parallelly::availableCores() / 4))
 
 # get ClimateNA historic normals --------------------------------------------------------------
 
@@ -87,7 +90,7 @@ new_rows_hist_normals <- future_lapply(dem_ff, function(f) {
   }) |>
     dplyr::bind_rows()
 
-  dbDisconnect(climate_db)
+  DBI::dbDisconnect(climate_db)
 
   return(z)
 }, future.seed = NULL) |>
@@ -100,7 +103,7 @@ if (!"rowid" %in% colnames(new_rows_hist_normals)) {
   rows_update(climate_hist_normals_df, new_rows_hist_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
-dbDisconnect(climate_db)
+DBI::dbDisconnect(climate_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
@@ -143,7 +146,7 @@ if (!"rowid" %in% colnames(checksums_hist_normals)) {
   rows_update(checksums_hist_normals_df, checksums_hist_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
-dbDisconnect(checksums_db)
+DBI::dbDisconnect(checksums_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
@@ -178,7 +181,7 @@ if (createZips) {
     }) |>
       dplyr::bind_rows()
 
-    dbDisconnect(climate_db)
+    DBI::dbDisconnect(climate_db)
 
     return(z)
   }) |>
@@ -186,7 +189,7 @@ if (createZips) {
 
   rows_update(climate_hist_normals_df, new_rows_hist_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
-  dbDisconnect(climate_db)
+  DBI::dbDisconnect(climate_db)
 
   file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }
@@ -230,7 +233,7 @@ if (uploadArchives) {
     }) |>
       dplyr::bind_rows()
 
-    dbDisconnect(climate_db)
+    DBI::dbDisconnect(climate_db)
 
     return(z)
   }) |>
@@ -238,7 +241,7 @@ if (uploadArchives) {
 
   rows_update(climate_hist_normals_df, new_rows_hist_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
-  dbDisconnect(climate_db)
+  DBI::dbDisconnect(climate_db)
 
   file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }

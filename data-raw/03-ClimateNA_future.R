@@ -6,12 +6,20 @@
 
 source("data-raw/01-ClimateNA_setup.R")
 
+runClimateNA <- FALSE ## TRUE
+fileChecksums <- TRUE
+createZips <- FALSE ## TRUE
+uploadArchives <- FALSE ## TRUE
+reuploadArchives <- FALSE ## TRUE
+
 climateType <- "future"
 
-csdb <- checksums_sql(wrkngDBfile, climateType)
-checksums_db <- csdb[["db"]]
-checksums_future_df <- csdb[["df"]]
-rm(csdb)
+if (isTRUE(fileChecksums)) {
+  csdb <- checksums_sql(wrkngDBfile, climateType)
+  checksums_db <- csdb[["db"]]
+  checksums_future_df <- csdb[["df"]]
+  rm(csdb)
+}
 
 dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
 climate_db <- dbdf[["db"]]
@@ -24,32 +32,12 @@ SSPs <- available(climateType)[["ssps"]]
 future_years <- available(climateType)[["years"]]
 future_decades <- (future_years %/% 10 * 10) |> unique() |> as.integer()
 
-runClimateNA <- FALSE ## TRUE
-createZips <- FALSE ## TRUE
-uploadArchives <- FALSE ## TRUE
-reuploadArchives <- FALSE ## TRUE
-
 if (!exists("dem_ff")) {
   dem_ff <- list.files(file.path(ClimateNAdata, "dem"), pattern = "[.]asc$", full.names = TRUE)
   stopifnot(length(dem_ff) > 0)
 }
 
-plan("callr", workers = min(length(dem_ff), parallelly::availableCores()))
-
-# use ClimateNA to fetch and process climate data ---------------------------------------------
-
-## TODO: currently, the package is of very low quality,
-##       offering little more than a clumsy wrapper around system2()
-
-# if (!"ClimateNAr" %in% row.names(installed.packages())) {
-#   dlDir <- file.path("C:/Users", Sys.info()[["user"]], "Downloads")
-#   pkgurl <- "https://climatena.ca/downloads/ClimateNAr_1.2.0.zip"
-#   pkglcl <- file.path(dlDir, basename(pkgurl))
-#   download.file(pkgurl, pkglcl)
-#   install.packages(pkglcl, repos = NULL)
-# }
-#
-# library(ClimateNAr)
+plan("callr", workers = min(length(dem_ff), parallelly::availableCores() / 2))
 
 # get ClimateNA future time series ------------------------------------------------------------
 
@@ -111,7 +99,7 @@ new_rows_future <- future_lapply(dem_ff, function(f) {
   }) |>
     dplyr::bind_rows()
 
-  dbDisconnect(climate_db)
+  DBI::dbDisconnect(climate_db)
 
   return(z)
 }, future.seed = NULL) |>
@@ -124,7 +112,7 @@ if (!"rowid" %in% colnames(new_rows_future)) {
   rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
-dbDisconnect(climate_db)
+  DBI::dbDisconnect(climate_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
@@ -173,7 +161,7 @@ if (!"rowid" %in% colnames(checksums_future)) {
   rows_update(checksums_future_df, checksums_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
-dbDisconnect(checksums_db)
+  DBI::dbDisconnect(checksums_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
@@ -225,7 +213,7 @@ if (createZips) {
     }) |>
       dplyr::bind_rows()
 
-    dbDisconnect(climate_db)
+    DBI::dbDisconnect(climate_db)
 
     return(z)
   }) |>
@@ -233,7 +221,7 @@ if (createZips) {
 
   rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
-  dbDisconnect(climate_db)
+  DBI::dbDisconnect(climate_db)
 
   file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }
@@ -305,7 +293,7 @@ if (uploadArchives) {
     }) |>
       dplyr::bind_rows()
 
-    dbDisconnect(climate_db)
+    DBI::dbDisconnect(climate_db)
 
     return(z)
   }) |>
@@ -313,7 +301,7 @@ if (uploadArchives) {
 
   rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
-  dbDisconnect(climate_db)
+  DBI::dbDisconnect(climate_db)
 
   file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 }
