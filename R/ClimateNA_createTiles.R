@@ -164,64 +164,61 @@ sqlite_connect_db <- function(dbfile) {
 #' @importFrom DBI dbCreateTable dbExecute dbExistsTable
 #' @importFrom dplyr tbl
 #' @importFrom RSQLite dbConnect SQLite
-#' @importFrom tibble rowid_to_column
 #' @rdname ClimateNA_sql
 ClimateNA_sql <- function(dbfile, type) {
   db <- sqlite_connect_db(dbfile)
 
   df_template <- switch(
     type,
-    historic_normals = data.frame(
-      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
-      period = NA_character_,  ## climate period
-      tileid = NA_integer_,    ## tile ID
-      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
-      zipfile = NA_character_, ## relative file path
-      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
-      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
-      stringsAsFactors = FALSE
+    historic_normals = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER",    ## climate period
+      tileid = "INTEGER",      ## tile ID
+      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER",   ## relative file path
+      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     ),
-    future_normals = data.frame(
-      gcm = NA_character_,     ## climate scenario GCM
-      ssp = NA_character_,     ## climate scenario SSP
-      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
-      period = NA_character_,  ## climate period
-      tileid = NA_integer_,    ## tile ID
-      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
-      zipfile = NA_character_, ## relative file path
-      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
-      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
-      stringsAsFactors = FALSE
+    future_normals = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      gcm = "CHARACTER",       ## climate scenario GCM
+      ssp = "CHARACTER",       ## climate scenario SSP
+      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER",    ## climate period
+      tileid = "INTEGER",      ## tile ID
+      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER",   ## relative file path
+      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     ),
-    historic = data.frame(
-      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
-      year = NA_character_,    ## climate year
-      tileid = NA_integer_,    ## tile ID
-      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
-      zipfile = NA_character_, ## relative file path
-      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
-      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
-      stringsAsFactors = FALSE
+    historic = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "CHARACTER",      ## climate year
+      tileid = "INTEGER",      ## tile ID
+      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER",   ## relative file path
+      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     ),
-    future = data.frame(
-      gcm = NA_character_,     ## climate scenario GCM
-      ssp = NA_character_,     ## climate scenario SSP
-      msy = NA_character_,     ## one of: 'M', 'S', 'Y', 'MSY'
-      year = NA_character_,    ## climate year (or period)
-      tileid = NA_integer_,    ## tile ID
-      created = Sys.time(),    ## timestamp of when tile set was created using ClimateNA
-      zipfile = NA_character_, ## relative file path
-      archived = Sys.time(),   ## timestamp of when tile set archive was created (zipped)
-      gid = NA_character_,     ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = Sys.time(),   ## timestamp of when archive uploaded to google drive
-      stringsAsFactors = FALSE
+    future = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      gcm = "CHARACTER",       ## climate scenario GCM
+      ssp = "CHARACTER",       ## climate scenario SSP
+      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "CHARACTER",      ## climate year (or period)
+      tileid = "INTEGER",      ## tile ID
+      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER",   ## relative file path
+      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     )
-  ) |>
-    tibble::rowid_to_column() |> ## add rowid column to use as table primary key
-    na.omit()
+  )
 
   tbl <- type
 
@@ -241,45 +238,43 @@ checksums_sql <- function(dbfile, type) {
 
   df_template <- switch(
     type,
-    historic_normals = data.frame(
-      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
-      period = NA_character_,   ## climate period
-      tileid = NA_integer_,     ## tile ID
-      filename = NA_character_, ## file name
-      filehash = NA_character_, ## file hash (checksum)
-      stringsAsFactors = FALSE
+    historic_normals = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER",     ## climate period
+      tileid = "ISNTEGER",      ## tile ID
+      filename = "CHARACTER",   ## file name
+      filehash = "CHARACTER"    ## file hash (checksum)
     ),
-    future_normals = data.frame(
-      gcm = NA_character_,      ## climate scenario GCM
-      ssp = NA_character_,      ## climate scenario SSP
-      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
-      period = NA_character_,   ## climate period
-      tileid = NA_integer_,     ## tile ID
-      filename = NA_character_, ## file name
-      filehash = NA_character_, ## file hash (checksum)
-      stringsAsFactors = FALSE
+    future_normals = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      gcm = "CHARACTER",        ## climate scenario GCM
+      ssp = "CHARACTER",        ## climate scenario SSP
+      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER",     ## climate period
+      tileid = "INTEGER",       ## tile ID
+      filename = "CHARACTER",   ## file name
+      filehash = "CHARACTER"    ## file hash (checksum)
     ),
-    historic = data.frame(
-      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
-      year = NA_character_,     ## climate year
-      tileid = NA_integer_,     ## tile ID
-      filename = NA_character_, ## file name
-      filehash = NA_character_, ## file hash (checksum)
-      stringsAsFactors = FALSE
+    historic = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "CHARACTER",       ## climate year
+      tileid = "INTEGER",       ## tile ID
+      filename = "CHARACTER",   ## file name
+      filehash = "CHARACTER"    ## file hash (checksum)
     ),
-    future = data.frame(
-      gcm = NA_character_,      ## climate scenario GCM
-      ssp = NA_character_,      ## climate scenario SSP
-      msy = NA_character_,      ## one of: 'M', 'S', 'Y', 'MSY'
-      year = NA_character_,     ## climate year (or period)
-      tileid = NA_integer_,     ## tile ID
-      filename = NA_character_, ## file name
-      filehash = NA_character_, ## file hash (checksum)
-      stringsAsFactors = FALSE
+    future = c(
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      gcm = "CHARACTER",        ## climate scenario GCM
+      ssp = "CHARACTER",        ## climate scenario SSP
+      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "CHARACTER",       ## climate year (or period)
+      tileid = "INTEGER",       ## tile ID
+      filename = "CHARACTER",   ## file name
+      filehash = "CHARACTER"    ## file hash (checksum)
     )
-  ) |>
-    tibble::rowid_to_column() |> ## add rowid column to use as table primary key
-    na.omit()
+  )
 
   tbl <- paste0("checksums_", type)
 

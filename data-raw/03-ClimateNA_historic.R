@@ -76,7 +76,7 @@ new_rows_historic <- future_lapply(dem_ff, function(f) {
         }
 
         new_row <- data.frame(
-          ## rowid will be filled automatically
+          ## id will be filled automatically
           msy = msy,
           year = yr,
           tileid = tile,
@@ -144,14 +144,14 @@ checksums_historic <- future_lapply(dem_ff, function(f) {
 }, future.seed = NULL) |>
   dplyr::bind_rows()
 
-if (!"rowid" %in% colnames(checksums_historic)) {
-  checksums_historic <- tibble::rowid_to_column(checksums_historic)
-  rows_append(checksums_historic_df, checksums_historic, copy = TRUE, in_place = TRUE)
+if (!"id" %in% colnames(new_rows_historic)) {
+  rows_append(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(checksums_historic_df, checksums_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
 DBI::dbDisconnect(checksums_db)
+DBI::dbDisconnect(climate_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 

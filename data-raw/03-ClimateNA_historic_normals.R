@@ -139,14 +139,14 @@ checksums_hist_normals <- future_lapply(dem_ff, function(f) {
 }, future.seed = NULL) |>
   dplyr::bind_rows()
 
-if (!"rowid" %in% colnames(checksums_hist_normals)) {
-  checksums_hist_normals <- tibble::rowid_to_column(checksums_hist_normals)
-  rows_append(checksums_hist_normals_df, checksums_hist_normals, copy = TRUE, in_place = TRUE)
+if (!"id" %in% colnames(new_rows_hist_normals)) {
+  rows_append(climate_hist_normals_df, new_rows_hist_normals, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(checksums_hist_normals_df, checksums_hist_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(climate_hist_normals_df, new_rows_hist_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
 DBI::dbDisconnect(checksums_db)
+DBI::dbDisconnect(climate_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 

@@ -147,14 +147,14 @@ checksums_futu_normals <- future_lapply(dem_ff, function(f) {
 }, future.seed = NULL) |>
   dplyr::bind_rows()
 
-if (!"rowid" %in% colnames(checksums_futu_normals)) {
-  checksums_futu_normals <- tibble::rowid_to_column(checksums_futu_normals)
-  rows_append(checksums_futu_normals_df, checksums_futu_normals, copy = TRUE, in_place = TRUE)
+if (!"id" %in% colnames(new_rows_futu_normals)) {
+  rows_append(climate_futu_normals_df, new_rows_futu_normals, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(checksums_futu_normals_df, checksums_futu_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(climate_futu_normals_df, new_rows_futu_normals, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
 DBI::dbDisconnect(checksums_db)
+DBI::dbDisconnect(climate_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
@@ -180,7 +180,7 @@ if (createZips) {
 
             row <- dplyr::filter(
               climate_futu_normals_df,
-              msy == !!msy & tileid == !!tile ## all periods put into same zipfile
+              gcm == !!gcm & ssp == !!ssp & msy == !!msy & period %in% !!period & tileid == !!tile
             ) |>
               collect()
 
@@ -242,7 +242,7 @@ if (uploadArchives) {
 
             row <- dplyr::filter(
               climate_futu_normals_df,
-              msy == !!msy & tileid == !!tile ## all periods put into same zipfile
+              gcm == !!gcm & ssp == !!ssp & msy == !!msy & period %in% !!period & tileid == !!tile
             ) |>
               collect()
 

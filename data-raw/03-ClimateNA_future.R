@@ -154,14 +154,14 @@ checksums_future <- future_lapply(dem_ff, function(f) {
 }, future.seed = NULL) |>
   dplyr::bind_rows()
 
-if (!"rowid" %in% colnames(checksums_future)) {
-  checksums_future <- tibble::rowid_to_column(checksums_future)
-  rows_append(checksums_future_df, checksums_future, copy = TRUE, in_place = TRUE)
+if (!"id" %in% colnames(new_rows_future)) {
+  rows_append(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(checksums_future_df, checksums_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
-  DBI::dbDisconnect(checksums_db)
+DBI::dbDisconnect(checksums_db)
+DBI::dbDisconnect(climate_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 

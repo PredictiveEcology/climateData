@@ -24,6 +24,7 @@ library(reproducible)
 library(rprojroot)
 
 prjDir <- find_root(has_file("climateData.Rproj"))
+
 devtools::load_all(prjDir)
 
 # setup ---------------------------------------------------------------------------------------
@@ -51,6 +52,10 @@ dbfile <- "ClimateNA_tiles.sqlite"
 pkgDBfile <- file.path(prjDir, "inst", "extdata", dbfile)
 addlDBfile <- file.path(ClimateNAdata, dbfile)
 wrkngDBfile <- file.path(prjDir, "tmp", dbfile) ## local copy in current project
+
+if (!dir.exists(dirname(wrkngDBfile))) {
+  dir.create(dirname(wrkngDBfile))
+}
 
 if (!file.exists(wrkngDBfile)) {
   file.copy(pkgDBfile, wrkngDBfile) ## always work on a copy
