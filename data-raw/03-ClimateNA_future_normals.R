@@ -36,7 +36,7 @@ if (!exists("dem_ff")) {
   stopifnot(length(dem_ff) > 0)
 }
 
-plan("callr", workers = min(length(dem_ff), parallelly::availableCores()))
+plan("callr", workers = min(length(dem_ff), parallelly::availableCores() / 2))
 
 # get ClimateNA future normals --------------------------------------------------------------
 
