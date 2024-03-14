@@ -120,7 +120,7 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
     historic = file.path(dataPath, "historic", MSY, tile),
     historic_normals = file.path(dataPath, "historic", "normals", MSY, tile),
     future = file.path(dataPath, "future", paste0(gcm, "_ssp", ssp), MSY, tile),
-    future_normals = file.path(dataPath, "future", "normals", MSY, tile)
+    future_normals = file.path(dataPath, "future",  paste0(gcm, "_ssp", ssp), "normals", MSY, tile)
   ) |>
     normalizePath(mustWork = FALSE) |>
     (function(x) {
