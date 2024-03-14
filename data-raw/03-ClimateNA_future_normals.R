@@ -46,7 +46,8 @@ new_rows_futu_normals <- future_lapply(dem_ff, function(f) {
   climate_futu_normals_df <- dbdf[["df"]]
   rm(dbdf)
 
-  tile <- normalizePath(f) |> tileID()
+  f <- normalizePath(f)
+  tile <- tileID(f)
 
   z <- lapply(MSYs, function(msy) {
     lapply(future_nrm, function(nrm) {

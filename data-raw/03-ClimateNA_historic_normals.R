@@ -44,7 +44,8 @@ new_rows_hist_normals <- future_lapply(dem_ff, function(f) {
   climate_hist_normals_df <- dbdf[["df"]]
   rm(dbdf)
 
-  tile <- normalizePath(f) |> tileID()
+  f <- normalizePath(f)
+  tile <- tileID(f)
 
   z <- lapply(MSYs, function(msy) {
     lapply(period_nrm, function(nrm) {

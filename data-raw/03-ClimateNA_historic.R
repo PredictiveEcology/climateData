@@ -48,7 +48,8 @@ new_rows_historic <- future_lapply(dem_ff, function(f) {
   climate_historic_df <- dbdf[["df"]]
   rm(dbdf)
 
-  tile <- normalizePath(f) |> tileID()
+  f <- normalizePath(f)
+  tile <- tileID(f)
 
   z <- lapply(MSYs, function(msy) {
     lapply(period_ann, function(ann) {

@@ -7,7 +7,7 @@
 source("data-raw/01-ClimateNA_setup.R")
 
 runClimateNA <- FALSE ## TRUE
-fileChecksums <- TRUE
+fileChecksums <- FALSE ## TRUE
 createZips <- FALSE ## TRUE
 uploadArchives <- FALSE ## TRUE
 reuploadArchives <- FALSE ## TRUE
@@ -47,7 +47,8 @@ new_rows_future <- future_lapply(dem_ff, function(f) {
   future_climate_df <- dbdf[["df"]]
   rm(dbdf)
 
-  tile <- normalizePath(f) |> tileID()
+  f <- normalizePath(f)
+  tile <- tileID(f)
 
   z <- lapply(GCMs, function(gcm) {
     lapply(SSPs, function(ssp) {
