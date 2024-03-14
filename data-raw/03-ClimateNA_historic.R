@@ -66,13 +66,15 @@ new_rows_historic <- future_lapply(dem_ff, function(f) {
       if (nrow(row) == 0) {
         if (isTRUE(runClimateNA)) {
           withr::local_dir(ClimateNAdir)
-          system2(ClimateNAexe,
-                  args = c(
-                    paste0("/", msy),
-                    paste0("/", ann),
-                    paste0("/", f),
-                    paste0("/", ClimateNAout)
-                  ))
+          sys::exec_wait(
+            ClimateNAexe,
+            args = c(
+              paste0("/", msy),
+              paste0("/", ann),
+              paste0("/", f),
+              paste0("/", ClimateNAout)
+            )
+          )
           withr::deferred_run()
         }
 

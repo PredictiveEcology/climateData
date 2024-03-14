@@ -41,6 +41,7 @@ Suggests:
     rmarkdown,
     rprojroot,
     SpaDES.tools (>= 2.0.4),
+    sys,
     testthat (>= 3.0.0)
 Remotes:
     PredictiveEcology/reproducible@development
