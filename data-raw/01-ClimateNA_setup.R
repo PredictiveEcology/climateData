@@ -42,6 +42,8 @@ userEmail <- "achubaty@for-cast.ca"
 oauthCachePath <- file.path(prjDir, ".secrets")
 googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 
+maxCores <- parallelly::availableCores() * 0.75
+
 ## database tracks which data already processed / uploaded
 ##
 ##   NOTE: the package version should be the canonical one.
