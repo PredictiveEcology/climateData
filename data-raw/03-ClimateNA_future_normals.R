@@ -51,13 +51,13 @@ new_rows_futu_normals <- future_lapply(dem_ff, function(f) {
 
   z <- lapply(MSYs, function(msy) {
     lapply(future_nrm, function(nrm) {
-      ClimateNAout <- ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy = msy)
+      ClimateNAout <- ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy, gcm, ssp)
 
       period <- substr(nrm, 8, 16)
 
       row <- dplyr::filter(
         climate_futu_normals_df,
-        msy == !!msy & period == !!period & tileid == !!tile
+        gcm == !!gcm & ssp == !!ssp & msy == !!msy & period == !!period & tileid == !!tile
       ) |>
         collect()
 
