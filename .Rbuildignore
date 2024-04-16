@@ -1,6 +1,11 @@
-^climateData\.Rproj$
-^\.Rproj\.user$
 ^inst/extdata/\.gitignore$
 ^inst/extdata/README\.md$
 ^inst/extdata/CHECKSUMS\.txt$
+^\.github$
+^\.Rproj\.user$
+^\.secrets$
+^climateData\.Rproj$
 ^LICENSE$
+^man-roxygen$
+^data-raw$
+^tmp$

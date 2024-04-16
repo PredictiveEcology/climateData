@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeClimateDEM.R
 \name{makeClimateDEM}
 \alias{makeClimateDEM}
-\title{Create a DEM for use with ClimateNA}
+\title{Create a DEM for use with \code{ClimateNA}}
 \usage{
 makeClimateDEM(
   studyArea,
@@ -14,24 +14,28 @@ makeClimateDEM(
 )
 }
 \arguments{
-\item{studyArea}{a studyArea for cropping the gtopo30 DEM}
+\item{studyArea}{an \code{sf} or \code{SpatVect} polygon delineating the boundaries of the study area.
+typically used to crop/mask rasters when \code{rasterToMatch} is not supplied.
+passed to \code{\link[reproducible:postProcessTo]{reproducible::postProcessTo()}}.}
 
-\item{arcSecRes}{the resolution of the output dem in arc seconds}
+\item{arcSecRes}{the resolution of the output DEM in arcseconds}
 
-\item{bufferArcSec}{numeric  - arc seconds by which to buffer the studyArea to ensure seamless coverage.
-Recommended to be at least the same as \code{res}}
+\item{bufferArcSec}{numeric, arcseconds by which to buffer the \code{studyArea} to
+ensure seamless coverage.
+Recommended to be at least the same as \code{res}.}
 
-\item{DEMdestinationPath}{DESCRIPTION NEEDED}
+\item{DEMdestinationPath}{the directory to save the downloaded DEM raster}
 
-\item{destinationPath}{the directory to save the output raster}
+\item{destinationPath}{the directory to save the output \code{.asc} raster}
 
-\item{filename2}{the name of the output DEM without the .ASC suffix}
+\item{filename2}{the name of the output DEM without the \code{.asc} suffix}
 }
 \value{
 a DEM in ASCII format
 }
 \description{
-Create a DEM for use with ClimateNA
+\strong{Windows only} due to limitations using \code{ClimateNA} with non-Windows
+created DEMs.
 }
 \author{
 Ian Eddy
