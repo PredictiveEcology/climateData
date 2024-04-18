@@ -1,3 +1,7 @@
+# climateData 2.0.4
+
+- fix `calcATA()` calculation
+
 # climateData 2.0.0
 
 ## Enhancements
