@@ -109,7 +109,7 @@ calcATA <- function(stacks, layers, .dots = NULL) {
   MAT_norm_mean <- rast(stack_periods) |> terra::app(fun = mean, na.rm = TRUE)
 
   ATAstack <- lapply(stack_years,  function(x) {
-      ata <- MAT_norm_mean - x[["MAT"]]
+      ata <- x[["MAT"]] - MAT_norm_mean
       set.names(ata, "ATA")
       return(ata)
     }) |>
