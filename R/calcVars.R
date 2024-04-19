@@ -96,7 +96,7 @@ calcAsIs <- function(stacks, layers, .dots = NULL) {
 }
 
 #' @export
-#' @importFrom terra app
+#' @importFrom terra app subset
 #' @rdname calcVars
 calcATA <- function(stacks, layers, .dots = NULL) {
   type <- calcStackLayersType(stacks, layers)
@@ -104,8 +104,9 @@ calcATA <- function(stacks, layers, .dots = NULL) {
   type_periods <- grep(paste0("(", paste0(type, collapse = "|"), ")_period"), names(.dots), value = TRUE)
   stack_years <- stacks[paste0(gsub("_years", "", type_years), "_", .dots[[type_years]])]
   stack_periods <- stacks[paste0(gsub("_period", "", type_periods), "_", .dots[[type_periods]])]
+  stack_periods <- stack_periods[grep("MAT", x = )]
   checkCalcStackLayers(append(stack_years, stack_periods), layers)
-
+  stack_periods <- lapply(stack_periods, terra::subset, subset = "MAT_normal")
   MAT_norm_mean <- rast(stack_periods) |> terra::app(fun = mean, na.rm = TRUE)
 
   ATAstack <- lapply(stack_years,  function(x) {
