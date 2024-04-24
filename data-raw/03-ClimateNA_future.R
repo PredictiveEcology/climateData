@@ -1,5 +1,5 @@
 ## 1. Create tiles for Canada for use with ClimateNA;
-## 2. Download and process historic, projected, and normals data for each tile using ClimateNA;
+## 2. Download and process historical, projected, and normals data for each tile using ClimateNA;
 ## 3. Archive and upload each set of tiles for use with canClimateData.
 
 # setup ---------------------------------------------------------------------------------------

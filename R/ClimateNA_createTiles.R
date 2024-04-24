@@ -1,4 +1,4 @@
-.allowedClimateTypes <- c("historic", "historic_normals", "future", "future_normals")
+.allowedClimateTypes <- c("historical", "historical_normals", "future", "future_normals")
 
 #' Identify ClimateNA data available via this package
 #'
@@ -7,8 +7,8 @@
 #' @export
 #'
 #' @examples
-#' historic_years <- available("historic")[["years"]]
-#' hist_nrm_prds <- available("historic_normals")[["periods"]]
+#' historical_years <- available("historical")[["years"]]
+#' hist_nrm_prds <- available("historical_normals")[["periods"]]
 #'
 #' future_gcms <- available("future")[["gcms"]]
 #' future_ssps <- available("future")[["ssps"]]
@@ -30,10 +30,10 @@ available <- function(type) {
   )
 
   switch(type,
-         historic = list(
+         historical = list(
            years = 1901L:2022L
          ),
-         historic_normals = list(
+         historical_normals = list(
            periods = c("1901_1930", "1911_1940", "1921_1950",
                        "1931_1960", "1941_1970", "1951_1980",
                        "1971_2000", "1981_2010", "1991_2020")
@@ -117,8 +117,8 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
   MSY <-  switch(msy, MSY = "all", M = "monthly", S = "seasonal", Y = "yearly")
   switch(
     type,
-    historic = file.path(dataPath, "historic", MSY, tile),
-    historic_normals = file.path(dataPath, "historic", "normals", MSY, tile),
+    historical = file.path(dataPath, "historical", MSY, tile),
+    historical_normals = file.path(dataPath, "historical", "normals", MSY, tile),
     future = file.path(dataPath, "future", paste0(gcm, "_ssp", ssp), MSY, tile),
     future_normals = file.path(dataPath, "future",  paste0(gcm, "_ssp", ssp), "normals", MSY, tile)
   ) |>
@@ -170,7 +170,7 @@ ClimateNA_sql <- function(dbfile, type) {
 
   df_template <- switch(
     type,
-    historic_normals = c(
+    historical_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT",
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
       period = "CHARACTER",    ## climate period
@@ -194,7 +194,7 @@ ClimateNA_sql <- function(dbfile, type) {
       gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
       uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     ),
-    historic = c(
+    historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT",
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
       year = "CHARACTER",      ## climate year
@@ -238,7 +238,7 @@ checksums_sql <- function(dbfile, type) {
 
   df_template <- switch(
     type,
-    historic_normals = c(
+    historical_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT",
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
       period = "CHARACTER",     ## climate period
@@ -256,7 +256,7 @@ checksums_sql <- function(dbfile, type) {
       filename = "CHARACTER",   ## file name
       filehash = "CHARACTER"    ## file hash (checksum)
     ),
-    historic = c(
+    historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT",
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
       year = "CHARACTER",       ## climate year

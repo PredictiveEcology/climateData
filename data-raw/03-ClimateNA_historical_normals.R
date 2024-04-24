@@ -11,7 +11,7 @@ fileChecksums <- TRUE
 createZips <- FALSE ## TRUE
 uploadArchives <- FALSE ## TRUE
 
-climateType <- "historic_normals"
+climateType <- "historical_normals"
 
 if (isTRUE(fileChecksums)) {
   csdb <- checksums_sql(wrkngDBfile, climateType)
@@ -36,7 +36,7 @@ if (!exists("dem_ff")) {
 
 plan("callr", workers = min(length(dem_ff), maxCores))
 
-# get ClimateNA historic normals --------------------------------------------------------------
+# get ClimateNA historical normals --------------------------------------------------------------
 
 new_rows_hist_normals <- future_lapply(dem_ff, function(f) {
   dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
@@ -156,7 +156,7 @@ file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 # archive tilesets ----------------------------------------------------------------------------
 
 if (createZips) {
-  ## historic normals
+  ## historical normals
   new_rows_hist_normals <- future_lapply(dem_ff, function(f) {
     dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
     climate_db <- dbdf[["db"]]
@@ -206,7 +206,7 @@ if (uploadArchives) {
     Y = "1FStzgwcLMz4gky2UJtt9z5U8MWR1A94k"
   )
 
-  ## historic normals
+  ## historical normals
   new_rows_hist_normals <- future_lapply(dem_ff, function(f) {
     googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 

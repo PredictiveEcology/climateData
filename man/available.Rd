@@ -8,14 +8,14 @@ available(type)
 }
 \arguments{
 \item{type}{character. denotes the table in the sqlite database to access.
-one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
+one of 'historical', 'future', 'historical_normals', or 'future_normals'.}
 }
 \description{
 Identify ClimateNA data available via this package
 }
 \examples{
-historic_years <- available("historic")[["years"]]
-hist_nrm_prds <- available("historic_normals")[["periods"]]
+historical_years <- available("historical")[["years"]]
+hist_nrm_prds <- available("historical_normals")[["periods"]]
 
 future_gcms <- available("future")[["gcms"]]
 future_ssps <- available("future")[["ssps"]]

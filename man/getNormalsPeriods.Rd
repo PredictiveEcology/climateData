@@ -2,13 +2,13 @@
 % Please edit documentation in R/ClimateNA_useTiles.R
 \name{getNormalsPeriods}
 \alias{getNormalsPeriods}
-\title{Get historic or future climate normals periods}
+\title{Get historical or future climate normals periods}
 \usage{
 getNormalsPeriods(type = NULL, tile = NULL, msy = "Y", gcm = NULL, ssp = NULL)
 }
 \arguments{
 \item{type}{character. denotes the table in the sqlite database to access.
-one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
+one of 'historical', 'future', 'historical_normals', or 'future_normals'.}
 
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
@@ -22,5 +22,5 @@ one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
 character.
 }
 \description{
-Get historic or future climate normals periods
+Get historical or future climate normals periods
 }

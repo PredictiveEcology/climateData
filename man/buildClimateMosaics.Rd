@@ -31,7 +31,7 @@ buildClimateMosaicsNormals(
 }
 \arguments{
 \item{type}{character. denotes the table in the sqlite database to access.
-one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
+one of 'historical', 'future', 'historical_normals', or 'future_normals'.}
 
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 

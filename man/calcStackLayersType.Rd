@@ -9,14 +9,14 @@ calcStackLayersType(stacks, layers)
 \arguments{
 \item{stacks}{named list of \code{SpatRaster} objects.
 names should correspond to \verb{<type>_<year>} or \verb{<type>_<period>},
-where \code{type} is one of "historic" or "future"; and \code{year} or \code{period}
+where \code{type} is one of "historical" or "future"; and \code{year} or \code{period}
 correspond to a climate year or climate period, respectively.}
 
 \item{layers}{layer names (matching ClimateNA variable names) to check for in
 each element of \code{stacks}.}
 }
 \value{
-character string indicating the type (one of "historic" or "future")
+character string indicating the type (one of "historical" or "future")
 }
 \description{
 Determine the type of climate variables

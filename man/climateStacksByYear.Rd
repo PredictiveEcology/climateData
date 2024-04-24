@@ -16,7 +16,7 @@ climateStacksByPeriod(tifs, climVars, type, period)
 see \url{https://climatena.ca/Help2#_var} for full list of variables.}
 
 \item{type}{character. denotes the table in the sqlite database to access.
-one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
+one of 'historical', 'future', 'historical_normals', or 'future_normals'.}
 
 \item{years}{integer. consecutive data years to use (e.g., \code{2011:2100}).}
 

@@ -70,11 +70,11 @@ whichTypes <- function(climVars) {
 #'     require("SpaDES.tools", quietly = TRUE) &&
 #'     !isTRUE(as.logical(Sys.getenv("CI", "false")))) {
 #'   dPath <- file.path(tempdir(), "test_prepClimateLayers")
-#'   climateType <- "historic"
+#'   climateType <- "historical"
 #'   climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
 #'   climatePathOut <- file.path(climatePath, "outputs") |> reproducible::checkPath(create = TRUE)
-#'   historic_prd <- c("1951_1980", "1981_2010")
-#'   historic_yrs <- c(2011:2015)
+#'   historical_prd <- c("1951_1980", "1981_2010")
+#'   historical_yrs <- c(2011:2015)
 #'   future_yrs <- c(2021:2025)
 #'   GCM <- "CanESM5"
 #'   SSP <- 370
@@ -87,35 +87,35 @@ whichTypes <- function(climVars) {
 #'   ## FFP uses yearly  variable; no fun (as is); similar name to bFFP and eFFP
 #'   ## MDC uses monthly vars; uses custom fun
 #'   climateVariables <- list(
-#'     historic_ATA = list(
-#'       vars = c("historic_MAT", "historic_MAT_normal"),
+#'     historical_ATA = list(
+#'       vars = c("historical_MAT", "historical_MAT_normal"),
 #'       fun = quote(calcATA),
-#'       .dots = list(historic_period = historic_prd, historic_years = historic_yrs)
+#'       .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
 #'     ),
 #'     future_ATA = list(
-#'       vars = c("future_MAT", "historic_MAT_normal"),
+#'       vars = c("future_MAT", "historical_MAT_normal"),
 #'       fun = quote(calcATA),
-#'       .dots = list(historic_period = historic_prd, future_years = future_yrs)
+#'       .dots = list(historical_period = historical_prd, future_years = future_yrs)
 #'     ),
-#'     historic_CMI = list(
-#'       vars = "historic_CMI",
+#'     historical_CMI = list(
+#'       vars = "historical_CMI",
 #'       fun = quote(calcAsIs),
-#'       .dots = list(historic_years = historic_yrs)
+#'       .dots = list(historical_years = historical_yrs)
 #'     ),
-#'     historic_CMI_normal = list(
-#'       vars = "historic_CMI_normal",
+#'     historical_CMI_normal = list(
+#'       vars = "historical_CMI_normal",
 #'       fun = quote(calcCMInormal),
-#'       .dots = list(historic_period = historic_prd, historic_years = historic_yrs)
+#'       .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
 #'     ),
 #'     future_FFP = list(
 #'       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
 #'       fun = quote(calcAsIs),
 #'       .dots = list(future_years = future_yrs)
 #'     ),
-#'     historic_MDC = list(
-#'       vars = c(sprintf("historic_PPT%02d", 4:9), sprintf("historic_Tmax%02d", 4:9)),
+#'     historical_MDC = list(
+#'       vars = c(sprintf("historical_PPT%02d", 4:9), sprintf("historical_Tmax%02d", 4:9)),
 #'       fun = quote(calcMDC),
-#'       .dots = list(historic_years = historic_yrs)
+#'       .dots = list(historical_years = historical_yrs)
 #'     )
 #'   )
 #'
@@ -123,9 +123,9 @@ whichTypes <- function(climVars) {
 #'     climateVarsList = climateVariables,
 #'     srcdir = climatePath,    ## raw inputs, downloaded from Google Drive
 #'     dstdir = climatePathOut, ## intermediate + final outputs
-#'     historic_years = historic_yrs,
+#'     historical_years = historical_yrs,
 #'     future_years = future_yrs,
-#'     historic_period = historic_prd,
+#'     historical_period = historical_prd,
 #'     future_period = NULL,
 #'     gcm = GCM,
 #'     ssp = SSP,
@@ -138,13 +138,13 @@ whichTypes <- function(climVars) {
 prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
                                tile = NULL,
                                future_years = NULL, future_period = NULL,
-                               historic_years = NULL, historic_period = NULL,
+                               historical_years = NULL, historical_period = NULL,
                                gcm = NULL, ssp = NULL, cl = NULL,
                                studyArea = NULL, studyAreaName = NULL, rasterToMatch = NULL,
                                currentModuleName = "NoModule", ...) {
   stopifnot(
     !missing(srcdir), !missing(dstdir),
-    !all(is.null(future_years), is.null(future_period), is.null(historic_years), is.null(historic_period)),
+    !all(is.null(future_years), is.null(future_period), is.null(historical_years), is.null(historical_period)),
     (!is.null(tile) && is.null(studyArea) && is.null(rasterToMatch)) || ## pass tile but not sA/RTM
       (is.null(tile) && !is.null(studyArea) && !is.null(rasterToMatch)) ## pass sA/RTM but not tile
   )
@@ -178,12 +178,12 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   MSYN <- whichMSYN(needVars)
   unique_types_msy <- paste0(types, "_", MSYN) |> gsub("_normal", "", x = _) |> unique()
   ## TODO: for now, seasonal variables are only available in the MSY ("all") archives
-  unique_types_msy <- gsub("^historic_S$", "historic_MSY", unique_types_msy) |> unique()
+  unique_types_msy <- gsub("^historical_S$", "historical_MSY", unique_types_msy) |> unique()
   unique_types_msy <- gsub("^future_S$", "future_MSY", unique_types_msy) |> unique()
 
   ## consolidate types -- if all needed, download all variables in same archive
-  if (all(c("historic_M", "historic_S", "historic_Y") %in% unique_types_msy)) {
-    unique_types_msy <- gsub("^historic_(M|S|Y)$", "historic_MSY", unique_types_msy) |> unique()
+  if (all(c("historical_M", "historical_S", "historical_Y") %in% unique_types_msy)) {
+    unique_types_msy <- gsub("^historical_(M|S|Y)$", "historical_MSY", unique_types_msy) |> unique()
   }
   if (all(c("future_M", "future_S", "future_Y") %in% unique_types_msy)) {
     unique_types_msy <- gsub("^future_(M|S|Y)$", "future_MSY", unique_types_msy) |> unique()
@@ -191,21 +191,21 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
 
   ## 2. download and extract multiple archives per tile (by decade)
   climPreProcessOut <- lapply(unique_types_msy, function(type_msyn) {
-    if (type_msyn %in% c("historic_M", "historic_S", "historic_Y", "historic_MSY")) {
-      type <- "historic"
-      msy <- strsplit(type_msyn, "historic_")[[1]] |> dplyr::last()
+    if (type_msyn %in% c("historical_M", "historical_S", "historical_Y", "historical_MSY")) {
+      type <- "historical"
+      msy <- strsplit(type_msyn, "historical_")[[1]] |> dplyr::last()
       climatePath_type <- file.path(climatePath, type)
-      urls <- getClimateURLs(type = type, tile = tile, years = historic_years, msy = msy)
+      urls <- getClimateURLs(type = type, tile = tile, years = historical_years, msy = msy)
       out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
-      allDirs <- file.path(climatePath_type, rep(tile, length(historic_years)),
-                           paste0("Year_", historic_years, msy)) |> sort()
-    } else if (type_msyn == "historic_N") {
-      type <- "historic_normals"
-      climatePath_type <- file.path(climatePath, "historic", "normals")
+      allDirs <- file.path(climatePath_type, rep(tile, length(historical_years)),
+                           paste0("Year_", historical_years, msy)) |> sort()
+    } else if (type_msyn == "historical_N") {
+      type <- "historical_normals"
+      climatePath_type <- file.path(climatePath, "historical", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y")
       out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
-      allDirs <- file.path(climatePath_type, rep(tile, length(historic_period)),
-                           paste0("Normal_", historic_period, "Y")) |> sort()
+      allDirs <- file.path(climatePath_type, rep(tile, length(historical_period)),
+                           paste0("Normal_", historical_period, "Y")) |> sort()
     } else if (type_msyn %in% c("future_M", "future_S", "future_Y", "future_MSY")) {
       type <- "future"
       msy <- strsplit(type_msyn, "future_")[[1]] |> dplyr::last()
@@ -234,18 +234,18 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   ## 3. load data into R -- build vrts and write mosaic tifs to disk
   ##    these are **unprojected** tile mosaics and will need to be postProcessed
 
-  ## historic
-  vars_hist_msy <- grep("^historic_", needVars, value = TRUE) |>
+  ## historical
+  vars_hist_msy <- grep("^historical_", needVars, value = TRUE) |>
     grep("_normal$", x = _, value = TRUE, invert = TRUE) |>
-    gsub("^historic_", "", x = _) ## strip prefix
+    gsub("^historical_", "", x = _) ## strip prefix
 
   if (length(vars_hist_msy) > 0) {
     tifs_hist_msy <- buildClimateMosaics(
-      type = "historic",
+      type = "historical",
       tile = tile,
       climVars = vars_hist_msy,
-      years = historic_years,
-      srcdir = file.path(climatePath, "historic"),
+      years = historical_years,
+      srcdir = file.path(climatePath, "historical"),
       dstdir = climatePathOut,
       cl = cl
     )
@@ -253,18 +253,18 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
     tifs_hist_msy <- list()
   }
 
-  ## historic_normals
-  vars_hist_nrm <- grep("^historic_", needVars, value = TRUE) |>
+  ## historical_normals
+  vars_hist_nrm <- grep("^historical_", needVars, value = TRUE) |>
     grep("_normal$", x = _, value = TRUE) |>
-    gsub("^historic_", "", x = _) ## strip prefix
+    gsub("^historical_", "", x = _) ## strip prefix
 
   if (length(vars_hist_nrm) > 0) {
     tifs_hist_nrm <- buildClimateMosaicsNormals(
-      type = "historic",
+      type = "historical",
       tile = tile,
       climVars = vars_hist_nrm,
-      period = historic_period,
-      srcdir = file.path(climatePath, "historic", "normals"),
+      period = historical_period,
+      srcdir = file.path(climatePath, "historical", "normals"),
       dstdir = climatePathOut,
       cl = cl
     )
@@ -326,11 +326,11 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
 
   ## ClimateNA v7.41 (August 01, 2023) release note:
   ## Climate variables with decimals are no longer converted to integers in raster format.
-  climStacks_historic_MSY <- climateStacksByYear(tifs = tifs_hist_msy, climVars = vars_hist_msy,
-                                                 type = "historic", years = historic_years)
+  climStacks_historical_MSY <- climateStacksByYear(tifs = tifs_hist_msy, climVars = vars_hist_msy,
+                                                 type = "historical", years = historical_years)
 
-  climStacks_historic_N <- climateStacksByPeriod(tifs = tifs_hist_nrm, climVars = vars_hist_nrm,
-                                                 type = "historic", period = historic_period)
+  climStacks_historical_N <- climateStacksByPeriod(tifs = tifs_hist_nrm, climVars = vars_hist_nrm,
+                                                 type = "historical", period = historical_period)
 
   climStacks_future_MSY <- climateStacksByYear(tifs = tifs_futu_msy, climVars = vars_futu_msy,
                                                type = "future", years = future_years)
@@ -338,8 +338,8 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   climStacks_future_N <- climateStacksByPeriod(tifs = tifs_futu_nrm, climVars = vars_futu_nrm,
                                                type = "future", period = future_period)
 
-  climStacks <- c(climStacks_historic_MSY, climStacks_future_MSY,
-                  climStacks_historic_N, climStacks_future_N)
+  climStacks <- c(climStacks_historical_MSY, climStacks_future_MSY,
+                  climStacks_historical_N, climStacks_future_N)
 
   ## 4. do `climateVarsList$newVar$fun` to the tifs (still **unprojected**)
   climDataFun <- lapply(climateVarsList, function(newClimVar) {
@@ -362,7 +362,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   }
 
   digest4cache <- c("climatePathOut", "currentModuleName",
-                    "future_years", "future_period", "historic_years", "historic_period",
+                    "future_years", "future_period", "historical_years", "historical_period",
                     "rasterToMatch", "studyArea", "studyAreaName") |>
     mget(envir = environment()) |>
     .robustDigest(object = _)

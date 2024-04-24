@@ -11,27 +11,27 @@ fileChecksums <- TRUE
 createZips <- FALSE ## TRUE
 uploadArchives <- FALSE ## TRUE
 
-climateType <- "historic"
+climateType <- "historical"
 
 if (isTRUE(fileChecksums)) {
   csdb <- checksums_sql(wrkngDBfile, climateType)
   checksums_db <- csdb[["db"]]
-  checksums_historic_df <- csdb[["df"]]
+  checksums_historical_df <- csdb[["df"]]
   rm(csdb)
 }
 
 dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
 climate_db <- dbdf[["db"]]
-climate_historic_df <- dbdf[["df"]]
+climate_historical_df <- dbdf[["df"]]
 rm(dbdf)
 
 MSYs <- c("MSY", "M", "S", "Y")
 
-historic_years <- available(climateType)[["years"]]
-# historic_years <- 1901L:1990L
-# historic_years <- 1991L:2022L
-historic_decades <- (historic_years %/% 10 * 10) |> unique() |> as.integer()
-period_ann <- paste0("Year_", historic_years, ".ann")
+historical_years <- available(climateType)[["years"]]
+# historical_years <- 1901L:1990L
+# historical_years <- 1991L:2022L
+historical_decades <- (historical_years %/% 10 * 10) |> unique() |> as.integer()
+period_ann <- paste0("Year_", historical_years, ".ann")
 
 if (!exists("dem_ff")) {
   dem_ff <- list.files(file.path(ClimateNAdata, "dem"), pattern = "[.]asc$", full.names = TRUE)
@@ -40,12 +40,12 @@ if (!exists("dem_ff")) {
 
 plan("callr", workers = min(length(dem_ff), maxCores))
 
-# get ClimateNA historic time series ----------------------------------------------------------
+# get ClimateNA historical time series ----------------------------------------------------------
 
 new_rows_historic <- future_lapply(dem_ff, function(f) {
   dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
   climate_db <- dbdf[["db"]]
-  climate_historic_df <- dbdf[["df"]]
+  climate_historical_df <- dbdf[["df"]]
   rm(dbdf)
 
   f <- normalizePath(f)
@@ -58,7 +58,7 @@ new_rows_historic <- future_lapply(dem_ff, function(f) {
       yr <- substr(ann, 6, 9)
 
       row <- dplyr::filter(
-        climate_historic_df,
+        climate_historical_df,
         msy == !!msy & year == !!yr & tileid == !!tile
       ) |>
         collect()
@@ -86,10 +86,10 @@ new_rows_historic <- future_lapply(dem_ff, function(f) {
           created = file.info(ClimateNAout)$mtime,
           stringsAsFactors = FALSE
         )
-        # rows_append(climate_historic_df, new_row, copy = TRUE, in_place = TRUE)
+        # rows_append(climate_historical_df, new_row, copy = TRUE, in_place = TRUE)
       } else {
         new_row <- dplyr::mutate(row, created = file.info(ClimateNAout)$mtime)
-        # rows_update(climate_historic_df, new_row, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+        # rows_update(climate_historical_df, new_row, copy = TRUE, in_place = TRUE, unmatched = "ignore")
       }
 
       return(new_row)
@@ -106,9 +106,9 @@ new_rows_historic <- future_lapply(dem_ff, function(f) {
 
 if (!"rowid" %in% colnames(new_rows_historic)) {
   new_rows_historic <- tibble::rowid_to_column(new_rows_historic)
-  rows_append(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE)
+  rows_append(climate_historical_df, new_rows_historic, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(climate_historical_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
 DBI::dbDisconnect(climate_db)
@@ -148,9 +148,9 @@ checksums_historic <- future_lapply(dem_ff, function(f) {
   dplyr::bind_rows()
 
 if (!"id" %in% colnames(new_rows_historic)) {
-  rows_append(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE)
+  rows_append(climate_historical_df, new_rows_historic, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(climate_historical_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 }
 
 DBI::dbDisconnect(checksums_db)
@@ -161,11 +161,11 @@ file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 # archive tilesets ----------------------------------------------------------------------------
 
 if (createZips) {
-  ## historic time series
+  ## historical time series
   new_rows_historic <- future_lapply(dem_ff, function(f) {
     dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
     climate_db <- dbdf[["db"]]
-    climate_historic_df <- dbdf[["df"]]
+    climate_historical_df <- dbdf[["df"]]
     rm(dbdf)
 
     tile <- normalizePath(f) |> tileID()
@@ -173,11 +173,11 @@ if (createZips) {
     z <- lapply(MSYs, function(msy) {
       ClimateNAout <- ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy)
 
-      lapply(historic_decades, function(dcd) {
+      lapply(historical_decades, function(dcd) {
         fzip <- paste0(ClimateNAout, "_", msy, "_", dcd, ".zip")
 
         row <- dplyr::filter(
-          climate_historic_df,
+          climate_historical_df,
           msy == !!msy & year %in% !!(dcd + 0:9) & tileid == !!tile ## zip each decade
         ) |>
           collect()
@@ -191,7 +191,7 @@ if (createZips) {
         withr::deferred_run()
 
         new_row <- dplyr::mutate(row, archived = file.info(fzip)$mtime, zipfile = fs::path_rel(fzip, ClimateNAdata))
-        # rows_update(climate_historic_df, new_row, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+        # rows_update(climate_historical_df, new_row, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
         return(new_row)
       }) |>
@@ -205,7 +205,7 @@ if (createZips) {
   }) |>
     dplyr::bind_rows()
 
-  rows_update(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(climate_historical_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
   DBI::dbDisconnect(climate_db)
 
@@ -223,13 +223,13 @@ if (uploadArchives) {
     Y = "1bp6UX5b9nczub0OG41YAhOQUmyerywc6"
   )
 
-  ## historic time series
+  ## historical time series
   new_rows_historic <- future_lapply(dem_ff, function(f) {
     googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 
     dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
     climate_db <- dbdf[["db"]]
-    climate_historic_df <- dbdf[["df"]]
+    climate_historical_df <- dbdf[["df"]]
     rm(dbdf)
 
     tile <- normalizePath(f) |> tileID()
@@ -240,11 +240,11 @@ if (uploadArchives) {
       gid <- googledrive::as_id(gids_historic[[msy]])
       drivefiles <- googledrive::drive_ls(gid)
 
-      lapply(historic_decades, function(dcd) {
+      lapply(historical_decades, function(dcd) {
         fzip <- paste0(ClimateNAout, "_", msy, "_", dcd, ".zip")
 
         row <- dplyr::filter(
-          climate_historic_df,
+          climate_historical_df,
           msy == !!msy & year %in% !!(dcd + 0:9) & tileid == !!tile ## zip each decade
         ) |>
           collect()
@@ -274,7 +274,7 @@ if (uploadArchives) {
   }) |>
     dplyr::bind_rows()
 
-  rows_update(climate_historic_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  rows_update(climate_historical_df, new_rows_historic, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
   DBI::dbDisconnect(climate_db)
 
