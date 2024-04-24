@@ -250,5 +250,6 @@ if (uploadArchives) {
 }
 
 ## copy updated db to package data folder + remove working copy
-file.copy(addlDBfile, pkgDBfile, overwrite = TRUE)
+file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
+file.copy(wrkngDBfile, pkgDBfile, overwrite = TRUE)
 unlink(wrkngDBfile)
