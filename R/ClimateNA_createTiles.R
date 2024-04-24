@@ -171,7 +171,7 @@ ClimateNA_sql <- function(dbfile, type) {
   df_template <- switch(
     type,
     historical_normals = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
       period = "CHARACTER",    ## climate period
       tileid = "INTEGER",      ## tile ID
@@ -182,7 +182,7 @@ ClimateNA_sql <- function(dbfile, type) {
       uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     ),
     future_normals = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       gcm = "CHARACTER",       ## climate scenario GCM
       ssp = "CHARACTER",       ## climate scenario SSP
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
@@ -195,7 +195,7 @@ ClimateNA_sql <- function(dbfile, type) {
       uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     ),
     historical = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
       year = "CHARACTER",      ## climate year
       tileid = "INTEGER",      ## tile ID
@@ -206,7 +206,7 @@ ClimateNA_sql <- function(dbfile, type) {
       uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
     ),
     future = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       gcm = "CHARACTER",       ## climate scenario GCM
       ssp = "CHARACTER",       ## climate scenario SSP
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
@@ -239,7 +239,7 @@ checksums_sql <- function(dbfile, type) {
   df_template <- switch(
     type,
     historical_normals = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
       period = "CHARACTER",     ## climate period
       tileid = "ISNTEGER",      ## tile ID
@@ -247,7 +247,7 @@ checksums_sql <- function(dbfile, type) {
       filehash = "CHARACTER"    ## file hash (checksum)
     ),
     future_normals = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       gcm = "CHARACTER",        ## climate scenario GCM
       ssp = "CHARACTER",        ## climate scenario SSP
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
@@ -257,7 +257,7 @@ checksums_sql <- function(dbfile, type) {
       filehash = "CHARACTER"    ## file hash (checksum)
     ),
     historical = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
       year = "CHARACTER",       ## climate year
       tileid = "INTEGER",       ## tile ID
@@ -265,7 +265,7 @@ checksums_sql <- function(dbfile, type) {
       filehash = "CHARACTER"    ## file hash (checksum)
     ),
     future = c(
-      id = "INTEGER PRIMARY KEY AUTOINCREMENT",
+      id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       gcm = "CHARACTER",        ## climate scenario GCM
       ssp = "CHARACTER",        ## climate scenario SSP
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
