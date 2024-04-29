@@ -19,6 +19,7 @@ test_that("prepClimateLayers works for multiple variable types", {
   ## CMI uses yearly variable; no fun (as is)
   ## FFP uses yearly  variable; no fun (as is); similar name to bFFP and eFFP
   ## MDC uses monthly vars; uses custom fun
+  ## CMD uses seasonal variable; no fun (as is)
   climateVariables <- list(
     historical_ATA = list(
       vars = c("historical_MAT", "historical_MAT_normal"),
@@ -49,6 +50,11 @@ test_that("prepClimateLayers works for multiple variable types", {
       vars = c(sprintf("historical_PPT%02d", 4:9), sprintf("historical_Tmax%02d", 4:9)),
       fun = quote(calcMDC),
       .dots = list(historical_years = historical_yrs)
+    ),
+    future_CMD_sm = list(
+      vars = "future_CMD_sm",
+      fun = quote(calcAsIs),
+      .dots = list(future_years = future_yrs)
     )
   )
 

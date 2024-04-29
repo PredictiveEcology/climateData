@@ -116,6 +116,11 @@ whichTypes <- function(climVars) {
 #'       vars = c(sprintf("historical_PPT%02d", 4:9), sprintf("historical_Tmax%02d", 4:9)),
 #'       fun = quote(calcMDC),
 #'       .dots = list(historical_years = historical_yrs)
+#'     ),
+#'     future_CMD_sm = list(
+#'       vars = "future_CMD_sm",
+#'       fun = quote(calcAsIs),
+#'       .dots = list(future_years = future_yrs)
 #'     )
 #'   )
 #'
