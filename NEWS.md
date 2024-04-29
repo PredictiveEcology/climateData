@@ -1,3 +1,8 @@
+# climateData (development version)
+
+- add checks for climate variable names and try to catch misspecification of variables by the user in `prepareClimateLayers()`;
+- documentation improvements;
+
 # climateData 2.0.6
 
 - replace use of 'historic' with 'historical' for all arguments and function names, database tables and entries, and data paths;

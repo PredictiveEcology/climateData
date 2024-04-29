@@ -1,3 +1,5 @@
+.allowedClimDotsNames <- c("historical_period", "historical_years", "future_period", "future_years")
+
 #' Determine MSYN type of a climate variable
 #'
 #' @template ClimateNA_climVars
@@ -243,6 +245,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   vars_hist_msy <- grep("^historical_", needVars, value = TRUE) |>
     grep("_normal$", x = _, value = TRUE, invert = TRUE) |>
     gsub("^historical_", "", x = _) ## strip prefix
+  stopifnot(all(vars_hist_msy %in% .allowedClimateVars_MSY))
 
   if (length(vars_hist_msy) > 0) {
     tifs_hist_msy <- buildClimateMosaics(
@@ -262,6 +265,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   vars_hist_nrm <- grep("^historical_", needVars, value = TRUE) |>
     grep("_normal$", x = _, value = TRUE) |>
     gsub("^historical_", "", x = _) ## strip prefix
+  stopifnot(all(sub("_normal$", "", vars_hist_nrm) %in% .allowedClimateVars_nrm))
 
   if (length(vars_hist_nrm) > 0) {
     tifs_hist_nrm <- buildClimateMosaicsNormals(
@@ -281,6 +285,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   vars_futu_msy <- grep("^future_", needVars, value = TRUE) |>
     grep("_normal$", x = _, value = TRUE, invert = TRUE) |>
     gsub("^future_", "", x = _) ## strip prefix
+  stopifnot(all(vars_futu_msy %in% .allowedClimateVars_MSY))
 
   if (length(vars_futu_msy) > 0) {
     tifs_futu_msy <- buildClimateMosaics(
@@ -302,6 +307,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   vars_futu_nrm <- grep("^future_", needVars, value = TRUE) |>
     grep("_normal$", x = _, value = TRUE) |>
     gsub("^future_", "", x = _) ## strip prefix
+  stopifnot(all(sub("_normal$", "", vars_futu_nrm) %in% .allowedClimateVars_nrm))
 
   if (length(vars_futu_nrm) > 0) {
     tifs_futu_nrm <- buildClimateMosaicsNormals(
@@ -352,6 +358,33 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
     climFun <- newClimVar[["fun"]]
     climDots <- newClimVar[[".dots"]]
 
+    ## assert/check that climVars correspond to names(climDots)
+    vars_hist_msy <- climVars[grepl("^historical_", climVars) & !grepl("_normal$", climVars)]
+    if (length(vars_hist_msy) > 0) {
+      stopifnot("historical_years" %in% names(climDots))
+    }
+
+    vars_hist_nrm <- climVars[grepl("^historical_.*_normal", climVars)]
+    if (length(vars_hist_nrm) > 0) {
+      stopifnot("historical_period" %in% names(climDots))
+    }
+
+    vars_futu_msy <- climVars[grepl("^future", climVars) & !grepl("_normal$", climVars)]
+    if (length(vars_futu_msy) > 0) {
+      stopifnot("future_years" %in% names(climDots))
+    }
+
+    vars_futu_nrm <- climVars[grepl("^future_.*_normal", climVars)]
+    if (length(vars_futu_nrm) > 0) {
+      stopifnot("future_period" %in% names(climDots))
+    }
+
+    if (any(!climDots %in% .allowedClimDotsNames)) {
+      warning(paste("'climateVarsList' element '.dots' with possibly incorrect name:\n",
+                    names(climDots)))
+    }
+    ## end assertions/checks
+
     funOut <- do.call(eval(climFun), list(
       stacks = climStacks,
       layers = climVars,
@@ -367,7 +400,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   }
 
   digest4cache <- c("climatePathOut", "currentModuleName",
-                    "future_years", "future_period", "historical_years", "historical_period",
+                    .allowedClimDotsNames,
                     "rasterToMatch", "studyArea", "studyAreaName") |>
     mget(envir = environment()) |>
     .robustDigest(object = _)
