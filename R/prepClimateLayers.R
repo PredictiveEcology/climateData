@@ -33,9 +33,17 @@ whichTypes <- function(climVars) {
 
 #' Prepare rasters for derived and 'as-is' climate variables
 #'
-#' TODO
+#' @param climateVarsList Named list of lists, specifying the climate variables to extract and/or
+#' calculate.
+#' The name of each outer list element must be prefixed by either `future_` or `historical_`,
+#' and each inner list should consist of the following named elements:
 #'
-#' @param climateVarsList TODO
+#' - `vars`: the raw variables used to derive the target variable;
+#' - `fun`: a quoted function used to derive the target variable,
+#'          where `quote(calcAsIs)` denotes target variables that ARE the raw variable:
+#'  - `.dots`: additional arguments passed to `fun`.
+#'
+#' See examples.
 #'
 #' @template ClimateNA_srcdstdir
 #'
@@ -55,7 +63,8 @@ whichTypes <- function(climVars) {
 #'
 #' @template rasterToMatch
 #'
-#' @param currentModuleName TODO
+#' @param currentModuleName character string giving the name of the current module.
+#'                          used to tag `Cache` entries.
 #'
 #' @param ... additional arguments (not used)
 #'

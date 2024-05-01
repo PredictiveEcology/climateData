@@ -126,9 +126,9 @@ getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
 #'
 #' @template ClimateNA_tile
 #'
-#' @param climateURLs TODO
+#' @param climateURLs list of lists of tile URLs, with outer list names corresponding to tile ids.
 #'
-#' @param climatePath TODO
+#' @param climatePath character string specifying the directory path to put climate data.
 #'
 #' @return (invisibly) a list of length `tileIDs` containing the result of `preProcess()` calls
 #'

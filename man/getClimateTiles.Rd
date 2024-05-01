@@ -9,9 +9,9 @@ getClimateTiles(tile, climateURLs, climatePath)
 \arguments{
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
-\item{climateURLs}{TODO}
+\item{climateURLs}{list of lists of tile URLs, with outer list names corresponding to tile ids.}
 
-\item{climatePath}{TODO}
+\item{climatePath}{character string specifying the directory path to put climate data.}
 }
 \value{
 (invisibly) a list of length \code{tileIDs} containing the result of \code{preProcess()} calls
