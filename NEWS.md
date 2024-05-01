@@ -1,7 +1,13 @@
+# climateData 2.2.0
+
+- fix issue extracting tile urls when tile ids not provided in numerical order, or when numerical order did not match alphabetical order (i.e., `sort(c(2, 11, 12, 3)) != sort(c("2", "3", "11", "12"))`);
+- fixed spurious warnings for names in `.dots` passed to `prepClimateLayers()`;
+- improved documentation;
+
 # climateData 2.1.0
 
 - add checks for climate variable names and try to catch misspecification of variables by the user in `prepareClimateLayers()`;
-- documentation improvements;
+- improved documentation;
 
 # climateData 2.0.6
 
