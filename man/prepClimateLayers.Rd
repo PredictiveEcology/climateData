@@ -24,7 +24,18 @@ prepClimateLayers(
 )
 }
 \arguments{
-\item{climateVarsList}{TODO}
+\item{climateVarsList}{Named list of lists, specifying the climate variables to extract and/or
+calculate.
+The name of each outer list element must be prefixed by either \code{future_} or \code{historical_},
+and each inner list should consist of the following named elements:
+\itemize{
+\item \code{vars}: the raw variables used to derive the target variable;
+\item \code{fun}: a quoted function used to derive the target variable,
+where \code{quote(calcAsIs)} denotes target variables that ARE the raw variable:
+\item \code{.dots}: additional arguments passed to \code{fun}.
+}
+
+See examples.}
 
 \item{srcdir, dstdir}{character. vector of directory paths to source and destination raster files.}
 
@@ -56,12 +67,13 @@ passed to \code{\link[reproducible:postProcessTo]{reproducible::postProcessTo()}
 \item{rasterToMatch}{a \code{SpatRaster} object to use as the template for GIS operations.
 passed to \code{\link[reproducible:postProcessTo]{reproducible::postProcessTo()}}.}
 
-\item{currentModuleName}{TODO}
+\item{currentModuleName}{character string giving the name of the current module.
+used to tag \code{Cache} entries.}
 
 \item{...}{additional arguments (not used)}
 }
 \description{
-TODO
+Prepare rasters for derived and 'as-is' climate variables
 }
 \examples{
 if (require("archive", quietly = TRUE) &&
