@@ -379,7 +379,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       stopifnot("future_period" %in% names(climDots))
     }
 
-    if (any(!climDots %in% .allowedClimDotsNames)) {
+    if (any(!names(climDots) %in% .allowedClimDotsNames)) {
       warning(paste("'climateVarsList' element '.dots' with possibly incorrect name:\n",
                     names(climDots)))
     }
