@@ -13,7 +13,7 @@ checksums_sql(dbfile, type)
 \item{dbfile}{path to \code{.sqlite} database file}
 
 \item{type}{character. denotes the table in the sqlite database to access.
-one of 'historic', 'future', 'historic_normals', or 'future_normals'.}
+one of 'historical', 'future', 'historical_normals', or 'future_normals'.}
 }
 \value{
 named list containing:

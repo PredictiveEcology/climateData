@@ -6,7 +6,7 @@ utils::globalVariables(c(
 #'
 #' @template stacks_layers
 #'
-#' @return character string indicating the type (one of "historic" or "future")
+#' @return character string indicating the type (one of "historical" or "future")
 #'
 #' @export
 #' @importFrom dplyr first

@@ -11,8 +11,8 @@ prepClimateLayers(
   tile = NULL,
   future_years = NULL,
   future_period = NULL,
-  historic_years = NULL,
-  historic_period = NULL,
+  historical_years = NULL,
+  historical_period = NULL,
   gcm = NULL,
   ssp = NULL,
   cl = NULL,
@@ -30,9 +30,9 @@ prepClimateLayers(
 
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
-\item{historic_years, future_years}{integer. consecutive data years to use (e.g., \code{2011:2100}).}
+\item{historical_years, future_years}{integer. consecutive data years to use (e.g., \code{2011:2100}).}
 
-\item{historic_period, future_period}{character.
+\item{historical_period, future_period}{character.
 climate normal periods to use (e.g., \code{c("1951_1980", "1981_2010")}).}
 
 \item{gcm}{character. name of GCM available in ClimateNA.}
@@ -69,11 +69,11 @@ if (require("archive", quietly = TRUE) &&
     require("SpaDES.tools", quietly = TRUE) &&
     !isTRUE(as.logical(Sys.getenv("CI", "false")))) {
   dPath <- file.path(tempdir(), "test_prepClimateLayers")
-  climateType <- "historic"
+  climateType <- "historical"
   climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
   climatePathOut <- file.path(climatePath, "outputs") |> reproducible::checkPath(create = TRUE)
-  historic_prd <- c("1951_1980", "1981_2010")
-  historic_yrs <- c(2011:2015)
+  historical_prd <- c("1951_1980", "1981_2010")
+  historical_yrs <- c(2011:2015)
   future_yrs <- c(2021:2025)
   GCM <- "CanESM5"
   SSP <- 370
@@ -86,35 +86,40 @@ if (require("archive", quietly = TRUE) &&
   ## FFP uses yearly  variable; no fun (as is); similar name to bFFP and eFFP
   ## MDC uses monthly vars; uses custom fun
   climateVariables <- list(
-    historic_ATA = list(
-      vars = c("historic_MAT", "historic_MAT_normal"),
+    historical_ATA = list(
+      vars = c("historical_MAT", "historical_MAT_normal"),
       fun = quote(calcATA),
-      .dots = list(historic_period = historic_prd, historic_years = historic_yrs)
+      .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
     ),
     future_ATA = list(
-      vars = c("future_MAT", "historic_MAT_normal"),
+      vars = c("future_MAT", "historical_MAT_normal"),
       fun = quote(calcATA),
-      .dots = list(historic_period = historic_prd, future_years = future_yrs)
+      .dots = list(historical_period = historical_prd, future_years = future_yrs)
     ),
-    historic_CMI = list(
-      vars = "historic_CMI",
+    historical_CMI = list(
+      vars = "historical_CMI",
       fun = quote(calcAsIs),
-      .dots = list(historic_years = historic_yrs)
+      .dots = list(historical_years = historical_yrs)
     ),
-    historic_CMI_normal = list(
-      vars = "historic_CMI_normal",
+    historical_CMI_normal = list(
+      vars = "historical_CMI_normal",
       fun = quote(calcCMInormal),
-      .dots = list(historic_period = historic_prd, historic_years = historic_yrs)
+      .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
     ),
     future_FFP = list(
       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
       fun = quote(calcAsIs),
       .dots = list(future_years = future_yrs)
     ),
-    historic_MDC = list(
-      vars = c(sprintf("historic_PPT\%02d", 4:9), sprintf("historic_Tmax\%02d", 4:9)),
+    historical_MDC = list(
+      vars = c(sprintf("historical_PPT\%02d", 4:9), sprintf("historical_Tmax\%02d", 4:9)),
       fun = quote(calcMDC),
-      .dots = list(historic_years = historic_yrs)
+      .dots = list(historical_years = historical_yrs)
+    ),
+    future_CMD_sm = list(
+      vars = "future_CMD_sm",
+      fun = quote(calcAsIs),
+      .dots = list(future_years = future_yrs)
     )
   )
 
@@ -122,9 +127,9 @@ if (require("archive", quietly = TRUE) &&
     climateVarsList = climateVariables,
     srcdir = climatePath,    ## raw inputs, downloaded from Google Drive
     dstdir = climatePathOut, ## intermediate + final outputs
-    historic_years = historic_yrs,
+    historical_years = historical_yrs,
     future_years = future_yrs,
-    historic_period = historic_prd,
+    historical_period = historical_prd,
     future_period = NULL,
     gcm = GCM,
     ssp = SSP,

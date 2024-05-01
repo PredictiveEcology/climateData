@@ -32,10 +32,10 @@ whereAmI <- function(studyArea) {
 #' @importFrom dplyr collect filter
 #'
 #' @examples
-#' (getClimateTable(type = "historic", tile = 1, msy = "M", years = 2011:2020))
+#' (getClimateTable(type = "historical", tile = 1, msy = "M", years = 2011:2020))
 #' (getClimateTable(type = "future", tile = 1, msy = "Y", years = 2051:2060,
 #'                  gcm = "CanESM5", ssp = 370))
-#' (getClimateTable(type = "historic_normals", tile = 1, msy = "Y"))
+#' (getClimateTable(type = "historical_normals", tile = 1, msy = "Y"))
 #' (getClimateTable(type = "future_normals", tile = 1, msy = "Y",
 #'                  gcm = "CanESM5", ssp = 370)) ## none yet available
 getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
@@ -59,12 +59,12 @@ getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
   climate_df <- dbdf[["df"]]
   on.exit(DBI::dbDisconnect(climate_db), add = TRUE)
 
-  climate_dt <- if (type == "historic") {
+  climate_dt <- if (type == "historical") {
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy, year %in% !!years)
   } else if (type == "future") {
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy, year %in% !!years,
                   gcm == !!gcm, ssp == !!as.character(ssp))
-  } else if (type == "historic_normals") {
+  } else if (type == "historical_normals") {
     ## all periods in single zip
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy)
   } else if (type == "future_normals") {
@@ -75,7 +75,7 @@ getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
   climate_dt <- dplyr::collect(climate_dt)
 }
 
-#' Get historic or future climate normals periods
+#' Get historical or future climate normals periods
 #'
 #' @template ClimateNA_type
 #' @template ClimateNA_tile
@@ -87,7 +87,7 @@ getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
 #' @export
 #' @importFrom dplyr pull
 getNormalsPeriods <- function(type = NULL, tile = NULL, msy = "Y", gcm = NULL, ssp = NULL) {
-  if (type %in% c("historic", "future")) {
+  if (type %in% c("historical", "future")) {
     type <- paste0(type, "_normals")
   }
 
