@@ -113,3 +113,53 @@ test_that("prepClimateLayers works for multiple variable types", {
 
   unlink(dPath, recursive = TRUE)
 })
+
+test_that("prepClimateLayers properly handles unordered tileIDs", {
+  skip_on_cran()
+  skip_on_ci() ## needs to authorize googldrive package for downloads
+  skip_if_not_installed("archive")
+  skip_if_not_installed("googledrive")
+
+  dPath <- file.path(tempdir(), "test_prepClimateLayers")
+  climateType <- "historical"
+  climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
+  climatePathOut <- file.path(climatePath, "outputs") |> reproducible::checkPath(create = TRUE)
+  tileIDs <- c(3, 2, 12, 11)
+  historical_yrs <- c(2005:2015) ## cross-decade, therefore multiple climate URLs
+
+  climateVariables <- list(
+    historical_DD5_sp = list(
+      vars = "historical_DD5_sp",
+      fun = quote(calcAsIs),
+      .dots = list(historical_years = historical_yrs)
+    ),
+    historical_Tmin_wt = list(
+      vars = "historical_Tmin_wt",
+      fun = quote(calcAsIs),
+      .dots = list(historical_years = historical_yrs)
+    )
+  )
+
+  climateRasters <- prepClimateLayers(
+    climateVarsList = climateVariables,
+    srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
+    dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
+    tile = tileIDs,
+    historical_years = historical_yrs,
+    future_years = NULL,
+    historical_period = NULL,
+    future_period = NULL,
+    gcm = NULL,
+    ssp = NULL,
+    cl = NULL,
+    studyArea = NULL,
+    studyAreaName = NULL,
+    rasterToMatch = NULL
+  )
+
+  lapply(climateRasters, function(x) {
+    expect_s4_class(x, "SpatRaster")
+  })
+
+  unlink(dPath, recursive = TRUE)
+})

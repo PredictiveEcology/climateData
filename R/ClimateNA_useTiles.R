@@ -137,23 +137,19 @@ getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
 getClimateTiles <- function(tile, climateURLs, climatePath) {
   stopifnot(requireNamespace("googledrive", quietly = TRUE))
 
-  Map(
-    climateTile = tile,
-    climateURL = climateURLs,
-    function(climateTile, climateURL) {
-      ## TODO: the zip files are being put inside the tile directory, but should be one level up
-      preProcessOut <- lapply(climateURL, function(url) {
-        preProcess(
-          url = googledrive::as_id(url),
-          targetFile = NULL,
-          destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
-        ) ## TODO: how to best use Cache here?
-      })
-      names(preProcessOut) <- paste0("tile_", climateTile)
+  lapply(tile, climateURL = climateURLs, function(climateTile, climateURL) {
+    ## TODO: the zip files are being put inside the tile directory, but should be one level up
+    preProcessOut <- lapply(climateURL[[as.character(climateTile)]], function(url) {
+      preProcess(
+        url = googledrive::as_id(url),
+        targetFile = NULL,
+        destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
+      ) ## TODO: how to best use Cache here?
+    })
+    names(preProcessOut) <- paste0("tile_", climateTile)
 
-      return(preProcessOut)
-    }
-  ) |>
+    return(preProcessOut)
+  }) |>
     invisible()
 }
 
