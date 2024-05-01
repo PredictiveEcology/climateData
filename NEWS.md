@@ -1,4 +1,4 @@
-# climateData (development version)
+# climateData 2.1.0
 
 - add checks for climate variable names and try to catch misspecification of variables by the user in `prepareClimateLayers()`;
 - documentation improvements;
