@@ -118,6 +118,11 @@ whichTypes <- function(climVars) {
 #'       fun = quote(calcCMInormal),
 #'       .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
 #'     ),
+#'     historical_FFP_normal = list(
+#'       vars = "historical_FFP_normal", ## ensure FFP only; not bFFP nor eFFP
+#'       fun = quote(calcAsIs),
+#'       .dots = list(historical_period = historical_prd)
+#'     ),
 #'     future_FFP = list(
 #'       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
 #'       fun = quote(calcAsIs),
@@ -152,12 +157,12 @@ whichTypes <- function(climVars) {
 #'   )
 #' }
 prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
-                               tile = NULL,
-                               future_years = NULL, future_period = NULL,
-                               historical_years = NULL, historical_period = NULL,
-                               gcm = NULL, ssp = NULL, cl = NULL,
-                               studyArea = NULL, studyAreaName = NULL, rasterToMatch = NULL,
-                               currentModuleName = "NoModule", ...) {
+                              tile = NULL,
+                              future_years = NULL, future_period = NULL,
+                              historical_years = NULL, historical_period = NULL,
+                              gcm = NULL, ssp = NULL, cl = NULL,
+                              studyArea = NULL, studyAreaName = NULL, rasterToMatch = NULL,
+                              currentModuleName = "NoModule", ...) {
   stopifnot(
     !missing(srcdir), !missing(dstdir),
     !all(is.null(future_years), is.null(future_period), is.null(historical_years), is.null(historical_period)),

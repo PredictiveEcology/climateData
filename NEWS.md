@@ -1,3 +1,7 @@
+# climateData 2.2.1
+
+- add support for multiple parallel backends (#11) via option `climateData.parallel.backend` (default "parallel"; also supports "future");
+
 # climateData 2.2.0
 
 - fix issue extracting tile URLs when tile ids not provided in numerical order, or when numerical order did not match alphabetical order (i.e., `sort(c(2, 11, 12, 3)) != sort(c("2", "3", "11", "12"))`);

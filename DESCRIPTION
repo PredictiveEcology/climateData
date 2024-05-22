@@ -3,8 +3,8 @@ Title: Utilities For Working With North American Climate Data
 Description: Utilities for working with North American climate data from
     'ClimateNA' <https://climatena.ca/>.
 URL: https://github.com/PredictiveEcology/climateData
-Date: 2024-05-01
-Version: 2.2.0
+Date: 2024-05-22
+Version: 2.2.1
 Authors@R: c(
     person("Alex M", "Chubaty", email = "achubaty@for-cast.ca",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7146-8135")),
@@ -20,6 +20,7 @@ Imports:
     DBI,
     dplyr,
     fs,
+    future.apply,
     methods,
     parallel,
     parallelly,
@@ -42,7 +43,8 @@ Suggests:
     rprojroot,
     SpaDES.tools (>= 2.0.4),
     sys,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 Remotes:
     PredictiveEcology/reproducible@development
 BugReports: https://github.com/PredictiveEcology/climateData/issues

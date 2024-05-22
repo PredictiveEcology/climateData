@@ -46,10 +46,13 @@ see \url{https://climatena.ca/Help2#_var} for full list of variables.}
 
 \item{srcdir, dstdir}{character. vector of directory paths to source and destination raster files.}
 
-\item{cl}{cluster object. if \code{NULL} (default), a cluster will be created using up to
-\code{length(climVar)} number of CPU cores for parallel computation.
-Users can pass their own \code{cl} object or specify option
-\code{parallelly.availableCores.fallback} to reduce the number of cores used.
+\item{cl}{Optional cluster object.
+If option \code{climateData.parallel.backend} is "parallel" (default), and \code{cl} is NULL (default),
+a cluster will be created using up to \code{length(climVar)} number of CPU cores.
+When using the "parallel" backend, users can pass their own \code{cl} object or specify option
+\code{parallelly.availableCores.fallback} to control the number of cores used.
+If \code{climateData.parallel.backend} is "future", \code{cl} is ignored, as the user is expected to
+set up the future plan themselves (see \code{future::plan}).
 Users may also need to specify setting up the cluster using 'sequential',
 rather than the default 'parallel', via \code{parallelly.makeNodePSOCK.setup_strategy}.
 See \code{?parallelly.options}.}

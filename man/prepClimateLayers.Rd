@@ -50,10 +50,13 @@ climate normal periods to use (e.g., \code{c("1951_1980", "1981_2010")}).}
 
 \item{ssp}{integer. one of the available SSPs in ClimateNA (e.g., \code{370} or \code{585})}
 
-\item{cl}{cluster object. if \code{NULL} (default), a cluster will be created using up to
-\code{length(climVar)} number of CPU cores for parallel computation.
-Users can pass their own \code{cl} object or specify option
-\code{parallelly.availableCores.fallback} to reduce the number of cores used.
+\item{cl}{Optional cluster object.
+If option \code{climateData.parallel.backend} is "parallel" (default), and \code{cl} is NULL (default),
+a cluster will be created using up to \code{length(climVar)} number of CPU cores.
+When using the "parallel" backend, users can pass their own \code{cl} object or specify option
+\code{parallelly.availableCores.fallback} to control the number of cores used.
+If \code{climateData.parallel.backend} is "future", \code{cl} is ignored, as the user is expected to
+set up the future plan themselves (see \code{future::plan}).
 Users may also need to specify setting up the cluster using 'sequential',
 rather than the default 'parallel', via \code{parallelly.makeNodePSOCK.setup_strategy}.
 See \code{?parallelly.options}.}
@@ -117,6 +120,11 @@ if (require("archive", quietly = TRUE) &&
       vars = "historical_CMI_normal",
       fun = quote(calcCMInormal),
       .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
+    ),
+    historical_FFP_normal = list(
+      vars = "historical_FFP_normal", ## ensure FFP only; not bFFP nor eFFP
+      fun = quote(calcAsIs),
+      .dots = list(historical_period = historical_prd)
     ),
     future_FFP = list(
       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
