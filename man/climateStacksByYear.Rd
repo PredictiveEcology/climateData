@@ -10,7 +10,7 @@ climateStacksByYear(tifs, climVars, type, years)
 climateStacksByPeriod(tifs, climVars, type, period)
 }
 \arguments{
-\item{tifs}{TODO}
+\item{tifs}{character specifying the filepaths to the climate rasters}
 
 \item{climVars}{character. CLimateNA climate variables to use.
 see \url{https://climatena.ca/Help2#_var} for full list of variables.}
