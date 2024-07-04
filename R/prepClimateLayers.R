@@ -31,27 +31,33 @@ whichTypes <- function(climVars) {
   }, character(1))
 }
 
+#' Extract historical or future years (or periods) from a climate variables list
+#'
+#' @template climVarsList
+#'
+#' @param type character string specifying one of:
+#'        `r paste0("'", paste0(.allowedClimDotsNames, collapse = "', '"), "'")`.
+#'
+#' @export
+extractTimes <- function(climateVarsList, type) {
+  stopifnot(type %in% .allowedClimDotsNames)
+
+  lapply(climateVarsList, function(v) {
+    v[[".dots"]][[type]]
+  }) |>
+    unlist() |>
+    unname() |>
+    unique() |>
+    sort()
+}
+
 #' Prepare rasters for derived and 'as-is' climate variables
 #'
-#' @param climateVarsList Named list of lists, specifying the climate variables to extract and/or
-#' calculate.
-#' The name of each outer list element must be prefixed by either `future_` or `historical_`,
-#' and each inner list should consist of the following named elements:
-#'
-#' - `vars`: the raw variables used to derive the target variable;
-#' - `fun`: a quoted function used to derive the target variable,
-#'          where `quote(calcAsIs)` denotes target variables that ARE the raw variable:
-#'  - `.dots`: additional arguments passed to `fun`.
-#'
-#' See examples.
+#' @template climVarsList
 #'
 #' @template ClimateNA_srcdstdir
 #'
 #' @template ClimateNA_tile
-#'
-#' @template ClimateNA_typeyears
-#'
-#' @template ClimateNA_typeperiod
 #'
 #' @template ClimateNA_gcmssp
 #'
@@ -144,10 +150,6 @@ whichTypes <- function(climVars) {
 #'     climateVarsList = climateVariables,
 #'     srcdir = climatePath,    ## raw inputs, downloaded from Google Drive
 #'     dstdir = climatePathOut, ## intermediate + final outputs
-#'     historical_years = historical_yrs,
-#'     future_years = future_yrs,
-#'     historical_period = historical_prd,
-#'     future_period = NULL,
 #'     gcm = GCM,
 #'     ssp = SSP,
 #'     cl = NULL,
@@ -158,14 +160,11 @@ whichTypes <- function(climVars) {
 #' }
 prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
                               tile = NULL,
-                              future_years = NULL, future_period = NULL,
-                              historical_years = NULL, historical_period = NULL,
                               gcm = NULL, ssp = NULL, cl = NULL,
                               studyArea = NULL, studyAreaName = NULL, rasterToMatch = NULL,
                               currentModuleName = "NoModule", ...) {
   stopifnot(
     !missing(srcdir), !missing(dstdir),
-    !all(is.null(future_years), is.null(future_period), is.null(historical_years), is.null(historical_period)),
     (!is.null(tile) && is.null(studyArea) && is.null(rasterToMatch)) || ## pass tile but not sA/RTM
       (is.null(tile) && !is.null(studyArea) && !is.null(rasterToMatch)) ## pass sA/RTM but not tile
   )
@@ -187,10 +186,10 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   }
 
   ## determine which climate vars are needed from climateVarsList$newVar$var
-  # annual vars: XXX
-  # monthly vars: XXX00
-  # seasonal vars: XXX_zz
-  # normal vars: will need to be prefixed with 'normal_'
+  ## annual vars: XXX
+  ## monthly vars: XXX00
+  ## seasonal vars: XXX_zz
+  ## normal vars: will need to be prefixed with 'normal_'
   needVars <- purrr::transpose(climateVarsList)[["vars"]] |>
     unlist() |>
     unname() |>
@@ -209,6 +208,12 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   if (all(c("future_M", "future_S", "future_Y") %in% unique_types_msy)) {
     unique_types_msy <- gsub("^future_(M|S|Y)$", "future_MSY", unique_types_msy) |> unique()
   }
+
+  ## determine which years / periods we need to get
+  historical_years <- extractTimes(climateVarsList, "historical_years")
+  historical_period <- extractTimes(climateVarsList, "historical_period")
+  future_years <- extractTimes(climateVarsList, "future_years")
+  future_period <- extractTimes(climateVarsList, "future_period")
 
   ## 2. download and extract multiple archives per tile (by decade)
   climPreProcessOut <- lapply(unique_types_msy, function(type_msyn) {

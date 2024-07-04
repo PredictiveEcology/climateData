@@ -1,3 +1,7 @@
+# climateData 2.2.2
+
+- remove redundant arguments `historical_years`, `future_years`, `historical_period`, and `future_period` from `prepClimateLayers()` (#12).
+
 # climateData 2.2.1
 
 - add support for multiple parallel backends (#11) via option `climateData.parallel.backend` (default "parallel"; also supports "future");

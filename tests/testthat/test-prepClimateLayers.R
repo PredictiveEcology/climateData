@@ -73,10 +73,6 @@ test_that("prepClimateLayers works for multiple variable types", {
         srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
         dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
         tile = tileIDs,
-        historical_years = historical_yrs,
-        future_years = future_yrs,
-        historical_period = historical_prd,
-        future_period = NULL,
         gcm = GCM,
         ssp = SSP,
         cl = NULL,
@@ -111,10 +107,6 @@ test_that("prepClimateLayers works for multiple variable types", {
           srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
           dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
           # tile = tileIDs, ## when passing `studyArea`/`rasterToMatch` then `tile` isn't needed
-          historical_years = historical_yrs,
-          future_years = future_yrs,
-          historical_period = historical_prd,
-          future_period = NULL,
           gcm = GCM,
           ssp = SSP,
           cl = NULL,
@@ -164,10 +156,6 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
     srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
     dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
     tile = tileIDs,
-    historical_years = historical_yrs,
-    future_years = NULL,
-    historical_period = NULL,
-    future_period = NULL,
     gcm = NULL,
     ssp = NULL,
     cl = NULL,

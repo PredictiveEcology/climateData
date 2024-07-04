@@ -9,10 +9,6 @@ prepClimateLayers(
   srcdir,
   dstdir,
   tile = NULL,
-  future_years = NULL,
-  future_period = NULL,
-  historical_years = NULL,
-  historical_period = NULL,
   gcm = NULL,
   ssp = NULL,
   cl = NULL,
@@ -40,11 +36,6 @@ See examples.}
 \item{srcdir, dstdir}{character. vector of directory paths to source and destination raster files.}
 
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
-
-\item{historical_years, future_years}{integer. consecutive data years to use (e.g., \code{2011:2100}).}
-
-\item{historical_period, future_period}{character.
-climate normal periods to use (e.g., \code{c("1951_1980", "1981_2010")}).}
 
 \item{gcm}{character. name of GCM available in ClimateNA.}
 
@@ -147,10 +138,6 @@ if (require("archive", quietly = TRUE) &&
     climateVarsList = climateVariables,
     srcdir = climatePath,    ## raw inputs, downloaded from Google Drive
     dstdir = climatePathOut, ## intermediate + final outputs
-    historical_years = historical_yrs,
-    future_years = future_yrs,
-    historical_period = historical_prd,
-    future_period = NULL,
     gcm = GCM,
     ssp = SSP,
     cl = NULL,
