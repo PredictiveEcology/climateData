@@ -262,11 +262,14 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
       dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
       dsttif <- file.path(dstdir, paste0(fname, ".tif"))
 
-      ## TODO: by default, layer name is filename; update this to be `mv`
-      sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
-      sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
+      newMosaic <- terra::sprc(srcfiles) |> terra::mosaic()
+      writeRaster(newMosaic, filename = dsttif, overwrite = TRUE)
 
-      on.exit(file.remove(dstvrt), add = TRUE)
+      ## TODO: by default, layer name is filename; update this to be `mv`
+      # sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
+      # sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
+
+      # on.exit(file.remove(dstvrt), add = TRUE)
 
       return(dsttif)
     }) |>
