@@ -260,10 +260,17 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
     lapply(unique(basename(srcfiles)), function(mv) {
       mv <- tools::file_path_sans_ext(mv)
       fname <- paste(mv, basename(basename(srcdir)), y, "t", paste(tile, collapse = "-"), sep = "_")
-      dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
+      # dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
       dsttif <- file.path(dstdir, paste0(fname, ".tif"))
 
-      newMosaic <- terra::sprc(srcfiles) |> terra::mosaic()
+      # ss <- mget(ls())
+      # save(ss, file = paste0("~/tmp/stuff", basename(tempfile()), ".rda"))
+      if (length(srcfiles) == 1) {
+        newMosaic <- terra::rast(srcfiles)
+      } else {
+        newMosaic <- terra::sprc(srcfiles) |> terra::mosaic()
+      }
+
       writeRaster(newMosaic, filename = dsttif, overwrite = TRUE)
 
       ## TODO: by default, layer name is filename; update this to be `mv`
