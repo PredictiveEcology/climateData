@@ -218,14 +218,14 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
   fff <- reproducible:::.whichExtractFn(archiveFile, args = list())
   tf <- tempfile()
   dir.create(tf, showWarnings = FALSE, recursive = TRUE)
-  lala <- fff$fun(file.path(workingPath, archiveFile),
+  lala <- fff$fun(file.path(archiveFile),
                   files = filesToExtract, dir = tf)
   dirsToMake <- unique(dirname(file.path(workingPath, lala)))
   de <- dir.exists(dirsToMake)
   if (any(de %in% FALSE)) {
     silence <- lapply(dirsToMake[de %in% FALSE], dir.create, showWarnings = FALSE, recursive = TRUE)
   }
-  unlink(file.path(workingPath, lala), recursive = TRUE)
+  unlink(file.path(workingPath, lala), recursive = TRUE, force = TRUE)
   linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
   lala
 }
