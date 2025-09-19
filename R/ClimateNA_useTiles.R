@@ -336,7 +336,7 @@ buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = N
       cores <- min(length(years), parallelly::availableCores(constraints = "connections"))
 
       cl <- parallelly::makeClusterPSOCK(cores,
-                                         default_packages = c("fs", "sf", "terra"),
+                                         default_packages = c("fs", "terra"),
                                          rscript_libs = .libPaths(),
                                          autoStop = TRUE)
       on.exit(parallel::stopCluster(cl), add = TRUE)
