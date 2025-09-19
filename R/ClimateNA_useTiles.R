@@ -182,6 +182,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
         for (i in 1:2) {
           message("Downloading from Google Drive...")
           dwnld <- googledrive::drive_download(file = googledrive::as_id(url), verbose = TRUE,  overwrite = TRUE)
+          abc <- file.path(getwd(), dwnld$local_path)
           localMD5 <- unname(tools::md5sum(dwnld$name))
           if (identical(remoteMD5, localMD5))
             break
