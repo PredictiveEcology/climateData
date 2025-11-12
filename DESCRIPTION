@@ -1,18 +1,18 @@
 Package: climateData
 Title: Utilities For Working With North American Climate Data
+Authors@R: c(
+    person("Alex M", "Chubaty", , "achubaty@for-cast.ca", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-7146-8135")),
+    person("Ian", "Eddy", , "ian.eddy@nrcan-rncan.gc.ca", role = "aut",
+           comment = c(ORCID = "0000-0001-7397-2116")),
+    person("Eliot", "McIntire", , "eliot.mcintire@nrcan-rncan.gc.ca", role = "aut",
+           comment = c(ORCID = "0000-0002-6914-8316"))
+  )
 Description: Utilities for working with North American climate data from
     'ClimateNA' <https://climatena.ca/>.
+License: GPL-3
 URL: https://github.com/PredictiveEcology/climateData
-Date: 2024-07-04
-Version: 2.2.2
-Authors@R: c(
-    person("Alex M", "Chubaty", email = "achubaty@for-cast.ca",
-           role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7146-8135")),
-    person("Ian", "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca",
-           role = c("aut"), comment = c(ORCID = "0000-0001-7397-2116")),
-    person("Eliot", "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca",
-           role = c("aut"), comment = c(ORCID = "0000-0002-6914-8316"))
-    )
+BugReports: https://github.com/PredictiveEcology/climateData/issues
 Depends:
     R (>= 4.2)
 Imports:
@@ -27,8 +27,8 @@ Imports:
     purrr,
     reproducible (>= 2.0.8),
     RSQLite,
-    stats,
     sf,
+    stats,
     terra,
     tools,
     utils
@@ -45,15 +45,14 @@ Suggests:
     sys,
     testthat (>= 3.0.0),
     withr
+VignetteBuilder: 
+    knitr
 Remotes:
-    PredictiveEcology/reproducible@development
-BugReports: https://github.com/PredictiveEcology/climateData/issues
+    PredictiveEcology/SpaDES.tools@development
+ByteCompile: yes
+Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-CA
-License: GPL-3
-ByteCompile: yes
 LazyData: true
-RoxygenNote: 7.3.3
-VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
-Config/testthat/edition: 3
+RoxygenNote: 7.3.3
