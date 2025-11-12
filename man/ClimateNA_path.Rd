@@ -14,7 +14,7 @@ ClimateNA_path(
 )
 }
 \arguments{
-\item{dataPath}{TODO}
+\item{dataPath}{character. path to ClimateNA data directory.}
 
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
 
