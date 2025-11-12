@@ -35,6 +35,7 @@ Imports:
 Suggests:
     archive,
     dbplyr (>= 2.2.1),
+    digest,
     geodata,
     googledrive,
     hms,
