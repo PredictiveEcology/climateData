@@ -29,7 +29,8 @@ MSYs <- c("MSY", "M", "S", "Y")
 
 historical_years <- available(climateType)[["years"]]
 # historical_years <- 1901L:1990L
-# historical_years <- 1991L:2022L
+# historical_years <- 1991L:2024L
+historical_years <- 2023L:2024L
 historical_decades <- (historical_years %/% 10 * 10) |> unique() |> as.integer()
 period_ann <- paste0("Year_", historical_years, ".ann")
 
