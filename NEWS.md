@@ -1,3 +1,8 @@
+# climateData (development version)
+
+- drop support for R < 4.4 due to changes in dependency packages;
+- explicitly add dependency `digest`, which was used to create datasets;
+
 # climateData 2.2.2
 
 - remove redundant arguments `historical_years`, `future_years`, `historical_period`, and `future_period` from `prepClimateLayers()` (#12).

@@ -37,15 +37,12 @@ rewrite_asc <- function(f) {
 #'
 #' @export
 tileID <- function(file) {
-  basename(file) |>
-    sub("^can_dem_", "", x = _) |>
-    sub("[.]asc$", "", x = _) |>
-    as.integer()
+  basename(file) |> sub("^can_dem_", "", x = _) |> sub("[.]asc$", "", x = _) |> as.integer()
 }
 
 #' Construct target output paths for ClimateNA data
 #'
-#' @param dataPath TODO
+#' @param dataPath character. path to ClimateNA data directory.
 #'
 #' @template ClimateNA_tile
 #'
@@ -61,17 +58,19 @@ tileID <- function(file) {
 ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm = NULL, ssp = NULL) {
   stopifnot(type %in% .allowedClimateTypes)
 
-  MSY <-  switch(msy, MSY = "all", M = "monthly", S = "seasonal", Y = "yearly")
+  MSY <- switch(msy, MSY = "all", M = "monthly", S = "seasonal", Y = "yearly")
   switch(
     type,
     historical = file.path(dataPath, "historical", MSY, tile),
     historical_normals = file.path(dataPath, "historical", "normals", MSY, tile),
     future = file.path(dataPath, "future", paste0(gcm, "_ssp", ssp), MSY, tile),
-    future_normals = file.path(dataPath, "future",  paste0(gcm, "_ssp", ssp), "normals", MSY, tile)
+    future_normals = file.path(dataPath, "future", paste0(gcm, "_ssp", ssp), "normals", MSY, tile)
   ) |>
     normalizePath(mustWork = FALSE) |>
     (function(x) {
-      if (!dir.exists(x)) dir.create(x, recursive = TRUE)
+      if (!dir.exists(x)) {
+        dir.create(x, recursive = TRUE)
+      }
       x
     })()
 }
