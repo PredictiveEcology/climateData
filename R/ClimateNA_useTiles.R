@@ -217,9 +217,13 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
   filesToExtract <- grep(climateVarsGrep, fia, value = TRUE)
   fff <- reproducible:::.whichExtractFn(archiveFile, args = list())
   tf <- tempfile()
+  args <- list(file.path(archiveFile), files = filesToExtract)
   dir.create(tf, showWarnings = FALSE, recursive = TRUE)
-  lala <- fff$fun(file.path(archiveFile),
-                  files = filesToExtract, dir = tf)
+  nam <- if (requireNamespace("archive", quietly = TRUE)) "dir" else "exdir"
+  exdir <- list(tf) |> setNames(nam)
+
+  args <- append(args, exdir)
+  lala <- do.call(fff$fun, args)
   dirsToMake <- unique(dirname(file.path(workingPath, lala)))
   de <- dir.exists(dirsToMake)
   if (any(de %in% FALSE)) {
