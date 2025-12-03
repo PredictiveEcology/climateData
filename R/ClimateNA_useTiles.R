@@ -175,7 +175,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
       #   destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
       # ) |> Cache(.functionName = paste0("preProcess_climateData_", climateTile, "_", url))
 
-      abc <- assessGoogle(url) # gets filename, file.size, md5sum
+      abc <- reproducible::retry(retries = 2, reproducible:::assessGoogle(url)) # gets filename, file.size, md5sum
       remoteMD5 <- attr(abc, "drive_resource")[[1]]$md5Checksum
       localMD5 <- if (file.exists(abc)) unname(tools::md5sum(abc)) else ""
       if (!identical(remoteMD5, localMD5)) {
@@ -224,9 +224,10 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
 
   args <- append(args, exdir)
   lala <- do.call(fff$fun, args)
-  if (nzchar(fs::path_common(c(tf, lala)))) {
-    lala <- fs::path_rel(lala, tf)
-  }
+  if (any(fs::is_absolute_path(lala)))
+    if (nzchar(fs::path_common(c(tf, lala)))) {
+      lala <- fs::path_rel(lala, tf)
+    }
 
   dirsToMake <- unique(dirname(file.path(workingPath, lala)))
   de <- dir.exists(dirsToMake)

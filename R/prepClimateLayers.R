@@ -433,7 +433,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
     type <- strsplit(nm, "_")[[1]] |> dplyr::first()
     var <- strsplit(nm, "_")[[1]] |> dplyr::last()
     fname <- paste(var, type, studyAreaName, sep = "_")
-    climRast <- Cache(
+    climRast <-
       postProcessTo(
         from = newClimRast,
         to = rasterToMatch,
@@ -441,13 +441,14 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
         writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
         useCache = FALSE, ## use internal cache for postProcessTo
         overwrite = TRUE
-      ),
-      omitArgs = c("to", "maskTo", "overwrite"), # don't digest these each time
-      .functionName = paste0("prepClimateLayers_", fname),
-      .cacheExtra = digest4cache,
-      quick = c("writeTo", "climatePath", "climatePathOut"), # don't cache on outputs
-      userTags = c(paste0(type[1]), fname)
-    )
+      ) |>
+      Cache(
+        omitArgs = c("to", "maskTo", "overwrite"), # don't digest these each time
+        .functionName = paste0("prepClimateLayers_", fname),
+        .cacheExtra = digest4cache,
+        quick = c("writeTo", "climatePath", "climatePathOut"), # don't cache on outputs
+        userTags = c(paste0(type[1]), fname)
+      )
     # terra::time(climRast, tstep = "year") <- years ## TODO: what about monthly?
 
     return(climRast)
