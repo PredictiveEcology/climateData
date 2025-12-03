@@ -224,6 +224,10 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
 
   args <- append(args, exdir)
   lala <- do.call(fff$fun, args)
+  if (nzchar(fs::path_common(c(tf, lala)))) {
+    lala <- fs::path_rel(lala, tf)
+  }
+
   dirsToMake <- unique(dirname(file.path(workingPath, lala)))
   de <- dir.exists(dirsToMake)
   if (any(de %in% FALSE)) {
