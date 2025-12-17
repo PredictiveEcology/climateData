@@ -13,6 +13,7 @@ library(dplyr)
 library(future)
 library(future.apply)
 library(future.callr)
+library(progressr)
 
 ## geospatial
 # library(geodata)
@@ -33,9 +34,11 @@ devtools::load_all(prjDir)
 
 ClimateNAdir <- "C:/Climatena_v760"
 ClimateNAexe <- "ClimateNA_v7.60.exe"
-ClimateNAdata <- switch(Sys.info()[["sysname"]],
-                        Linux = "/mnt/data/climate/ClimateNA_data",
-                        Windows = "C:/ClimateNA_data")
+ClimateNAdata <- switch(
+  Sys.info()[["sysname"]],
+  Linux = "/mnt/data/climate/ClimateNA_data",
+  Windows = "C:/ClimateNA_data"
+)
 stopifnot(dir.exists(ClimateNAdata))
 
 userEmail <- "achubaty@for-cast.ca"
@@ -43,6 +46,8 @@ oauthCachePath <- file.path(prjDir, ".secrets")
 googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
 
 maxCores <- parallelly::availableCores() * 0.75
+
+handlers(global = TRUE) ## "subscribe" to progress updates
 
 ## database tracks which data already processed / uploaded
 ##

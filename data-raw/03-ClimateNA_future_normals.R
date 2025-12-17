@@ -134,7 +134,7 @@ file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 checksums_futu_normals <- future.apply::future_lapply(
   dem_ff,
   function(f) {
-    tile <- normalizePath(f) |> climateData::tileID(f)
+    tile <- normalizePath(f) |> climateData::tileID()
 
     lapply(GCMs, function(gcm) {
       lapply(SSPs, function(ssp) {
@@ -178,12 +178,12 @@ checksums_futu_normals <- future.apply::future_lapply(
 ) |>
   dplyr::bind_rows()
 
-if (!"id" %in% colnames(new_rows_futu_normals)) {
-  dplyr::rows_append(climate_futu_normals_df, new_rows_futu_normals, copy = TRUE, in_place = TRUE)
+if (!"id" %in% colnames(checksums_futu_normals)) {
+  dplyr::rows_append(checksums_futu_normals_df, checksums_futu_normals, copy = TRUE, in_place = TRUE)
 } else {
   dplyr::rows_update(
-    climate_futu_normals_df,
-    new_rows_futu_normals,
+    checksums_futu_normals_df,
+    checksums_futu_normals,
     copy = TRUE,
     in_place = TRUE,
     unmatched = "ignore"
@@ -205,7 +205,7 @@ if (createZips) {
     climate_futu_normals_df <- dbdf[["df"]]
     rm(dbdf)
 
-    tile <- normalizePath(f) |> climateData::tileID(f)
+    tile <- normalizePath(f) |> climateData::tileID()
 
     z <- lapply(GCMs, function(gcm) {
       lapply(SSPs, function(ssp) {
@@ -282,7 +282,7 @@ if (uploadArchives) {
     climate_futu_normals_df <- dbdf[["df"]]
     rm(dbdf)
 
-    tile <- normalizePath(f) |> climateData::tileID(f)
+    tile <- normalizePath(f) |> climateData::tileID()
 
     z <- lapply(GCMs, function(gcm) {
       lapply(SSPs, function(ssp) {
