@@ -29,7 +29,7 @@
 
 # climateData 2.0.4
 
-- fix `calcATA()` calculation
+- fix `calcATA()` calculation;
 
 # climateData 2.0.0
 

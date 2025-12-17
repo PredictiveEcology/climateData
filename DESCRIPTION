@@ -1,7 +1,7 @@
 Package: climateData
 Title: Utilities For Working With North American Climate Data
 Version: 2.2.2.9000
-Date: 2025-11-12
+Date: 2025-12-17
 Authors@R: c(
     person("Alex M", "Chubaty", , "achubaty@for-cast.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-7146-8135")),
