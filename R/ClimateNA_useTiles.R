@@ -160,7 +160,10 @@ getClimateURLs <- function(
 #' @export
 #' @importFrom reproducible preProcess
 getClimateTiles <- function(tile, climateURLs, climatePath) {
-  stopifnot(requireNamespace("googledrive", quietly = TRUE))
+  stopifnot(
+    requireNamespace("googledrive", quietly = TRUE),
+    requireNamespace("httr2", quietly = TRUE)
+  )
 
   lapply(tile, climateURL = climateURLs, function(climateTile, climateURL) {
     ## TODO: the zip files are being put inside the tile directory, but should be one level up

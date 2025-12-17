@@ -2,6 +2,7 @@
 
 - drop support for R < 4.4 due to changes in dependency packages;
 - explicitly add dependency `digest`, which was used to create datasets;
+- add `httr2` to Suggests, as it is needed by `reproducible`;
 - add 2023 and 2024 historical data from ClimateNA;
 
 # climateData 2.2.2

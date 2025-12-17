@@ -24,7 +24,6 @@
 #' @importFrom reproducible prepInputs
 #' @importFrom terra buffer compareGeom crop mask project resample same.crs trim vect writeRaster
 #' @rdname makeClimateDEM
-  stopifnot(requireNamespace("googledrive", quietly = TRUE))
 makeClimateDEM <- function(
   studyArea,
   arcSecRes = c(180, 180),
@@ -33,6 +32,10 @@ makeClimateDEM <- function(
   destinationPath,
   filename2
 ) {
+  stopifnot(
+    requireNamespace("googledrive", quietly = TRUE),
+    requireNamespace("httr2", quietly = TRUE)
+  )
 
   if (!is(studyArea, "SpatVector")) {
     studyArea <- vect(studyArea)

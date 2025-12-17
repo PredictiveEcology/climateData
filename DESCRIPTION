@@ -42,6 +42,7 @@ Suggests:
     geodata,
     googledrive,
     hms,
+    httr2,
     knitr,
     progressr,
     rmarkdown,
