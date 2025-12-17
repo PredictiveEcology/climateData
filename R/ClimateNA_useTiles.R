@@ -38,13 +38,15 @@ whereAmI <- function(studyArea) {
 #' (getClimateTable(type = "historical_normals", tile = 1, msy = "Y"))
 #' (getClimateTable(type = "future_normals", tile = 1, msy = "Y",
 #'                  gcm = "CanESM5", ssp = 370)) ## none yet available
-getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
-                            gcm = NULL, ssp = NULL) {
-  stopifnot(
-    type %in% .allowedClimateTypes,
-    !is.null(tile),
-    !is.null(msy)
-  )
+getClimateTable <- function(
+  type = NULL,
+  tile = NULL,
+  years = NULL,
+  msy = NULL,
+  gcm = NULL,
+  ssp = NULL
+) {
+  stopifnot(type %in% .allowedClimateTypes, !is.null(tile), !is.null(msy))
 
   if (isTRUE(grepl("future", type))) {
     stopifnot(!is.null(gcm), !is.null(ssp))
@@ -62,15 +64,26 @@ getClimateTable <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
   climate_dt <- if (type == "historical") {
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy, year %in% !!years)
   } else if (type == "future") {
-    dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy, year %in% !!years,
-                  gcm == !!gcm, ssp == !!as.character(ssp))
+    dplyr::filter(
+      climate_df,
+      tileid %in% !!tile,
+      msy %in% !!msy,
+      year %in% !!years,
+      gcm == !!gcm,
+      ssp == !!as.character(ssp)
+    )
   } else if (type == "historical_normals") {
     ## all periods in single zip
     dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy)
   } else if (type == "future_normals") {
     ## all periods in single zip per gcm_ssp
-    dplyr::filter(climate_df, tileid %in% !!tile, msy %in% !!msy,
-                  gcm == !!gcm, ssp == !!as.character(ssp))
+    dplyr::filter(
+      climate_df,
+      tileid %in% !!tile,
+      msy %in% !!msy,
+      gcm == !!gcm,
+      ssp == !!as.character(ssp)
+    )
   }
   climate_dt <- dplyr::collect(climate_dt)
 }
@@ -108,10 +121,22 @@ getNormalsPeriods <- function(type = NULL, tile = NULL, msy = "Y", gcm = NULL, s
 #'
 #' @export
 #' @importFrom data.table .SD as.data.table
-getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
-                           gcm = NULL, ssp = NULL) {
-  climate_dt <- getClimateTable(type = type, tile = tile, years = years, msy = msy,
-                                gcm = gcm, ssp = ssp) |>
+getClimateURLs <- function(
+  type = NULL,
+  tile = NULL,
+  years = NULL,
+  msy = NULL,
+  gcm = NULL,
+  ssp = NULL
+) {
+  climate_dt <- getClimateTable(
+    type = type,
+    tile = tile,
+    years = years,
+    msy = msy,
+    gcm = gcm,
+    ssp = ssp
+  ) |>
     as.data.table()
   subsetdt <- climate_dt[, .SD, .SDcols = c("tileid", "gid")] |> unique()
   url <- lapply(unique(subsetdt$tileid), function(t) {
@@ -228,12 +253,22 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
 #' @importFrom tools file_path_sans_ext
 #'
 #' @rdname buildClimateMosaics
-buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = NULL,
-                                srcdir = NULL, dstdir = NULL, cl = NULL) {
-
+buildClimateMosaics <- function(
+  type,
+  tile,
+  climVars,
+  years,
+  gcm = NULL,
+  ssp = NULL,
+  srcdir = NULL,
+  dstdir = NULL,
+  cl = NULL
+) {
   if (any(grepl("_normal$", climVars))) {
-    stop("At least one of 'climVars' is a climate normal variable; ",
-         "use buildClimateMosaicsNormals() for these.")
+    stop(
+      "At least one of 'climVars' is a climate normal variable; ",
+      "use buildClimateMosaicsNormals() for these."
+    )
   }
 
   if (any(is.null(srcdir), is.null(dstdir))) {
@@ -248,19 +283,34 @@ buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = N
       ## TODO: use pemisc::optimalClusterNum() to determine cores based on number of years and tiles
       cores <- min(length(years), parallelly::availableCores(constraints = "connections"))
 
-      cl <- parallelly::makeClusterPSOCK(cores,
-                                         default_packages = c("fs", "sf", "terra"),
-                                         rscript_libs = .libPaths(),
-                                         autoStop = TRUE)
+      cl <- parallelly::makeClusterPSOCK(
+        cores,
+        default_packages = c("fs", "sf", "terra"),
+        rscript_libs = .libPaths(),
+        autoStop = TRUE
+      )
       on.exit(parallel::stopCluster(cl), add = TRUE)
     }
 
     ## don't flatten the out list; want to access list of climate variables per year
-    tifs <- parallel::parLapply(cl, years, fun = climateMosaicsParallel,
-                                climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+    tifs <- parallel::parLapply(
+      cl,
+      years,
+      fun = climateMosaicsParallel,
+      climVars = climVars,
+      tile = tile,
+      srcdir = srcdir,
+      dstdir = dstdir
+    )
   } else if (getOption("climateData.parallel.backend") == "future") {
-    tifs <- future.apply::future_lapply(years, FUN = climateMosaicsParallel,
-                                        climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+    tifs <- future.apply::future_lapply(
+      years,
+      FUN = climateMosaicsParallel,
+      climVars = climVars,
+      tile = tile,
+      srcdir = srcdir,
+      dstdir = dstdir
+    )
   } else {
     stopForInvalidBackend()
   }
@@ -308,12 +358,22 @@ climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
 #'
 #' @export
 #' @rdname buildClimateMosaics
-buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL, ssp = NULL,
-                                       srcdir = NULL, dstdir = NULL, cl = NULL) {
-
+buildClimateMosaicsNormals <- function(
+  type,
+  tile,
+  climVars,
+  period,
+  gcm = NULL,
+  ssp = NULL,
+  srcdir = NULL,
+  dstdir = NULL,
+  cl = NULL
+) {
   if (!all(grepl("_normal$", climVars))) {
-    stop("At least one of 'climVars' is not a climate normal variable; ",
-         "use buildClimateMosaics() for these.")
+    stop(
+      "At least one of 'climVars' is not a climate normal variable; ",
+      "use buildClimateMosaics() for these."
+    )
   }
 
   if (any(is.null(srcdir), is.null(dstdir))) {
@@ -328,19 +388,34 @@ buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL,
       ## TODO: use pemisc::optimalClusterNum() to determine cores based on number of periods and tiles
       cores <- min(length(period), parallelly::availableCores(constraints = "connections"))
 
-      cl <- parallelly::makeClusterPSOCK(cores,
-                                         default_packages = c("fs", "sf", "terra"),
-                                         rscript_libs = .libPaths(),
-                                         autoStop = TRUE)
+      cl <- parallelly::makeClusterPSOCK(
+        cores,
+        default_packages = c("fs", "sf", "terra"),
+        rscript_libs = .libPaths(),
+        autoStop = TRUE
+      )
       on.exit(parallel::stopCluster(cl), add = TRUE)
     }
 
     ## don't flatten the out list; want to access list of climate variables per year
-    tifs <- parallel::parLapply(cl, period, fun = climateMosaicsNormalsParallel,
-                                climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+    tifs <- parallel::parLapply(
+      cl,
+      period,
+      fun = climateMosaicsNormalsParallel,
+      climVars = climVars,
+      tile = tile,
+      srcdir = srcdir,
+      dstdir = dstdir
+    )
   } else if (getOption("climateData.parallel.backend") == "future") {
-    tifs <- future.apply::future_lapply(period, FUN = climateMosaicsNormalsParallel,
-                                        climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+    tifs <- future.apply::future_lapply(
+      period,
+      FUN = climateMosaicsNormalsParallel,
+      climVars = climVars,
+      tile = tile,
+      srcdir = srcdir,
+      dstdir = dstdir
+    )
   } else {
     stopForInvalidBackend()
   }

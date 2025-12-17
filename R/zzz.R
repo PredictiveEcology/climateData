@@ -1,9 +1,11 @@
 .parallelBackends <- c("parallel", "future")
 
 stopForInvalidBackend <- function() {
-  stop(sprintf("Invalid 'climateData.parallel.backend': '%s'.\nMust be one of: '%s'.",
-               getOption("climateData.parallel.backend"),
-               paste(.parallelBackends, collapse = "', '")))
+  stop(sprintf(
+    "Invalid 'climateData.parallel.backend': '%s'.\nMust be one of: '%s'.",
+    getOption("climateData.parallel.backend"),
+    paste(.parallelBackends, collapse = "', '")
+  ))
 }
 
 .onLoad <- function(libname, pkgname) {

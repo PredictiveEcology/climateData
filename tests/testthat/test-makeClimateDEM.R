@@ -1,12 +1,10 @@
 test_that("makeClimateDEM works", {
   skip_on_cran()
-  skip_on_ci() ## needs to authorize googldrive package for downloads
+  skip_on_ci() ## needs to authorize googledrive package for downloads
   skip_if_not(identical(tolower(.Platform$OS.type), "windows"))
   skip_if_not_installed("geodata")
   skip_if_not_installed("googledrive")
   skip_if_not_installed("withr")
-
-  googledrive::drive_deauth()
 
   dPath <- withr::local_tempdir("test_makeClimateDEM_")
 
