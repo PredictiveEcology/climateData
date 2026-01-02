@@ -4,6 +4,8 @@
 #' created DEMs.
 #'
 #' @template studyArea
+#' @param rasterToMatch If supplied, then this will be passed directly to `prepInputs`
+#'   as it has all the necessary information to directly postProcess.
 #'
 #' @param bufferArcSec numeric, arcseconds by which to buffer the `studyArea` to
 #'                     ensure seamless coverage.
@@ -24,19 +26,31 @@
 #' @importFrom reproducible prepInputs
 #' @importFrom terra buffer compareGeom crop mask project resample same.crs trim vect writeRaster
 #' @rdname makeClimateDEM
-makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 180,
+makeClimateDEM <- function(url = "https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/",
+                           studyArea, rasterToMatch, arcSecRes = c(180, 180), bufferArcSec = 180,
                            DEMdestinationPath, destinationPath, filename2) {
   stopifnot(requireNamespace("googledrive", quietly = TRUE))
 
-  if (!is(studyArea, "SpatVector")) {
-    studyArea <- vect(studyArea)
+  if (!missing(studyArea))
+    if (!is(studyArea, "SpatVector")) {
+      studyArea <- vect(studyArea)
+    }
+
+  if (!missing(rasterToMatch)) {
+    to <- rasterToMatch
+  } else {
+    to <- NULL
   }
 
-	gtopo30N <- prepInputs(
-	  url = "https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/",
-	  destinationPath = DEMdestinationPath,
-	  overwrite = TRUE
-	 )
+
+  gtopo30N <- prepInputs(
+    url = url, to = to,
+    destinationPath = DEMdestinationPath,
+    overwrite = TRUE
+  )
+
+  if (!is.null(to))
+    return(gtopo30N)
 
 	if (arcSecRes[1] != arcSecRes[2]) {
 		stop(".asc format requires x and y dimensions to be equal. Please adjust arcSecRes.")
@@ -54,7 +68,7 @@ makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 18
 	studyArea <- project(studyArea, crs(gtopo30N))
 	gtopo30N <- crop(gtopo30N, studyArea)
 	gtopo30N <- mask(gtopo30N, studyArea)
-	outputFilename <- file.path(destinationPath, paste0(filename2, ".asc"))
+	outputFilename <- file.path(destinationPath, paste0(filename2, ".tif"))
 	gtopo30N <- project(gtopo30N, "epsg:4326", res = arcSecRes/60/60)
 	gtopo30N <- trim(gtopo30N)
 	writeRaster(gtopo30N, filename = outputFilename, overwrite = TRUE)
