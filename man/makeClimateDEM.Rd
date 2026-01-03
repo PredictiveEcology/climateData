@@ -5,7 +5,9 @@
 \title{Create a DEM for use with \code{ClimateNA}}
 \usage{
 makeClimateDEM(
+  url = "https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/",
   studyArea,
+  rasterToMatch,
   arcSecRes = c(180, 180),
   bufferArcSec = 180,
   DEMdestinationPath,
@@ -17,6 +19,9 @@ makeClimateDEM(
 \item{studyArea}{an \code{sf} or \code{SpatVect} polygon delineating the boundaries of the study area.
 typically used to crop/mask rasters when \code{rasterToMatch} is not supplied.
 passed to \code{\link[reproducible:postProcessTo]{reproducible::postProcessTo()}}.}
+
+\item{rasterToMatch}{If supplied, then this will be passed directly to \code{prepInputs}
+as it has all the necessary information to directly postProcess.}
 
 \item{arcSecRes}{the resolution of the output DEM in arcseconds}
 
