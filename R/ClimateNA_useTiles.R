@@ -221,21 +221,21 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
   dir.create(tf, showWarnings = FALSE, recursive = TRUE)
   nam <- if (requireNamespace("archive", quietly = TRUE)) "dir" else "exdir"
   exdir <- list(tf) |> setNames(nam)
-
+  
   args <- append(args, exdir)
   lala <- do.call(fff$fun, args)
   if (any(fs::is_absolute_path(lala)))
     if (nzchar(fs::path_common(c(tf, lala)))) {
       lala <- fs::path_rel(lala, tf)
     }
-
+  
   dirsToMake <- unique(dirname(file.path(workingPath, lala)))
   de <- dir.exists(dirsToMake)
   if (any(de %in% FALSE)) {
     silence <- lapply(dirsToMake[de %in% FALSE], dir.create, showWarnings = FALSE, recursive = TRUE)
   }
   unlink(file.path(workingPath, lala), recursive = TRUE, force = TRUE)
-  linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
+  reproducible::linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
   lala
 }
 
