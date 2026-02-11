@@ -80,6 +80,7 @@ calcAsIs <- function(stacks, layers, .dots = NULL) {
     if (all(names_periods %in% names(stacks))) {
       stack_periods <- stacks[names_periods]
     }
+    layers <- paste0(layers, "_", .dots[[type_periods]])
   }
 
   stks <- append(stack_years, stack_periods)

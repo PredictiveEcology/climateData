@@ -1,6 +1,6 @@
 Package: climateData
 Title: Utilities For Working With North American Climate Data
-Version: 2.2.2.9000
+Version: 2.2.2.9001
 Date: 2025-11-12
 Authors@R: c(
     person("Alex M", "Chubaty", , "achubaty@for-cast.ca", role = c("aut", "cre"),
@@ -31,6 +31,7 @@ Imports:
     RSQLite,
     sf,
     stats,
+    stringr,
     terra,
     tools,
     utils

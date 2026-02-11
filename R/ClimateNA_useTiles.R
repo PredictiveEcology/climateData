@@ -492,7 +492,7 @@ climateStacksByPeriod <- function(tifs, climVars, type, period) {
         return(r)
       }) |>
         terra::rast()
-      terra::set.names(rs, climVars)
+      terra::set.names(rs, paste0(climVars, "_", period))
 
       return(rs)
     })

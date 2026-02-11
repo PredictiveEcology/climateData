@@ -80,6 +80,7 @@ extractTimes <- function(climateVarsList, type) {
 #' @importFrom reproducible .robustDigest Cache postProcessTo
 #' @importFrom sf st_union
 #' @importFrom terra aggregate rast set.names
+#' @importFrom stringr str_remove
 #'
 #' @examples
 #' if (require("archive", quietly = TRUE) &&
@@ -407,7 +408,6 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
                     names(climDots)))
     }
     ## end assertions/checks
-
     funOut <- do.call(eval(climFun), list(
       stacks = climStacks,
       layers = climVars,
@@ -431,7 +431,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   climData <- lapply(names(climDataFun), function(nm) {
     newClimRast <- climDataFun[[nm]]
     type <- strsplit(nm, "_")[[1]] |> dplyr::first()
-    var <- strsplit(nm, "_")[[1]] |> dplyr::last()
+    var <- stringr::str_remove(nm, paste0(type, "_"))
     fname <- paste(var, type, studyAreaName, sep = "_")
     climRast <- Cache(
       postProcessTo(
