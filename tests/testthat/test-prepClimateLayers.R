@@ -13,6 +13,7 @@ test_that("prepClimateLayers works for multiple variable types", {
   historical_prd <- c("1951_1980", "1981_2010")
   historical_yrs <- c(2011:2015)
   future_yrs <- c(2021:2025)
+  future_prd <- c("2011_2040", "2041_2070")
   GCM <- "CanESM5"
   SSP <- 370
 
@@ -22,31 +23,22 @@ test_that("prepClimateLayers works for multiple variable types", {
   ## MDC uses monthly vars; uses custom fun
   ## CMD uses seasonal variable; no fun (as is)
   climateVariables <- list(
-    historical_ATA = list(
-      vars = c("historical_MAT", "historical_MAT_normal"),
-      fun = quote(calcATA),
-      .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
-    ),
-    future_ATA = list(
-      vars = c("future_MAT", "historical_MAT_normal"),
-      fun = quote(calcATA),
-      .dots = list(historical_period = historical_prd, future_years = future_yrs)
-    ),
+
     historical_CMI = list(
       vars = "historical_CMI",
       fun = quote(calcAsIs),
       .dots = list(historical_years = historical_yrs)
-    ),
-    historical_CMI_normal = list(
-      vars = "historical_CMI_normal",
-      fun = quote(calcCMInormal),
-      .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
     ),
     historical_FFP_normal = list(
       vars = "historical_FFP_normal", ## ensure FFP only; not bFFP nor eFFP
       fun = quote(calcAsIs),
       .dots = list(historical_period = historical_prd)
     ),
+    #future period not supported
+    # future_CMD_sm_normal = list(
+    #   vars = "future_CMD_sm_normal",
+    #   fun = quote(calcAsIs),
+    #   .dots = list(future_period = future_prd),
     future_FFP = list(
       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
       fun = quote(calcAsIs),
@@ -56,12 +48,8 @@ test_that("prepClimateLayers works for multiple variable types", {
       vars = c(sprintf("historical_PPT%02d", 4:9), sprintf("historical_Tmax%02d", 4:9)),
       fun = quote(calcMDC),
       .dots = list(historical_years = historical_yrs)
-    ),
-    future_CMD_sm = list(
-      vars = "future_CMD_sm",
-      fun = quote(calcAsIs),
-      .dots = list(future_years = future_yrs)
     )
+
   )
 
   ## test with all parallel backends

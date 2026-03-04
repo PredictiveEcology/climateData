@@ -44,8 +44,6 @@ checkCalcStackLayers <- function(stacks, layers) {
 #' with layers corresponding to climate years or periods.
 #'
 #' - `calcAsIs()` returns the climate variable without modification;
-#' - `calcATA()` calculates Annual Temperature Anomaly (ATA) from `MAT` and `MAT_normal`;
-#' - `calcCMInormal()` calculates mean CMI over multiple normals periods;
 #' - `calcMDC()` calculates Monthly Drought Code (MDC) from `Tmax` and `PPT` for April-September;
 #'
 #' @template stacks_layers
@@ -80,66 +78,27 @@ calcAsIs <- function(stacks, layers, .dots = NULL) {
     if (all(names_periods %in% names(stacks))) {
       stack_periods <- stacks[names_periods]
     }
-    layers <- paste0(layers, "_", .dots[[type_periods]])
-  }
+   }
 
   stks <- append(stack_years, stack_periods)
+  #names(stks) = "historical_2011" etc - but name of list element is e.g. CMI
 
   checkCalcStackLayers(stks, layers)
 
   newStk <- lapply(stks, function(x) {
-      x[[gsub(paste0(type, "_"), "", layers)]]
+    rasNames <- names(x)
+    possNames <- gsub(paste0(type, "_"), "", layers)
+    #if layers is length > 1 (normal periods) we must protect like so
+    x[[rasNames %in% possNames]]
     }) |>
       rast()
+  #newStk is named "historical_2011", "historical_2023" - gsub returns CMI
+  # and it becomes "CMI_historical_2011"
   set.names(newStk, paste0(gsub(paste0(type, "_"), "", layers), "_", names(newStk))) ## years or period
 
   return(newStk)
 }
 
-#' @export
-#' @importFrom terra app subset
-#' @rdname calcVars
-calcATA <- function(stacks, layers, .dots = NULL) {
-  type <- calcStackLayersType(stacks, layers)
-  type_years <- grep(paste0("(", paste0(type, collapse = "|"), ")_years"), names(.dots), value = TRUE)
-  type_periods <- grep(paste0("(", paste0(type, collapse = "|"), ")_period"), names(.dots), value = TRUE)
-  stack_years <- stacks[paste0(gsub("_years", "", type_years), "_", .dots[[type_years]])]
-  stack_periods <- stacks[paste0(gsub("_period", "", type_periods), "_", .dots[[type_periods]])]
-  stack_periods <- lapply(stack_periods, terra::subset, subset = "MAT_normal")
-  checkCalcStackLayers(append(stack_years, stack_periods), layers)
-  MAT_norm_mean <- rast(stack_periods) |> terra::app(fun = mean, na.rm = TRUE)
-
-  ATAstack <- lapply(stack_years,  function(x) {
-      ata <- x[["MAT"]] - MAT_norm_mean
-      set.names(ata, "ATA")
-      return(ata)
-    }) |>
-    rast()
-  set.names(ATAstack, paste0("ATA_", names(stack_years))) ## years
-
-  return(ATAstack)
-}
-
-#' @export
-#' @importFrom terra app set.names
-#' @importFrom utils head
-#' @rdname calcVars
-calcCMInormal <- function(stacks, layers, .dots = NULL) {
-  type <- calcStackLayersType(stacks, layers)
-  type_years <- grep(paste0("(", paste0(type, collapse = "|"), ")_years"), names(.dots), value = TRUE)
-  type_periods <- grep(paste0("(", paste0(type, collapse = "|"), ")_period"), names(.dots), value = TRUE)
-  stack_years <- stacks[paste0(gsub("_years", "", type_years), "_", .dots[[type_years]])]
-  stack_periods <- stacks[paste0(gsub("_period", "", type_periods), "_", .dots[[type_periods]])]
-  checkCalcStackLayers(append(stack_years, stack_periods), layers)
-
-  CMI_norm_mean <- rast(stack_periods) |> terra::app(fun = mean, na.rm = TRUE)
-
-  paste0("CMI_normal_", substr(head(.dots[[type_periods]], 1), 1, 4), "-",
-         substr(head(rev(.dots[[type_periods]]), 1), 6, 9)) |>
-    set.names(CMI_norm_mean, value = _)
-
-  return(CMI_norm_mean)
-}
 
 #' Create raster of Monthly Drought Code (MDC)
 #'

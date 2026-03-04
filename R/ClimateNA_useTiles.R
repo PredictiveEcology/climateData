@@ -362,7 +362,7 @@ buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL,
 #' @return list of `SpatRaster`s
 #'
 #' @export
-#' @importFrom terra rast set.names
+#' @importFrom terra rast
 #' @rdname climateStacksByYear
 climateStacksByYear <- function(tifs, climVars, type, years) {
   if (length(tifs) > 0) {
@@ -371,12 +371,12 @@ climateStacksByYear <- function(tifs, climVars, type, years) {
       rs <- lapply(tifs[[y]], function(files) {
         r <- terra::rast(files)
         shortName <- vapply(basename(files), function(f) strsplit(f, "_")[[1]][1], character(1))
-        terra::set.names(r, shortName)
+        names(r) <- shortName
 
         return(r)
       }) |>
         terra::rast()
-      terra::set.names(rs, climVars)
+      names(rs) <- climVars
 
       return(rs)
     })
@@ -391,22 +391,23 @@ climateStacksByYear <- function(tifs, climVars, type, years) {
 #' @template ClimateNA_period
 #'
 #' @export
-#' @importFrom terra rast set.names
+#' @importFrom terra rast
 #' @rdname climateStacksByYear
 climateStacksByPeriod <- function(tifs, climVars, type, period) {
+  stopifnot(length(type) == 1, type %in% c("historical", "future"))
   if (length(tifs) > 0) {
     namesPerPeriod <- paste0(type, "_", period)
     climStacks_nrm <- lapply(namesPerPeriod, function(p) {
       rs <- lapply(tifs[[p]], function(files) {
         r <- terra::rast(files)
         shortName <- vapply(basename(files), function(f) strsplit(f, "_")[[1]][1], character(1))
-        terra::set.names(r, shortName)
+        names(r) <- shortName
 
         return(r)
       }) |>
         terra::rast()
-      terra::set.names(rs, paste0(climVars, "_", period))
-
+      shortName <- gsub(paste0("_", type), replacement = "", x = climVars)
+      names(rs) <- shortName
       return(rs)
     })
     names(climStacks_nrm) <- namesPerPeriod
