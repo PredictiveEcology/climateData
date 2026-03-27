@@ -1,3 +1,7 @@
+# climateData 2.2.3
+
+- use package prefix `reproducible::` for `linkOrCopy`
+
 # climateData 2.2.2
 
 - remove redundant arguments `historical_years`, `future_years`, `historical_period`, and `future_period` from `prepClimateLayers()` (#12).

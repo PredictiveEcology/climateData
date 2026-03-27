@@ -235,7 +235,7 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
     silence <- lapply(dirsToMake[de %in% FALSE], dir.create, showWarnings = FALSE, recursive = TRUE)
   }
   unlink(file.path(workingPath, lala), recursive = TRUE, force = TRUE)
-  linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
+  reproducible::linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
   lala
 }
 
