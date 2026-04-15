@@ -176,23 +176,24 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
         } else {
 
           remoteMD5 <- preHash[["remoteHash"]]
-          localMD5 <- if (file.exists(preHash$targetFile)) unname(tools::md5sum(preHash$targetFile)) else ""
+          localFile <- preHash$targetFile
+          localMD5 <- if (file.exists(localFile)) unname(tools::md5sum(localFile)) else ""
           if (!identical(remoteMD5, localMD5)) {
             for (i in 1:2) {
               message("Downloading from Google Drive...")
               dwnld <- googledrive::drive_download(file = googledrive::as_id(url), verbose = TRUE,  overwrite = TRUE)
-              preHash <- file.path(getwd(), dwnld$local_path)
+              localFile <- file.path(getwd(), dwnld$local_path)
               localMD5 <- unname(tools::md5sum(dwnld$name))
               if (identical(remoteMD5, localMD5))
                 break
               if (i == 2)
                 stop("Failed to correctly download file from Google Drive; please check connection")
             }
-            
+
           } else {
             message("skipping new download; local copy of zip already present and correct")
           }
-          newFiles <- extractJustAFew(workingPath, preHash$targetFile, climateVarsGrep)
+          newFiles <- extractJustAFew(workingPath, localFile, climateVarsGrep)
 
           ##  TODO: how to best use Cache here?
           # Eliot: suggesting this simple Cache --
