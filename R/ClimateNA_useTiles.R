@@ -220,7 +220,7 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
   args <- list(file.path(archiveFile), files = filesToExtract)
   dir.create(tf, showWarnings = FALSE, recursive = TRUE)
   nam <- if (requireNamespace("archive", quietly = TRUE)) "dir" else "exdir"
-  exdir <- list(tf) |> setNames(nam)
+  exdir <- list(tf) |> stats::setNames(nam)
 
   args <- append(args, exdir)
   lala <- do.call(fff$fun, args)

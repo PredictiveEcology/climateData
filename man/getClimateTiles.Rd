@@ -18,7 +18,6 @@ with a prefix of either \code{historical_} or \code{future_}.
 e.g., \code{c("historical_CMD_sm", "future_CMD_sp")}.
 If \code{NULL}, the default, then all files will be extracted.}
 
-\item{type}{A character string, either "historical", "future", "projected"}
 }
 \value{
 (invisibly) a list of length \code{tileIDs} containing the result of \code{preProcess()} calls

@@ -6,9 +6,6 @@
 use cases of calcAsIS containing multiple normal periods
 - fixed errors in `calcAsIs` where multiple climate normal periods and variables are retrieved
 - fixed errors caused by inconsistent behaviour regarding `terra` `SpatRaster` on disk and in memory
-
-# climateData (development version)
-
 - drop support for R < 4.4 due to changes in dependency packages;
 - explicitly add dependency `digest`, which was used to create datasets;
 
