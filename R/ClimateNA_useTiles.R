@@ -130,27 +130,113 @@ getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
 #'
 #' @param climatePath character string specifying the directory path to put climate data.
 #'
+#' @param needVars A character vector of the climate variables to extract from the zip files,
+#'   with a prefix of either `historical_` or `future_`.
+#'   e.g., `c("historical_CMD_sm", "future_CMD_sp")`.
+#'   If `NULL`, the default, then all files will be extracted.
+#' @param type A character string, either "historical", "future", "projected"
+#'
 #' @return (invisibly) a list of length `tileIDs` containing the result of `preProcess()` calls
 #'
 #' @export
 #' @importFrom reproducible preProcess
-getClimateTiles <- function(tile, climateURLs, climatePath) {
+getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
   stopifnot(requireNamespace("googledrive", quietly = TRUE))
 
+  # needVars <- get("needVars", whereInStack("needVars"))
+  if (is.null(needVars))
+    needVars <- ""
+  climateVars <- unique(gsub("historical\\_|future\\_|projected_", "", needVars))
+  climateVarsGrep <- paste(climateVars, collapse = "|")
+
+  owd <- getwd()
+  on.exit(options(owd))
   lapply(tile, climateURL = climateURLs, function(climateTile, climateURL) {
+    workingPath <- file.path(climatePath, climateTile)
+    reproducible::checkPath(workingPath, create = TRUE)
+    ow <- setwd(workingPath)
+    on.exit(options(ow))
     ## TODO: the zip files are being put inside the tile directory, but should be one level up
+    climateTileChar <- paste0("tile_", climateTile)
     preProcessOut <- lapply(climateURL[[as.character(climateTile)]], function(url) {
-      preProcess(
-        url = googledrive::as_id(url),
-        targetFile = NULL,
-        destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
-      ) ## TODO: how to best use Cache here?
-    })
-    names(preProcessOut) <- paste0("tile_", climateTile)
+      # inner <- preProcess(
+      #   url = googledrive::as_id(url),
+      #   alsoExtract = "none",
+      #   archive = "2_MSY_1990.zip",
+      #   # fun = quote(extractJustAFew(climatePath, climateTile, inner)),
+      #   targetFile = NA_character_, # don't extract anything
+      #   destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
+      # ) |> Cache(.functionName = paste0("preProcess_climateData_", climateTile, "_", url))
+
+      # This is previous version
+      # preProcess(
+      #   url = googledrive::as_id(url),
+      #   targetFile = NULL, # don't extract anything
+      #   destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
+      # ) |> Cache(.functionName = paste0("preProcess_climateData_", climateTile, "_", url))
+
+      abc <- reproducible::retry(retries = 2, reproducible:::assessGoogle(url)) # gets filename, file.size, md5sum
+      remoteMD5 <- attr(abc, "drive_resource")[[1]]$md5Checksum
+      localMD5 <- if (file.exists(abc)) unname(tools::md5sum(abc)) else ""
+      if (!identical(remoteMD5, localMD5)) {
+        for (i in 1:2) {
+          message("Downloading from Google Drive...")
+          dwnld <- googledrive::drive_download(file = googledrive::as_id(url), verbose = TRUE,  overwrite = TRUE)
+          abc <- file.path(getwd(), dwnld$local_path)
+          localMD5 <- unname(tools::md5sum(dwnld$name))
+          if (identical(remoteMD5, localMD5))
+            break
+          if (i == 2)
+            stop("Failed to correctly download file from Google Drive; please check connection")
+        }
+
+      } else {
+        message("skipping new download; local copy of zip already present and correct")
+      }
+      newFiles <- extractJustAFew(workingPath, abc, climateVarsGrep)
+      message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
+        # |> Cache(.functionName = paste0("preProcess_unzip_", climateTile, "_", url))
+
+      ##  TODO: how to best use Cache here?
+      # Eliot: suggesting this simple Cache --
+      #  It means that the Cache will be on the tile by date, with essentially no
+      #   digesting other than the url and the path, i.e., content is not assessed
+      #   This will be fine for a single computer, and when there are no climate
+      #   data updates
+
+    }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar))
+    names(preProcessOut) <- rep(climateTileChar, length(preProcessOut))
 
     return(preProcessOut)
   }) |>
     invisible()
+}
+
+extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
+  fia <- reproducible:::.listFilesInArchive(archiveFile)
+  filesToExtract <- grep(climateVarsGrep, fia, value = TRUE)
+  fff <- reproducible:::.whichExtractFn(archiveFile, args = list())
+  tf <- tempfile()
+  args <- list(file.path(archiveFile), files = filesToExtract)
+  dir.create(tf, showWarnings = FALSE, recursive = TRUE)
+  nam <- if (requireNamespace("archive", quietly = TRUE)) "dir" else "exdir"
+  exdir <- list(tf) |> setNames(nam)
+
+  args <- append(args, exdir)
+  lala <- do.call(fff$fun, args)
+  if (any(fs::is_absolute_path(lala)))
+    if (nzchar(fs::path_common(c(tf, lala)))) {
+      lala <- fs::path_rel(lala, tf)
+    }
+
+  dirsToMake <- unique(dirname(file.path(workingPath, lala)))
+  de <- dir.exists(dirsToMake)
+  if (any(de %in% FALSE)) {
+    silence <- lapply(dirsToMake[de %in% FALSE], dir.create, showWarnings = FALSE, recursive = TRUE)
+  }
+  unlink(file.path(workingPath, lala), recursive = TRUE, force = TRUE)
+  reproducible::linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
+  lala
 }
 
 #' Build climate mosaic rasters from ClimateNA tiles
@@ -183,14 +269,24 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
     lapply(unique(basename(srcfiles)), function(mv) {
       mv <- tools::file_path_sans_ext(mv)
       fname <- paste(mv, basename(basename(srcdir)), y, "t", paste(tile, collapse = "-"), sep = "_")
-      dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
+      # dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
       dsttif <- file.path(dstdir, paste0(fname, ".tif"))
 
-      ## TODO: by default, layer name is filename; update this to be `mv`
-      sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
-      sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
+      # ss <- mget(ls())
+      # save(ss, file = paste0("~/tmp/stuff", basename(tempfile()), ".rda"))
+      if (length(srcfiles) == 1) {
+        newMosaic <- terra::rast(srcfiles)
+      } else {
+        newMosaic <- terra::sprc(srcfiles) |> terra::mosaic()
+      }
 
-      on.exit(file.remove(dstvrt), add = TRUE)
+      writeRaster(newMosaic, filename = dsttif, overwrite = TRUE)
+
+      ## TODO: by default, layer name is filename; update this to be `mv`
+      # sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
+      # sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
+
+      # on.exit(file.remove(dstvrt), add = TRUE)
 
       return(dsttif)
     }) |>
@@ -249,7 +345,7 @@ buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = N
       cores <- min(length(years), parallelly::availableCores(constraints = "connections"))
 
       cl <- parallelly::makeClusterPSOCK(cores,
-                                         default_packages = c("fs", "sf", "terra"),
+                                         default_packages = c("fs", "terra"),
                                          rscript_libs = .libPaths(),
                                          autoStop = TRUE)
       on.exit(parallel::stopCluster(cl), add = TRUE)
