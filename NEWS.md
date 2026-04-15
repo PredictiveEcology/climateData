@@ -7,8 +7,9 @@
 - fix `climateMosaicsParallel()` to handle single-tile case using `terra::rast()` instead of `terra::sprc()`, which does not work correctly with a single tile;
 - remove `sf` from default packages loaded on parallel cluster in `buildClimateMosaics()`;
 - use package prefix `reproducible::` for `linkOrCopy`;
-- use `stats::setNames()` namespace prefix in `climateLayers()`;
 - refactor `prepClimateLayers()` to use pipe-style `postProcessTo(...) |> Cache(...)` for improved readability;
+- drop support for R < 4.4 due to changes in dependency packages;
+- explicitly add dependency `digest`, which was used to create datasets;
 
 # climateData 2.2.2
 

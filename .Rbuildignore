@@ -9,3 +9,5 @@
 ^man-roxygen$
 ^data-raw$
 ^tmp$
+^[.]?air[.]toml$
+^\.vscode$
