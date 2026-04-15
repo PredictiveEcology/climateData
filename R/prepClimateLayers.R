@@ -256,7 +256,6 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       stop("unknown climate variable type: ", type_msyn)
     }
 
-    if (!all(dir.exists(allDirs))) browser()
     stopifnot(all(dir.exists(allDirs)))
 
     return(out)
