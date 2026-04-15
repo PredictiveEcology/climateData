@@ -4,7 +4,7 @@
 \alias{getClimateTiles}
 \title{Download and extract multiple archives per tile (by decade)}
 \usage{
-getClimateTiles(tile, climateURLs, climatePath)
+getClimateTiles(tile, climateURLs, climatePath, needVars = NULL)
 }
 \arguments{
 \item{tile}{integer. tile id (e.g., the output of \code{tileID()}).}
@@ -12,6 +12,12 @@ getClimateTiles(tile, climateURLs, climatePath)
 \item{climateURLs}{list of lists of tile URLs, with outer list names corresponding to tile ids.}
 
 \item{climatePath}{character string specifying the directory path to put climate data.}
+
+\item{needVars}{A character vector of the climate variables to extract from the zip files,
+with a prefix of either \code{historical_} or \code{future_}.
+e.g., \code{c("historical_CMD_sm", "future_CMD_sp")}.
+If \code{NULL}, the default, then all files will be extracted.}
+
 }
 \value{
 (invisibly) a list of length \code{tileIDs} containing the result of \code{preProcess()} calls

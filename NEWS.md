@@ -1,5 +1,11 @@
-# climateData (development version)
+# climateData 2.2.3
 
+- use package prefix `reproducible::` for `linkOrCopy`
+
+- removed `calcATA` and `calcCMI` as pre-existing functions, as the functions were incompatible with 
+use cases of calcAsIS containing multiple normal periods
+- fixed errors in `calcAsIs` where multiple climate normal periods and variables are retrieved
+- fixed errors caused by inconsistent behaviour regarding `terra` `SpatRaster` on disk and in memory
 - drop support for R < 4.4 due to changes in dependency packages;
 - explicitly add dependency `digest`, which was used to create datasets;
 

@@ -2,16 +2,10 @@
 % Please edit documentation in R/calcVars.R
 \name{calcAsIs}
 \alias{calcAsIs}
-\alias{calcATA}
-\alias{calcCMInormal}
 \alias{calcMDC}
 \title{Create raster stacks of climate variables}
 \usage{
 calcAsIs(stacks, layers, .dots = NULL)
-
-calcATA(stacks, layers, .dots = NULL)
-
-calcCMInormal(stacks, layers, .dots = NULL)
 
 calcMDC(stacks, layers, .dots = NULL)
 }
@@ -37,8 +31,6 @@ with layers corresponding to climate years or periods.
 \details{
 \itemize{
 \item \code{calcAsIs()} returns the climate variable without modification;
-\item \code{calcATA()} calculates Annual Temperature Anomaly (ATA) from \code{MAT} and \code{MAT_normal};
-\item \code{calcCMInormal()} calculates mean CMI over multiple normals periods;
 \item \code{calcMDC()} calculates Monthly Drought Code (MDC) from \code{Tmax} and \code{PPT} for April-September;
 }
 }
