@@ -150,12 +150,12 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
   climateVarsGrep <- paste(climateVars, collapse = "|")
 
   owd <- getwd()
-  on.exit(options(owd))
+  on.exit(setwd(owd))
   lapply(tile, climateURL = climateURLs, function(climateTile, climateURL) {
     workingPath <- file.path(climatePath, climateTile)
     reproducible::checkPath(workingPath, create = TRUE)
     ow <- setwd(workingPath)
-    on.exit(options(ow))
+    on.exit(setwd(ow))
     ## TODO: the zip files are being put inside the tile directory, but should be one level up
     climateTileChar <- paste0("tile_", climateTile)
     preHashes <- Map(url = climateURL[[as.character(climateTile)]], function(url) {
@@ -207,7 +207,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
         message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
         
       }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar),
-                  .cacheExtra = list(preHashes = preHashes, climateVarsGrep = climateVarsGrep))
+                  .cacheExtra = list(preHashes = preHashes, climateVarsGrep = climateVarsGrep, workingPath = workingPath))
     names(preProcessOut) <- rep(climateTileChar, length(preProcessOut))
     
     return(preProcessOut)
