@@ -8,6 +8,7 @@
 - remove `sf` from default packages loaded on parallel cluster in `buildClimateMosaics()`;
 - use package prefix `reproducible::` for `linkOrCopy`;
 - refactor `prepClimateLayers()` to use pipe-style `postProcessTo(...) |> Cache(...)` for improved readability;
+- fix incorrect downloading and caching in `prepClimateLayers()` when multiple parallel cores are sharing disk space;
 - drop support for R < 4.4 due to changes in dependency packages;
 - explicitly add dependency `digest`, which was used to create datasets;
 
