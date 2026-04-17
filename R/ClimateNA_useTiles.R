@@ -150,63 +150,66 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
   climateVarsGrep <- paste(climateVars, collapse = "|")
 
   owd <- getwd()
-  on.exit(options(owd))
+  on.exit(setwd(owd))
   lapply(tile, climateURL = climateURLs, function(climateTile, climateURL) {
     workingPath <- file.path(climatePath, climateTile)
     reproducible::checkPath(workingPath, create = TRUE)
     ow <- setwd(workingPath)
-    on.exit(options(ow))
+    on.exit(setwd(ow))
     ## TODO: the zip files are being put inside the tile directory, but should be one level up
     climateTileChar <- paste0("tile_", climateTile)
-    preProcessOut <- lapply(climateURL[[as.character(climateTile)]], function(url) {
-      # inner <- preProcess(
-      #   url = googledrive::as_id(url),
-      #   alsoExtract = "none",
-      #   archive = "2_MSY_1990.zip",
-      #   # fun = quote(extractJustAFew(climatePath, climateTile, inner)),
-      #   targetFile = NA_character_, # don't extract anything
-      #   destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
-      # ) |> Cache(.functionName = paste0("preProcess_climateData_", climateTile, "_", url))
+    preHashes <- Map(url = climateURL[[as.character(climateTile)]], function(url) {
+      # preProcess(url = reproducible:::googledriveIDtoHumanURL(url))
+      reproducible:::getRemoteMetadata(url = reproducible:::googledriveIDtoHumanURL(url), isGDurl = TRUE)[c("remoteHash", "targetFile")]
+    })
+    preProcessOut <- Map(
+      url = climateURL[[as.character(climateTile)]], 
+      preHash = preHashes, function(url, preHash) {
+        
+        remoteMD5 <- preHash[["remoteHash"]]
+        
+        if (packageVersion("reproducible") >= "3.0.0.9026") {
+          outs <- preProcess(url =  reproducible:::googledriveIDtoHumanURL(url), 
+                             alsoExtract = climateVarsGrep, fun = NA,
+                             destinationPath = workingPath)#,
+          newFiles <- outs$checkSums$actualFile[outs$checkSums$checksum.x != "dir"]
+        } else {
 
-      # This is previous version
-      # preProcess(
-      #   url = googledrive::as_id(url),
-      #   targetFile = NULL, # don't extract anything
-      #   destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
-      # ) |> Cache(.functionName = paste0("preProcess_climateData_", climateTile, "_", url))
+          remoteMD5 <- preHash[["remoteHash"]]
+          localFile <- preHash$targetFile
+          localMD5 <- if (file.exists(localFile)) unname(tools::md5sum(localFile)) else ""
+          if (!identical(remoteMD5, localMD5)) {
+            for (i in 1:2) {
+              message("Downloading from Google Drive...")
+              dwnld <- googledrive::drive_download(file = googledrive::as_id(url), verbose = TRUE,  overwrite = TRUE)
+              localFile <- file.path(getwd(), dwnld$local_path)
+              localMD5 <- unname(tools::md5sum(dwnld$name))
+              if (identical(remoteMD5, localMD5))
+                break
+              if (i == 2)
+                stop("Failed to correctly download file from Google Drive; please check connection")
+            }
 
-      abc <- reproducible::retry(retries = 2, reproducible:::assessGoogle(url)) # gets filename, file.size, md5sum
-      remoteMD5 <- attr(abc, "drive_resource")[[1]]$md5Checksum
-      localMD5 <- if (file.exists(abc)) unname(tools::md5sum(abc)) else ""
-      if (!identical(remoteMD5, localMD5)) {
-        for (i in 1:2) {
-          message("Downloading from Google Drive...")
-          dwnld <- googledrive::drive_download(file = googledrive::as_id(url), verbose = TRUE,  overwrite = TRUE)
-          abc <- file.path(getwd(), dwnld$local_path)
-          localMD5 <- unname(tools::md5sum(dwnld$name))
-          if (identical(remoteMD5, localMD5))
-            break
-          if (i == 2)
-            stop("Failed to correctly download file from Google Drive; please check connection")
+          } else {
+            message("skipping new download; local copy of zip already present and correct")
+          }
+          newFiles <- extractJustAFew(workingPath, localFile, climateVarsGrep)
+
+          ##  TODO: how to best use Cache here?
+          # Eliot: suggesting this simple Cache --
+          #  It means that the Cache will be on the tile by date, with essentially no
+          #   digesting other than the url and the path, i.e., content is not assessed
+          #   This will be fine for a single computer, and when there are no climate
+          #   data updates
+          ## ELIOT again: now uses the new preProcess which tests remote data object; 
+          #  fixes the above issue
         }
-
-      } else {
-        message("skipping new download; local copy of zip already present and correct")
-      }
-      newFiles <- extractJustAFew(workingPath, abc, climateVarsGrep)
-      message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
-        # |> Cache(.functionName = paste0("preProcess_unzip_", climateTile, "_", url))
-
-      ##  TODO: how to best use Cache here?
-      # Eliot: suggesting this simple Cache --
-      #  It means that the Cache will be on the tile by date, with essentially no
-      #   digesting other than the url and the path, i.e., content is not assessed
-      #   This will be fine for a single computer, and when there are no climate
-      #   data updates
-
-    }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar))
+        message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
+        
+      }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar),
+                  .cacheExtra = list(preHashes = preHashes, climateVarsGrep = climateVarsGrep, workingPath = workingPath))
     names(preProcessOut) <- rep(climateTileChar, length(preProcessOut))
-
+    
     return(preProcessOut)
   }) |>
     invisible()

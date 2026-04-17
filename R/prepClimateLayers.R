@@ -210,7 +210,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       urls <- getClimateURLs(type = type, tile = tile, years = historical_years, msy = msy)
       out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
                              needVars = needVars)
-      allDirs <- file.path(climatePath_type, rep(tile, length(historical_years)),
+      allDirs <- file.path(climatePath_type, rep(tile, each = length(historical_years)),
                            paste0("Year_", historical_years, msy)) |> sort()
     } else if (type_msyn == "historical_N") {
       type <- "historical_normals"
@@ -218,7 +218,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y")
       out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
                              needVars = needVars)
-      allDirs <- file.path(climatePath_type, rep(tile, length(historical_period)),
+      allDirs <- file.path(climatePath_type, rep(tile, each = length(historical_period)),
                            paste0("Normal_", historical_period, "Y")) |> sort()
     } else if (type_msyn %in% c("future_M", "future_S", "future_Y", "future_MSY")) {
       type <- "future"
@@ -227,7 +227,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       urls <- getClimateURLs(type = type, tile = tile, years = future_years, msy = msy, gcm = gcm, ssp = ssp)
       out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
                              needVars = needVars)
-      allDirs <- file.path(climatePath_type, rep(tile, length(future_years)),
+      allDirs <- file.path(climatePath_type, rep(tile, each = length(future_years)),
                            paste0(gcm, "_ssp", ssp, "@", future_years, msy)) |> sort()
     } else if (type_msyn == "future_N") {
       stop("future normals not yet implemented") ## TODO: get data, implement and verify
@@ -236,7 +236,7 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y", gcm = gcm, ssp = ssp)
       out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
                              needVars = needVars)
-      allDirs <- file.path(climatePath_type, rep(tile, length(future_period)), paste0(gcm, "_ssp", ssp),
+      allDirs <- file.path(climatePath_type, rep(tile, each = length(future_period)), paste0(gcm, "_ssp", ssp),
                            paste0("Normal_", future_period, "Y")) |> sort() ## TODO: verify paths
     } else {
       stop("unknown climate variable type: ", type_msyn)

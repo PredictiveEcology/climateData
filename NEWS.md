@@ -1,5 +1,18 @@
 # climateData 2.2.3
 
+- add retry logic (via `reproducible::retry()`) for Google Drive file assessment in `getClimateTiles()` to improve resilience against transient network failures;
+- fix path tracking of downloaded file after Google Drive download in `getClimateTiles()`;
+- fix archive extraction in `extractJustAFew()` to support both `archive` and base R extraction functions by dynamically selecting the correct directory argument (`dir` vs `exdir`);
+- fix handling of absolute paths returned by the `archive` package during extraction, converting them to relative paths using `fs::path_rel()`;
+- fix `climateMosaicsParallel()` to handle single-tile case using `terra::rast()` instead of `terra::sprc()`, which does not work correctly with a single tile;
+- remove `sf` from default packages loaded on parallel cluster in `buildClimateMosaics()`;
+- use package prefix `reproducible::` for `linkOrCopy`;
+- refactor `prepClimateLayers()` to use pipe-style `postProcessTo(...) |> Cache(...)` for improved readability;
+- fix incorrect downloading and caching in `prepClimateLayers()` when multiple parallel cores are sharing disk space;
+- use `stats::setNames()` namespace prefix in `climateLayers()` for CRAN compliance;
+- drop support for R < 4.4 due to changes in dependency packages;
+- explicitly add dependency `digest`, which was used to create datasets;
+
 - use package prefix `reproducible::` for `linkOrCopy`
 
 - removed `calcATA` and `calcCMI` as pre-existing functions, as the functions were incompatible with 
