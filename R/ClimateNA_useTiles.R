@@ -147,6 +147,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
   if (is.null(needVars))
     needVars <- ""
   climateVars <- unique(gsub("historical\\_|future\\_|projected_", "", needVars))
+  climateVars <- unique(gsub("_normal", "", climateVars)) #normals are in their own archive
   climateVarsGrep <- paste(climateVars, collapse = "|")
 
   owd <- getwd()
