@@ -169,16 +169,16 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
         
         remoteMD5 <- preHash[["remoteHash"]]
         
-        if (packageVersion("reproducible") >= "3.0.0.9026") { # needs updates to alsoExtract that can work by grep
-          outs <- preProcess(url =  reproducible:::googledriveIDtoHumanURL(url), 
-                             alsoExtract = climateVarsGrep, fun = NA,
-                             destinationPath = workingPath)#,
-          newFiles <- outs$checkSums$actualFile[
-            outs$checkSums$checksum.x != "dir" & # removes any dirs
-              grepl(climateVarsGrep, outs$checkSums$actualFile) # removes the .zip effectively
-          ]
-          # newFiles1 <- outs$checkSums$actualFile[outs$checkSums$checksum.x != "dir"]
-        } else {
+        #if (packageVersion("reproducible") >= "3.0.0.9026") { # needs updates to alsoExtract that can work by grep
+        #   outs <- preProcess(url =  reproducible:::googledriveIDtoHumanURL(url), 
+        #                      alsoExtract = climateVarsGrep, fun = NA,
+        #                      destinationPath = workingPath)#,
+        #   newFiles <- outs$checkSums$actualFile[
+        #     outs$checkSums$checksum.x != "dir" & # removes any dirs
+        #       grepl(climateVarsGrep, outs$checkSums$actualFile) # removes the .zip effectively
+        #   ]
+        #   # newFiles1 <- outs$checkSums$actualFile[outs$checkSums$checksum.x != "dir"]
+        # } else {
 
           remoteMD5 <- preHash[["remoteHash"]]
           localFile <- preHash$targetFile
@@ -208,7 +208,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
           #   data updates
           ## ELIOT again: now uses the new preProcess which tests remote data object; 
           #  fixes the above issue
-        }
+        # }
         message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
         
       }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar),
