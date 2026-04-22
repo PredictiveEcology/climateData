@@ -160,7 +160,8 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
     climateTileChar <- paste0("tile_", climateTile)
     preHashes <- Map(url = climateURL[[as.character(climateTile)]], function(url) {
       # preProcess(url = reproducible:::googledriveIDtoHumanURL(url))
-      reproducible:::getRemoteMetadata(url = reproducible:::googledriveIDtoHumanURL(url), isGDurl = TRUE)[c("remoteHash", "targetFile")]
+      reproducible:::getRemoteMetadata(url = reproducible:::googledriveIDtoHumanURL(url), 
+                                       isGDurl = TRUE)[c("remoteHash", "targetFile")]
     })
     preProcessOut <- Map(
       url = climateURL[[as.character(climateTile)]], 
@@ -168,11 +169,15 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
         
         remoteMD5 <- preHash[["remoteHash"]]
         
-        if (packageVersion("reproducible") >= "3.0.0.9026") {
+        if (packageVersion("reproducible") >= "3.0.0.9026") { # needs updates to alsoExtract that can work by grep
           outs <- preProcess(url =  reproducible:::googledriveIDtoHumanURL(url), 
                              alsoExtract = climateVarsGrep, fun = NA,
                              destinationPath = workingPath)#,
-          newFiles <- outs$checkSums$actualFile[outs$checkSums$checksum.x != "dir"]
+          newFiles <- outs$checkSums$actualFile[
+            outs$checkSums$checksum.x != "dir" & # removes any dirs
+              grepl(climateVarsGrep, outs$checkSums$actualFile) # removes the .zip effectively
+          ]
+          # newFiles1 <- outs$checkSums$actualFile[outs$checkSums$checksum.x != "dir"]
         } else {
 
           remoteMD5 <- preHash[["remoteHash"]]
