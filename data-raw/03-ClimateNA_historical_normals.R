@@ -166,12 +166,17 @@ checksums_hist_normals <- future.apply::future_lapply(
 ) |>
   dplyr::bind_rows()
 
-if (!"id" %in% colnames(new_rows_hist_normals)) {
-  dplyr::rows_append(climate_hist_normals_df, new_rows_hist_normals, copy = TRUE, in_place = TRUE)
+if (!"id" %in% colnames(checksums_hist_normals)) {
+  dplyr::rows_append(
+    checksums_hist_normals_df,
+    checksums_hist_normals,
+    copy = TRUE,
+    in_place = TRUE
+  )
 } else {
   dplyr::rows_update(
-    climate_hist_normals_df,
-    new_rows_hist_normals,
+    checksums_hist_normals_df,
+    checksums_hist_normals,
     copy = TRUE,
     in_place = TRUE,
     unmatched = "ignore"
@@ -193,7 +198,7 @@ if (createZips) {
     climate_hist_normals_df <- dbdf[["df"]]
     rm(dbdf)
 
-    tile <- normalizePath(f) |> climateData::tileID(f)
+    tile <- normalizePath(f) |> climateData::tileID()
 
     z <- lapply(MSYs, function(msy) {
       ClimateNAout <- climateData::ClimateNA_path(
@@ -258,7 +263,7 @@ if (uploadArchives) {
     climate_hist_normals_df <- dbdf[["df"]]
     rm(dbdf)
 
-    tile <- normalizePath(f) |> climateData::tileID(f)
+    tile <- normalizePath(f) |> climateData::tileID()
 
     z <- lapply(MSYs, function(msy) {
       ClimateNAout <- climateData::ClimateNA_path(

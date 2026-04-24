@@ -24,43 +24,52 @@
 #' @importFrom reproducible prepInputs
 #' @importFrom terra buffer compareGeom crop mask project resample same.crs trim vect writeRaster
 #' @rdname makeClimateDEM
-makeClimateDEM <- function(studyArea, arcSecRes = c(180, 180), bufferArcSec = 180,
-                           DEMdestinationPath, destinationPath, filename2) {
-  stopifnot(requireNamespace("googledrive", quietly = TRUE))
+makeClimateDEM <- function(
+  studyArea,
+  arcSecRes = c(180, 180),
+  bufferArcSec = 180,
+  DEMdestinationPath,
+  destinationPath,
+  filename2
+) {
+  stopifnot(
+    requireNamespace("googledrive", quietly = TRUE),
+    requireNamespace("httr2", quietly = TRUE)
+  )
 
   if (!is(studyArea, "SpatVector")) {
     studyArea <- vect(studyArea)
   }
 
-	gtopo30N <- prepInputs(
-	  url = "https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/",
-	  destinationPath = DEMdestinationPath,
-	  overwrite = TRUE
-	 )
+  gtopo30N <- prepInputs(
+    url = "https://drive.google.com/file/d/14puAtns8oTZDtvWzpQ6_FgK4MbozGZFK/",
+    destinationPath = DEMdestinationPath,
+    overwrite = TRUE
+  )
 
-	if (arcSecRes[1] != arcSecRes[2]) {
-		stop(".asc format requires x and y dimensions to be equal. Please adjust arcSecRes.")
-	}
+  if (arcSecRes[1] != arcSecRes[2]) {
+    stop(".asc format requires x and y dimensions to be equal. Please adjust arcSecRes.")
+  }
 
-	if (!is.null(bufferArcSec)) {
-		studyArea <- project(studyArea, "epsg:4326")
-		studyArea <- buffer(studyArea, bufferArcSec/60/60)
-	}
+  if (!is.null(bufferArcSec)) {
+    studyArea <- project(studyArea, "epsg:4326")
+    studyArea <- buffer(studyArea, bufferArcSec / 60 / 60)
+  }
 
-	if (!same.crs(studyArea, gtopo30N)) {
-		studyArea <- project(studyArea, "epsg:4326")
-	}
+  if (!same.crs(studyArea, gtopo30N)) {
+    studyArea <- project(studyArea, "epsg:4326")
+  }
 
-	studyArea <- project(studyArea, crs(gtopo30N))
-	gtopo30N <- crop(gtopo30N, studyArea)
-	gtopo30N <- mask(gtopo30N, studyArea)
-	outputFilename <- file.path(destinationPath, paste0(filename2, ".asc"))
-	gtopo30N <- project(gtopo30N, "epsg:4326", res = arcSecRes/60/60)
-	gtopo30N <- trim(gtopo30N)
-	writeRaster(gtopo30N, filename = outputFilename, overwrite = TRUE)
+  studyArea <- project(studyArea, crs(gtopo30N))
+  gtopo30N <- crop(gtopo30N, studyArea)
+  gtopo30N <- mask(gtopo30N, studyArea)
+  outputFilename <- file.path(destinationPath, paste0(filename2, ".asc"))
+  gtopo30N <- project(gtopo30N, "epsg:4326", res = arcSecRes / 60 / 60)
+  gtopo30N <- trim(gtopo30N)
+  writeRaster(gtopo30N, filename = outputFilename, overwrite = TRUE)
 
-	## rewrite line endings in asc files for windows
-	rewrite_asc(outputFilename)
+  ## rewrite line endings in asc files for windows
+  rewrite_asc(outputFilename)
 
-	return(gtopo30N)
+  return(gtopo30N)
 }

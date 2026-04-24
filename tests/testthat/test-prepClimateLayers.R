@@ -1,6 +1,6 @@
 test_that("prepClimateLayers works for multiple variable types", {
   skip_on_cran()
-  skip_on_ci() ## needs to authorize googldrive package for downloads
+  skip_on_ci() ## needs to authorize googledrive package for downloads
   skip_if_not_installed("archive")
   skip_if_not_installed("googledrive")
   skip_if_not_installed("withr")
@@ -171,7 +171,7 @@ test_that("prepClimateLayers works for multiple variable types", {
 
 test_that("prepClimateLayers properly handles unordered tileIDs", {
   skip_on_cran()
-  skip_on_ci() ## needs to authorize googldrive package for downloads
+  skip_on_ci() ## needs to authorize googledrive package for downloads
   skip_if_not_installed("archive")
   skip_if_not_installed("googledrive")
   skip_if_not_installed("withr")

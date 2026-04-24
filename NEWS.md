@@ -21,6 +21,8 @@ use cases of calcAsIS containing multiple normal periods
 - fixed errors caused by inconsistent behaviour regarding `terra` `SpatRaster` on disk and in memory
 - drop support for R < 4.4 due to changes in dependency packages;
 - explicitly add dependency `digest`, which was used to create datasets;
+- add `httr2` to Suggests, as it is needed by `reproducible`;
+- add 2023 and 2024 historical data from ClimateNA;
 
 # climateData 2.2.2
 
@@ -47,7 +49,7 @@ use cases of calcAsIS containing multiple normal periods
 
 # climateData 2.0.4
 
-- fix `calcATA()` calculation
+- fix `calcATA()` calculation;
 
 # climateData 2.0.0
 

@@ -6,7 +6,7 @@
 
 ## Installation
 
-**Install from Predictive Eceology repo:**
+**Install from Predictive Ecology repo:**
     
 ```r
 install.packages("climateData", repos = c(PE = "https://PredictiveEcology.r-universe.dev",
