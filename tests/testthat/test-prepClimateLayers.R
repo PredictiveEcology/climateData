@@ -23,18 +23,27 @@ test_that("prepClimateLayers works for multiple variable types", {
   ## MDC uses monthly vars; uses custom fun
   ## CMD uses seasonal variable; no fun (as is)
   climateVariables <- list(
-
     historical_CMI = list(
       vars = "historical_CMI",
       fun = quote(calcAsIs),
-      .dots = list(historical_years = historical_yrs)
+      .dots = list(historical_years = 2008)
     ),
     historical_FFP_normal = list(
-      vars = "historical_FFP_normal", ## ensure FFP only; not bFFP nor eFFP
+      vars = "historical_MAT_normal", ## ensure MAT only; not bMAT nor eMAT
       fun = quote(calcAsIs),
       .dots = list(historical_period = historical_prd)
     ),
-    #future period not supported
+    historical_CMI_normal = list(
+      vars = "historical_CMI_normal", ## ensure MAT only; not bFFP nor eFFP
+      fun = quote(calcAsIs),
+      .dots = list(historical_period = historical_prd)
+    ),
+    historical_MAP = list(
+      vars = "historical_MAP",
+      fun = quote(calcAsIs),
+      .dots = list(historical_years = historical_yrs)
+    ),
+    # future period not supported
     # future_CMD_sm_normal = list(
     #   vars = "future_CMD_sm_normal",
     #   fun = quote(calcAsIs),
@@ -73,7 +82,56 @@ test_that("prepClimateLayers works for multiple variable types", {
     lapply(climateRasters[[backend]], function(x) {
       expect_s4_class(x, "SpatRaster")
     })
-  }
+
+    #new climate variables
+
+    climateVariables <- list(
+      historical_PAS_normal = list(
+        vars = "historical_PAS_normal", ## ensure MAT only; not bMAT nor eMAT
+        fun = quote(calcAsIs),
+        .dots = list(historical_period = historical_prd)
+      ),
+      historical_CMD_normal = list(
+        vars = "historical_CMD_normal", ## ensure MAT only; not bFFP nor eFFP
+        fun = quote(calcAsIs),
+        .dots = list(historical_period = historical_prd)
+      )
+    )
+
+    climateRasters <- list()
+    for (backend in .parallelBackends) {
+      withr::with_options(list(climateData.parallel.backend = backend), {
+        climateRasters[[backend]] <- prepClimateLayers(
+          climateVarsList = climateVariables,
+          srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
+          dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
+          tile = tileIDs,
+          gcm = GCM,
+          ssp = SSP,
+          cl = NULL,
+          studyArea = NULL,
+          studyAreaName = NULL,
+          rasterToMatch = NULL
+        )
+      })
+
+      lapply(climateRasters[[backend]], function(x) {
+        expect_s4_class(x, "SpatRaster")
+      })
+
+      ras1a <- climateRasters[[1]][[1]][[1]]
+      ras1b <- climateRasters[[1]][[1]][[2]]
+      ras2a <- climateRasters[[1]][[2]][[1]]
+
+      #avoid false just because of layer name
+      names(ras1a) <- names(ras1b)
+      names(ras2a) <- names(ras1a)
+
+     #check same var diff normal period
+      expect_false(isTRUE(terra::all.equal(ras1a, ras1b)))
+     #check diff var same normal period
+      expect_false(isTRUE(terra::all.equal(ras1a, ras2a)))
+    }
 
   ## now test with studyArea and rasterTaMatch
   skip_if_not_installed("SpaDES.tools")
@@ -157,3 +215,4 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
 
   withr::deferred_run()
 })
+

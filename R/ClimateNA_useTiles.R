@@ -110,6 +110,7 @@ getNormalsPeriods <- function(type = NULL, tile = NULL, msy = "Y", gcm = NULL, s
 #' @importFrom data.table .SD as.data.table
 getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
                            gcm = NULL, ssp = NULL) {
+  years <- as.character(years)
   climate_dt <- getClimateTable(type = type, tile = tile, years = years, msy = msy,
                                 gcm = gcm, ssp = ssp) |>
     as.data.table()
@@ -164,13 +165,13 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
       reproducible:::getRemoteMetadata(url = reproducible:::googledriveIDtoHumanURL(url), isGDurl = TRUE)[c("remoteHash", "targetFile")]
     })
     preProcessOut <- Map(
-      url = climateURL[[as.character(climateTile)]], 
+      url = climateURL[[as.character(climateTile)]],
       preHash = preHashes, function(url, preHash) {
-        
+
         remoteMD5 <- preHash[["remoteHash"]]
-        
+
         if (packageVersion("reproducible") >= "3.0.0.9026") {
-          outs <- preProcess(url =  reproducible:::googledriveIDtoHumanURL(url), 
+          outs <- preProcess(url =  reproducible:::googledriveIDtoHumanURL(url),
                              alsoExtract = climateVarsGrep, fun = NA,
                              destinationPath = workingPath)#,
           newFiles <- outs$checkSums$actualFile[outs$checkSums$checksum.x != "dir"]
@@ -202,15 +203,15 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
           #   digesting other than the url and the path, i.e., content is not assessed
           #   This will be fine for a single computer, and when there are no climate
           #   data updates
-          ## ELIOT again: now uses the new preProcess which tests remote data object; 
+          ## ELIOT again: now uses the new preProcess which tests remote data object;
           #  fixes the above issue
         }
         message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
-        
+
       }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar),
                   .cacheExtra = list(preHashes = preHashes, climateVarsGrep = climateVarsGrep, workingPath = workingPath))
     names(preProcessOut) <- rep(climateTileChar, length(preProcessOut))
-    
+
     return(preProcessOut)
   }) |>
     invisible()
