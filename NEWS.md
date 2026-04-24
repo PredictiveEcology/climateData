@@ -4,6 +4,9 @@
 - explicitly add dependency `digest`, which was used to create datasets;
 - add `httr2` to Suggests, as it is needed by `reproducible`;
 - add 2023 and 2024 historical data from ClimateNA;
+- store `year` as `INTEGER` (was `CHARACTER`) in the `historical`, `future`,
+  `checksums_historical`, and `checksums_future` tables of the bundled SQLite index;
+- fix typo `ISNTEGER` -> `INTEGER` in `checksums_historical.tileid`;
 
 # climateData 2.2.2
 

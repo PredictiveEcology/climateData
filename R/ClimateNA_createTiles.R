@@ -143,7 +143,7 @@ ClimateNA_sql <- function(dbfile, type) {
     historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "CHARACTER",      ## climate year
+      year = "INTEGER",        ## climate year
       tileid = "INTEGER",      ## tile ID
       created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
       zipfile = "CHARACTER",   ## relative file path
@@ -156,7 +156,7 @@ ClimateNA_sql <- function(dbfile, type) {
       gcm = "CHARACTER",       ## climate scenario GCM
       ssp = "CHARACTER",       ## climate scenario SSP
       msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "CHARACTER",      ## climate year (or period)
+      year = "INTEGER",        ## climate year
       tileid = "INTEGER",      ## tile ID
       created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
       zipfile = "CHARACTER",   ## relative file path
@@ -188,7 +188,7 @@ checksums_sql <- function(dbfile, type) {
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
       period = "CHARACTER",     ## climate period
-      tileid = "ISNTEGER",      ## tile ID
+      tileid = "INTEGER",       ## tile ID
       filename = "CHARACTER",   ## file name
       filehash = "CHARACTER"    ## file hash (checksum)
     ),
@@ -205,7 +205,7 @@ checksums_sql <- function(dbfile, type) {
     historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "CHARACTER",       ## climate year
+      year = "INTEGER",         ## climate year
       tileid = "INTEGER",       ## tile ID
       filename = "CHARACTER",   ## file name
       filehash = "CHARACTER"    ## file hash (checksum)
@@ -215,7 +215,7 @@ checksums_sql <- function(dbfile, type) {
       gcm = "CHARACTER",        ## climate scenario GCM
       ssp = "CHARACTER",        ## climate scenario SSP
       msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "CHARACTER",       ## climate year (or period)
+      year = "INTEGER",         ## climate year
       tileid = "INTEGER",       ## tile ID
       filename = "CHARACTER",   ## file name
       filehash = "CHARACTER"    ## file hash (checksum)

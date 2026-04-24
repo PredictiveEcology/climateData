@@ -66,7 +66,7 @@ progressr::with_progress({
             msy
           )
 
-          yr <- substr(ann, 6, 9)
+          yr <- as.integer(substr(ann, 6, 9))
 
           row <- dplyr::filter(
             climate_historical_df,
@@ -161,7 +161,7 @@ progressr::with_progress({
             msy
           )
 
-          yr <- substr(ann, 6, 9)
+          yr <- as.integer(substr(ann, 6, 9))
 
           digs <- file.path(ClimateNAout, paste0(tools::file_path_sans_ext(ann), msy)) |>
             fs::dir_ls(type = "file") |>
