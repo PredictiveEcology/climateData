@@ -3,8 +3,9 @@ test_that("prepClimateLayers works for multiple variable types", {
   skip_on_ci() ## needs to authorize googldrive package for downloads
   skip_if_not_installed("archive")
   skip_if_not_installed("googledrive")
+  skip_if_not_installed("withr")
 
-  dPath <- file.path(tempdir(), "test_prepClimateLayers")
+  dPath <- withr::local_tempdir("test_prepClimateLayers_")
   climateType <- "historical"
   climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
   climatePathOut <- file.path(climatePath, "outputs") |> reproducible::checkPath(create = TRUE)
@@ -12,6 +13,7 @@ test_that("prepClimateLayers works for multiple variable types", {
   historical_prd <- c("1951_1980", "1981_2010")
   historical_yrs <- c(2011:2015)
   future_yrs <- c(2021:2025)
+  future_prd <- c("2011_2040", "2041_2070")
   GCM <- "CanESM5"
   SSP <- 370
 
@@ -21,26 +23,22 @@ test_that("prepClimateLayers works for multiple variable types", {
   ## MDC uses monthly vars; uses custom fun
   ## CMD uses seasonal variable; no fun (as is)
   climateVariables <- list(
-    historical_ATA = list(
-      vars = c("historical_MAT", "historical_MAT_normal"),
-      fun = quote(calcATA),
-      .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
-    ),
-    future_ATA = list(
-      vars = c("future_MAT", "historical_MAT_normal"),
-      fun = quote(calcATA),
-      .dots = list(historical_period = historical_prd, future_years = future_yrs)
-    ),
+
     historical_CMI = list(
       vars = "historical_CMI",
       fun = quote(calcAsIs),
       .dots = list(historical_years = historical_yrs)
     ),
-    historical_CMI_normal = list(
-      vars = "historical_CMI_normal",
-      fun = quote(calcCMInormal),
-      .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
+    historical_FFP_normal = list(
+      vars = "historical_FFP_normal", ## ensure FFP only; not bFFP nor eFFP
+      fun = quote(calcAsIs),
+      .dots = list(historical_period = historical_prd)
     ),
+    #future period not supported
+    # future_CMD_sm_normal = list(
+    #   vars = "future_CMD_sm_normal",
+    #   fun = quote(calcAsIs),
+    #   .dots = list(future_period = future_prd),
     future_FFP = list(
       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
       fun = quote(calcAsIs),
@@ -50,68 +48,67 @@ test_that("prepClimateLayers works for multiple variable types", {
       vars = c(sprintf("historical_PPT%02d", 4:9), sprintf("historical_Tmax%02d", 4:9)),
       fun = quote(calcMDC),
       .dots = list(historical_years = historical_yrs)
-    ),
-    future_CMD_sm = list(
-      vars = "future_CMD_sm",
-      fun = quote(calcAsIs),
-      .dots = list(future_years = future_yrs)
     )
+
   )
 
-  climateRasters <- prepClimateLayers(
-    climateVarsList = climateVariables,
-    srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
-    dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
-    tile = tileIDs,
-    historical_years = historical_yrs,
-    future_years = future_yrs,
-    historical_period = historical_prd,
-    future_period = NULL,
-    gcm = GCM,
-    ssp = SSP,
-    cl = NULL,
-    studyArea = NULL,
-    studyAreaName = NULL,
-    rasterToMatch = NULL
-  )
+  ## test with all parallel backends
+  climateRasters <- list()
+  for (backend in .parallelBackends) {
+    withr::with_options(list(climateData.parallel.backend = backend), {
+      climateRasters[[backend]] <- prepClimateLayers(
+        climateVarsList = climateVariables,
+        srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
+        dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
+        tile = tileIDs,
+        gcm = GCM,
+        ssp = SSP,
+        cl = NULL,
+        studyArea = NULL,
+        studyAreaName = NULL,
+        rasterToMatch = NULL
+      )
+    })
 
-  lapply(climateRasters, function(x) {
-    expect_s4_class(x, "SpatRaster")
-  })
+    lapply(climateRasters[[backend]], function(x) {
+      expect_s4_class(x, "SpatRaster")
+    })
+  }
 
   ## now test with studyArea and rasterTaMatch
   skip_if_not_installed("SpaDES.tools")
 
   studyArea <- SpaDES.tools::randomStudyArea(size = 1e10)
-  rasterToMatch <- terra::rast(studyArea, resolution = 250) |>
-    terra::rasterize(studyArea, y = _)
+  rasterToMatch <- terra::rast(studyArea, resolution = 250) |> terra::rasterize(studyArea, y = _)
 
-  ## spurious warning:
-  ## attribute variables are assumed to be spatially constant throughout all geometries
-  climateRastersStudyArea <- suppressWarnings({
-    prepClimateLayers(
-      climateVarsList = climateVariables,
-      srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
-      dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
-      # tile = tileIDs, ## when passing `studyArea`/`rasterToMatch` then `tile` isn't needed
-      historical_years = historical_yrs,
-      future_years = future_yrs,
-      historical_period = historical_prd,
-      future_period = NULL,
-      gcm = GCM,
-      ssp = SSP,
-      cl = NULL,
-      studyArea = studyArea,
-      studyAreaName = "test_study_area",
-      rasterToMatch = rasterToMatch
-    )
-  })
+  ## test with all parallel backends
+  climateRasters <- list()
+  for (backend in .parallelBackends) {
+    withr::with_options(list(climateData.parallel.backend = backend), {
+      ## spurious warning:
+      ## attribute variables are assumed to be spatially constant throughout all geometries
+      climateRastersStudyArea <- suppressWarnings({
+        prepClimateLayers(
+          climateVarsList = climateVariables,
+          srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
+          dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
+          # tile = tileIDs, ## when passing `studyArea`/`rasterToMatch` then `tile` isn't needed
+          gcm = GCM,
+          ssp = SSP,
+          cl = NULL,
+          studyArea = studyArea,
+          studyAreaName = "test_study_area",
+          rasterToMatch = rasterToMatch
+        )
+      })
 
-  lapply(climateRastersStudyArea, function(x) {
-    expect_s4_class(x, "SpatRaster")
-  })
+      lapply(climateRastersStudyArea, function(x) {
+        expect_s4_class(x, "SpatRaster")
+      })
+    })
+  }
 
-  unlink(dPath, recursive = TRUE)
+  withr::deferred_run()
 })
 
 test_that("prepClimateLayers properly handles unordered tileIDs", {
@@ -119,8 +116,9 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
   skip_on_ci() ## needs to authorize googldrive package for downloads
   skip_if_not_installed("archive")
   skip_if_not_installed("googledrive")
+  skip_if_not_installed("withr")
 
-  dPath <- file.path(tempdir(), "test_prepClimateLayers")
+  dPath <- withr::local_tempdir("test_prepClimateLayers_")
   climateType <- "historical"
   climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
   climatePathOut <- file.path(climatePath, "outputs") |> reproducible::checkPath(create = TRUE)
@@ -142,13 +140,9 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
 
   climateRasters <- prepClimateLayers(
     climateVarsList = climateVariables,
-    srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
+    srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
     dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
     tile = tileIDs,
-    historical_years = historical_yrs,
-    future_years = NULL,
-    historical_period = NULL,
-    future_period = NULL,
     gcm = NULL,
     ssp = NULL,
     cl = NULL,
@@ -161,5 +155,5 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
     expect_s4_class(x, "SpatRaster")
   })
 
-  unlink(dPath, recursive = TRUE)
+  withr::deferred_run()
 })

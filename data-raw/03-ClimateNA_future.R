@@ -41,126 +41,160 @@ plan("callr", workers = min(length(dem_ff), maxCores))
 
 # get ClimateNA future time series ------------------------------------------------------------
 
-new_rows_future <- future_lapply(dem_ff, function(f) {
-  dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
-  climate_db <- dbdf[["db"]]
-  future_climate_df <- dbdf[["df"]]
-  rm(dbdf)
+new_rows_future <- future.apply::future_lapply(
+  dem_ff,
+  function(f) {
+    dbdf <- climateData::ClimateNA_sql(wrkngDBfile, climateType)
+    climate_db <- dbdf[["db"]]
+    future_climate_df <- dbdf[["df"]]
+    rm(dbdf)
 
-  f <- normalizePath(f)
-  tile <- tileID(f)
+    f <- normalizePath(f)
+    tile <- climateData::tileID(f)
 
-  z <- lapply(GCMs, function(gcm) {
-    lapply(SSPs, function(ssp) {
-      lapply(MSYs, function(msy) {
-        ClimateNAout <- ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy, gcm, ssp)
+    z <- lapply(GCMs, function(gcm) {
+      lapply(SSPs, function(ssp) {
+        lapply(MSYs, function(msy) {
+          ClimateNAout <- climateData::ClimateNA_path(
+            ClimateNAdata,
+            tile = tile,
+            type = climateType,
+            msy,
+            gcm,
+            ssp
+          )
 
-        lapply(future_years, function(yr) {
-          row <- dplyr::filter(
-            future_climate_df,
-            gcm == !!gcm & ssp == !!ssp & msy == !!msy & year == !!yr & tileid == !!tile
-          ) |>
-            collect()
+          lapply(future_years, function(yr) {
+            row <- dplyr::filter(
+              future_climate_df,
+              gcm == !!gcm & ssp == !!ssp & msy == !!msy & year == !!yr & tileid == !!tile
+            ) |>
+              dplyr::collect()
 
-          if (nrow(row) == 0) {
-            if (isTRUE(runClimateNA)) {
-              withr::local_dir(ClimateNAdir)
-              sys::exec_wait(
-                ClimateNAexe,
-                args = c(
-                  paste0("/", msy),
-                  paste0("/", gcm, "_ssp", ssp, "@", yr, ".gcm"),
-                  paste0("/", f),
-                  paste0("/", ClimateNAout)
+            if (nrow(row) == 0) {
+              if (isTRUE(runClimateNA)) {
+                withr::local_dir(ClimateNAdir)
+                sys::exec_wait(
+                  ClimateNAexe,
+                  args = c(
+                    paste0("/", msy),
+                    paste0("/", gcm, "_ssp", ssp, "@", yr, ".gcm"),
+                    paste0("/", f),
+                    paste0("/", ClimateNAout)
+                  )
                 )
+                withr::deferred_run()
+              }
+
+              new_row <- data.frame(
+                gcm = gcm,
+                ssp = ssp,
+                msy = msy,
+                year = yr,
+                tileid = tile,
+                created = file.info(ClimateNAout)$mtime,
+                stringsAsFactors = FALSE
               )
-              withr::deferred_run()
+              # rows_append(future_climate_df, new_row, copy = TRUE, in_place = TRUE)
+            } else {
+              new_row <- dplyr::mutate(row, created = file.info(ClimateNAout)$mtime)
+              # rows_update(future_climate_df, new_row, copy = TRUE, in_place = TRUE, unmatched = "ignore")
             }
 
-            new_row <- data.frame(
-              gcm = gcm,
-              ssp = ssp,
-              msy = msy,
-              year = yr,
-              tileid = tile,
-              created = file.info(ClimateNAout)$mtime,
-              stringsAsFactors = FALSE
-            )
-            # rows_append(future_climate_df, new_row, copy = TRUE, in_place = TRUE)
-          } else {
-            new_row <- dplyr::mutate(row, created = file.info(ClimateNAout)$mtime)
-            # rows_update(future_climate_df, new_row, copy = TRUE, in_place = TRUE, unmatched = "ignore")
-          }
-
-          return(new_row)
+            return(new_row)
+          }) |>
+            dplyr::bind_rows()
         }) |>
           dplyr::bind_rows()
       }) |>
         dplyr::bind_rows()
     }) |>
       dplyr::bind_rows()
-  }) |>
-    dplyr::bind_rows()
 
-  DBI::dbDisconnect(climate_db)
+    DBI::dbDisconnect(climate_db)
 
-  return(z)
-}, future.seed = NULL) |>
+    return(z)
+  },
+  future.seed = NULL
+) |>
   dplyr::bind_rows()
 
 if (!"rowid" %in% colnames(new_rows_future)) {
   new_rows_future <- tibble::rowid_to_column(new_rows_future)
-  rows_append(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE)
+  dplyr::rows_append(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  dplyr::rows_update(
+    future_climate_df,
+    new_rows_future,
+    copy = TRUE,
+    in_place = TRUE,
+    unmatched = "ignore"
+  )
 }
 
-  DBI::dbDisconnect(climate_db)
+DBI::dbDisconnect(climate_db)
 
 file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
 # checksums -----------------------------------------------------------------------------------
 
-checksums_future <- future_lapply(dem_ff, function(f) {
-  tile <- normalizePath(f) |> tileID()
+checksums_future <- future.apply::future_lapply(
+  dem_ff,
+  function(f) {
+    tile <- normalizePath(f) |> climateData::tileID(f)
 
-  lapply(GCMs, function(gcm) {
-    lapply(SSPs, function(ssp) {
-      lapply(MSYs, function(msy) {
-        ClimateNAout <- ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy, gcm, ssp)
-
-        lapply(future_years, function(yr) {
-          digs <- file.path(ClimateNAout, paste0(tools::file_path_sans_ext(nrm), "Y")) |>
-            fs::dir_ls(type = "file") |>
-            vapply(digest::digest, file = TRUE, algo = "xxhash64", FUN.VALUE = character(1))
-
-          checksums <- data.frame(
-            gcm = gcm,
-            ssp = ssp,
-            msy = msy,
-            year = yr,
-            tileid = tile,
-            filename = basename(names(digs)),
-            filehash = unname(digs),
-            stringsAsFactors = FALSE
+    lapply(GCMs, function(gcm) {
+      lapply(SSPs, function(ssp) {
+        lapply(MSYs, function(msy) {
+          ClimateNAout <- climateData::ClimateNA_path(
+            ClimateNAdata,
+            tile = tile,
+            type = climateType,
+            msy,
+            gcm,
+            ssp
           )
 
-          return(checksums)
+          lapply(future_years, function(yr) {
+            digs <- file.path(ClimateNAout, paste0(tools::file_path_sans_ext(nrm), "Y")) |>
+              fs::dir_ls(type = "file") |>
+              vapply(digest::digest, file = TRUE, algo = "xxhash64", FUN.VALUE = character(1))
+
+            checksums <- data.frame(
+              gcm = gcm,
+              ssp = ssp,
+              msy = msy,
+              year = yr,
+              tileid = tile,
+              filename = basename(names(digs)),
+              filehash = unname(digs),
+              stringsAsFactors = FALSE
+            )
+
+            return(checksums)
+          }) |>
+            dplyr::bind_rows()
         }) |>
           dplyr::bind_rows()
       }) |>
         dplyr::bind_rows()
     }) |>
       dplyr::bind_rows()
-  }) |>
-    dplyr::bind_rows()
-}, future.seed = NULL) |>
+  },
+  future.seed = NULL
+) |>
   dplyr::bind_rows()
 
 if (!"id" %in% colnames(new_rows_future)) {
-  rows_append(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE)
+  dplyr::rows_append(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE)
 } else {
-  rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  dplyr::rows_update(
+    future_climate_df,
+    new_rows_future,
+    copy = TRUE,
+    in_place = TRUE,
+    unmatched = "ignore"
+  )
 }
 
 DBI::dbDisconnect(checksums_db)
@@ -172,30 +206,44 @@ file.copy(wrkngDBfile, addlDBfile, overwrite = TRUE)
 
 if (createZips) {
   ## future time series
-  new_rows_future <- future_lapply(dem_ff, function(f) {
-    dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
+  new_rows_future <- future.apply::future_lapply(dem_ff, function(f) {
+    dbdf <- climateData::ClimateNA_sql(wrkngDBfile, climateType)
     climate_db <- dbdf[["db"]]
     future_climate_df <- dbdf[["df"]]
     rm(dbdf)
 
-    tile <- normalizePath(f) |> tileID()
+    tile <- normalizePath(f) |> climateData::tileID(f)
 
     z <- lapply(GCMs, function(gcm) {
       lapply(SSPs, function(ssp) {
         lapply(MSYs, function(msy) {
           lapply(future_decades, function(dcd) {
-            ClimateNAout <- ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy, gcm, ssp)
+            ClimateNAout <- climateData::ClimateNA_path(
+              ClimateNAdata,
+              tile = tile,
+              type = climateType,
+              msy,
+              gcm,
+              ssp
+            )
             fzip <- paste0(ClimateNAout, "_", gcm, "_", ssp, "_", msy, "_", dcd, ".zip")
 
             type <- paste0(climateType, "_", msy)
 
             row <- dplyr::filter(
               future_climate_df,
-              gcm == !!gcm & ssp == !!ssp & msy == !!msy & year %in% !!(dcd + 0:9) & tileid == !!tile
+              gcm == !!gcm &
+                ssp == !!ssp &
+                msy == !!msy &
+                year %in% !!(dcd + 0:9) &
+                tileid == !!tile
             ) |>
-              collect()
+              dplyr::collect()
 
-            files2add <- fs::dir_ls(ClimateNAout, regexp = paste0("@(", paste(dcd + 0:9, collapse = "|"), ")", msy, "$")) |>
+            files2add <- fs::dir_ls(
+              ClimateNAout,
+              regexp = paste0("@(", paste(dcd + 0:9, collapse = "|"), ")", msy, "$")
+            ) |>
               fs::dir_ls() |>
               fs::path_rel(ClimateNAout)
 
@@ -203,7 +251,11 @@ if (createZips) {
             archive_write_files(archive = fzip, files = files2add)
             withr::deferred_run()
 
-            new_row <- dplyr::mutate(row, archived = file.info(fzip)$mtime, zipfile = fs::path_rel(fzip, ClimateNAdata))
+            new_row <- dplyr::mutate(
+              row,
+              archived = file.info(fzip)$mtime,
+              zipfile = fs::path_rel(fzip, ClimateNAdata)
+            )
             # rows_update(future_climate_df, new_row, copy = TRUE, in_place = TRUE, unmatched = "ignore")
 
             return(new_row)
@@ -222,7 +274,13 @@ if (createZips) {
   }) |>
     dplyr::bind_rows()
 
-  rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  dplyr::rows_update(
+    future_climate_df,
+    new_rows_future,
+    copy = TRUE,
+    in_place = TRUE,
+    unmatched = "ignore"
+  )
 
   DBI::dbDisconnect(climate_db)
 
@@ -238,19 +296,21 @@ if (uploadArchives) {
 
   gids_future <- googledrive::drive_ls(googledrive::as_id("1DH_JF6ZluYsZUpHGRXpXI8Q-DOUOE9AY")) |>
     dplyr::select(name, id) |>
-    dplyr::mutate(gcm = sapply(name, function(x) strsplit(x, "_")[[1]][1]),
-                  ssp = sapply(name, function(x) strsplit(x, "(_ssp|_RCP)")[[1]][2]),
-                  name = NULL,
-                  .before = id)
+    dplyr::mutate(
+      gcm = sapply(name, function(x) strsplit(x, "_")[[1]][1]),
+      ssp = sapply(name, function(x) strsplit(x, "(_ssp|_RCP)")[[1]][2]),
+      name = NULL,
+      .before = id
+    )
 
   ## future time series
-  new_rows_future <- future_lapply(dem_ff, function(f) {
+  new_rows_future <- future.apply::future_lapply(dem_ff, function(f) {
     dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
     climate_db <- dbdf[["db"]]
     future_climate_df <- dbdf[["df"]]
     rm(dbdf)
 
-    tile <- normalizePath(f) |> tileID()
+    tile <- normalizePath(f) |> climateData::tileID(f)
 
     z <- lapply(GCMs, function(gcm) {
       lapply(SSPs, function(ssp) {
@@ -262,16 +322,27 @@ if (uploadArchives) {
           drivefiles <- googledrive::drive_ls(gid)
 
           lapply(future_decades, function(dcd) {
-            ClimateNAout <- ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy, gcm, ssp)
+            ClimateNAout <- climateData::ClimateNA_path(
+              ClimateNAdata,
+              tile = tile,
+              type = climateType,
+              msy,
+              gcm,
+              ssp
+            )
             fzip <- paste0(ClimateNAout, "_", gcm, "_", ssp, "_", msy, "_", dcd, ".zip")
 
             type <- paste0(climateType, "_", msy)
 
             row <- dplyr::filter(
               future_climate_df,
-              gcm == !!gcm & ssp == !!ssp & msy == !!msy & year %in% !!(dcd + 0:9) & tileid == !!tile
+              gcm == !!gcm &
+                ssp == !!ssp &
+                msy == !!msy &
+                year %in% !!(dcd + 0:9) &
+                tileid == !!tile
             ) |>
-              collect()
+              dplyr::collect()
 
             if (reuploadArchives) {
               gt <- googledrive::drive_put(media = fzip, path = googledrive::as_id(gid))
@@ -302,7 +373,13 @@ if (uploadArchives) {
   }) |>
     dplyr::bind_rows()
 
-  rows_update(future_climate_df, new_rows_future, copy = TRUE, in_place = TRUE, unmatched = "ignore")
+  dplyr::rows_update(
+    future_climate_df,
+    new_rows_future,
+    copy = TRUE,
+    in_place = TRUE,
+    unmatched = "ignore"
+  )
 
   DBI::dbDisconnect(climate_db)
 

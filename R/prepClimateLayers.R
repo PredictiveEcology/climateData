@@ -31,27 +31,33 @@ whichTypes <- function(climVars) {
   }, character(1))
 }
 
+#' Extract historical or future years (or periods) from a climate variables list
+#'
+#' @template climVarsList
+#'
+#' @param type character string specifying one of:
+#'        `r paste0("'", paste0(.allowedClimDotsNames, collapse = "', '"), "'")`.
+#'
+#' @export
+extractTimes <- function(climateVarsList, type) {
+  stopifnot(type %in% .allowedClimDotsNames)
+
+  lapply(climateVarsList, function(v) {
+    v[[".dots"]][[type]]
+  }) |>
+    unlist() |>
+    unname() |>
+    unique() |>
+    sort()
+}
+
 #' Prepare rasters for derived and 'as-is' climate variables
 #'
-#' @param climateVarsList Named list of lists, specifying the climate variables to extract and/or
-#' calculate.
-#' The name of each outer list element must be prefixed by either `future_` or `historical_`,
-#' and each inner list should consist of the following named elements:
-#'
-#' - `vars`: the raw variables used to derive the target variable;
-#' - `fun`: a quoted function used to derive the target variable,
-#'          where `quote(calcAsIs)` denotes target variables that ARE the raw variable:
-#'  - `.dots`: additional arguments passed to `fun`.
-#'
-#' See examples.
+#' @template climVarsList
 #'
 #' @template ClimateNA_srcdstdir
 #'
 #' @template ClimateNA_tile
-#'
-#' @template ClimateNA_typeyears
-#'
-#' @template ClimateNA_typeperiod
 #'
 #' @template ClimateNA_gcmssp
 #'
@@ -74,6 +80,7 @@ whichTypes <- function(climVars) {
 #' @importFrom reproducible .robustDigest Cache postProcessTo
 #' @importFrom sf st_union
 #' @importFrom terra aggregate rast set.names
+#' @importFrom stringr str_remove
 #'
 #' @examples
 #' if (require("archive", quietly = TRUE) &&
@@ -98,25 +105,15 @@ whichTypes <- function(climVars) {
 #'   ## FFP uses yearly  variable; no fun (as is); similar name to bFFP and eFFP
 #'   ## MDC uses monthly vars; uses custom fun
 #'   climateVariables <- list(
-#'     historical_ATA = list(
-#'       vars = c("historical_MAT", "historical_MAT_normal"),
-#'       fun = quote(calcATA),
-#'       .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
-#'     ),
-#'     future_ATA = list(
-#'       vars = c("future_MAT", "historical_MAT_normal"),
-#'       fun = quote(calcATA),
-#'       .dots = list(historical_period = historical_prd, future_years = future_yrs)
-#'     ),
 #'     historical_CMI = list(
 #'       vars = "historical_CMI",
 #'       fun = quote(calcAsIs),
 #'       .dots = list(historical_years = historical_yrs)
 #'     ),
-#'     historical_CMI_normal = list(
-#'       vars = "historical_CMI_normal",
-#'       fun = quote(calcCMInormal),
-#'       .dots = list(historical_period = historical_prd, historical_years = historical_yrs)
+#'     historical_FFP_normal = list(
+#'       vars = "historical_FFP_normal", ## ensure FFP only; not bFFP nor eFFP
+#'       fun = quote(calcAsIs),
+#'       .dots = list(historical_period = historical_prd)
 #'     ),
 #'     future_FFP = list(
 #'       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
@@ -139,10 +136,6 @@ whichTypes <- function(climVars) {
 #'     climateVarsList = climateVariables,
 #'     srcdir = climatePath,    ## raw inputs, downloaded from Google Drive
 #'     dstdir = climatePathOut, ## intermediate + final outputs
-#'     historical_years = historical_yrs,
-#'     future_years = future_yrs,
-#'     historical_period = historical_prd,
-#'     future_period = NULL,
 #'     gcm = GCM,
 #'     ssp = SSP,
 #'     cl = NULL,
@@ -152,15 +145,12 @@ whichTypes <- function(climVars) {
 #'   )
 #' }
 prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
-                               tile = NULL,
-                               future_years = NULL, future_period = NULL,
-                               historical_years = NULL, historical_period = NULL,
-                               gcm = NULL, ssp = NULL, cl = NULL,
-                               studyArea = NULL, studyAreaName = NULL, rasterToMatch = NULL,
-                               currentModuleName = "NoModule", ...) {
+                              tile = NULL,
+                              gcm = NULL, ssp = NULL, cl = NULL,
+                              studyArea = NULL, studyAreaName = NULL, rasterToMatch = NULL,
+                              currentModuleName = "NoModule", ...) {
   stopifnot(
     !missing(srcdir), !missing(dstdir),
-    !all(is.null(future_years), is.null(future_period), is.null(historical_years), is.null(historical_period)),
     (!is.null(tile) && is.null(studyArea) && is.null(rasterToMatch)) || ## pass tile but not sA/RTM
       (is.null(tile) && !is.null(studyArea) && !is.null(rasterToMatch)) ## pass sA/RTM but not tile
   )
@@ -182,10 +172,10 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   }
 
   ## determine which climate vars are needed from climateVarsList$newVar$var
-  # annual vars: XXX
-  # monthly vars: XXX00
-  # seasonal vars: XXX_zz
-  # normal vars: will need to be prefixed with 'normal_'
+  ## annual vars: XXX
+  ## monthly vars: XXX00
+  ## seasonal vars: XXX_zz
+  ## normal vars: will need to be prefixed with 'normal_'
   needVars <- purrr::transpose(climateVarsList)[["vars"]] |>
     unlist() |>
     unname() |>
@@ -205,6 +195,12 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
     unique_types_msy <- gsub("^future_(M|S|Y)$", "future_MSY", unique_types_msy) |> unique()
   }
 
+  ## determine which years / periods we need to get
+  historical_years <- extractTimes(climateVarsList, "historical_years")
+  historical_period <- extractTimes(climateVarsList, "historical_period")
+  future_years <- extractTimes(climateVarsList, "future_years")
+  future_period <- extractTimes(climateVarsList, "future_period")
+
   ## 2. download and extract multiple archives per tile (by decade)
   climPreProcessOut <- lapply(unique_types_msy, function(type_msyn) {
     if (type_msyn %in% c("historical_M", "historical_S", "historical_Y", "historical_MSY")) {
@@ -212,14 +208,16 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       msy <- strsplit(type_msyn, "historical_")[[1]] |> dplyr::last()
       climatePath_type <- file.path(climatePath, type)
       urls <- getClimateURLs(type = type, tile = tile, years = historical_years, msy = msy)
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(climatePath_type, rep(tile, length(historical_years)),
                            paste0("Year_", historical_years, msy)) |> sort()
     } else if (type_msyn == "historical_N") {
       type <- "historical_normals"
       climatePath_type <- file.path(climatePath, "historical", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y")
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(climatePath_type, rep(tile, length(historical_period)),
                            paste0("Normal_", historical_period, "Y")) |> sort()
     } else if (type_msyn %in% c("future_M", "future_S", "future_Y", "future_MSY")) {
@@ -227,7 +225,8 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       msy <- strsplit(type_msyn, "future_")[[1]] |> dplyr::last()
       climatePath_type <- file.path(climatePath, type)
       urls <- getClimateURLs(type = type, tile = tile, years = future_years, msy = msy, gcm = gcm, ssp = ssp)
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(climatePath_type, rep(tile, length(future_years)),
                            paste0(gcm, "_ssp", ssp, "@", future_years, msy)) |> sort()
     } else if (type_msyn == "future_N") {
@@ -235,7 +234,8 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
       type <- "future_normals"
       climatePath_type <- file.path(climatePath, "future", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y", gcm = gcm, ssp = ssp)
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(climatePath_type, rep(tile, length(future_period)), paste0(gcm, "_ssp", ssp),
                            paste0("Normal_", future_period, "Y")) |> sort() ## TODO: verify paths
     } else {
@@ -393,7 +393,6 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
                     names(climDots)))
     }
     ## end assertions/checks
-
     funOut <- do.call(eval(climFun), list(
       stacks = climStacks,
       layers = climVars,
@@ -417,9 +416,9 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
   climData <- lapply(names(climDataFun), function(nm) {
     newClimRast <- climDataFun[[nm]]
     type <- strsplit(nm, "_")[[1]] |> dplyr::first()
-    var <- strsplit(nm, "_")[[1]] |> dplyr::last()
+    var <- stringr::str_remove(nm, paste0(type, "_"))
     fname <- paste(var, type, studyAreaName, sep = "_")
-    climRast <- Cache(
+    climRast <-
       postProcessTo(
         from = newClimRast,
         to = rasterToMatch,
@@ -427,13 +426,14 @@ prepClimateLayers <- function(climateVarsList, srcdir, dstdir,
         writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
         useCache = FALSE, ## use internal cache for postProcessTo
         overwrite = TRUE
-      ),
-      omitArgs = c("to", "maskTo", "overwrite"), # don't digest these each time
-      .functionName = paste0("prepClimateLayers_", fname),
-      .cacheExtra = digest4cache,
-      quick = c("writeTo", "climatePath", "climatePathOut"), # don't cache on outputs
-      userTags = c(paste0(type[1]), fname)
-    )
+      ) |>
+      Cache(
+        omitArgs = c("to", "maskTo", "overwrite"), # don't digest these each time
+        .functionName = paste0("prepClimateLayers_", fname),
+        .cacheExtra = digest4cache,
+        quick = c("writeTo", "climatePath", "climatePathOut"), # don't cache on outputs
+        userTags = c(paste0(type[1]), fname)
+      )
     # terra::time(climRast, tstep = "year") <- years ## TODO: what about monthly?
 
     return(climRast)

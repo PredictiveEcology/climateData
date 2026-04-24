@@ -130,27 +130,169 @@ getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
 #'
 #' @param climatePath character string specifying the directory path to put climate data.
 #'
+#' @param needVars A character vector of the climate variables to extract from the zip files,
+#'   with a prefix of either `historical_` or `future_`.
+#'   e.g., `c("historical_CMD_sm", "future_CMD_sp")`.
+#'   If `NULL`, the default, then all files will be extracted.
+#' @param type A character string, either "historical", "future", "projected"
+#'
 #' @return (invisibly) a list of length `tileIDs` containing the result of `preProcess()` calls
 #'
 #' @export
 #' @importFrom reproducible preProcess
-getClimateTiles <- function(tile, climateURLs, climatePath) {
+getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
   stopifnot(requireNamespace("googledrive", quietly = TRUE))
 
+  # needVars <- get("needVars", whereInStack("needVars"))
+  if (is.null(needVars))
+    needVars <- ""
+  climateVars <- unique(gsub("historical\\_|future\\_|projected_", "", needVars))
+  climateVarsGrep <- paste(climateVars, collapse = "|")
+
+  owd <- getwd()
+  on.exit(options(owd))
   lapply(tile, climateURL = climateURLs, function(climateTile, climateURL) {
+    workingPath <- file.path(climatePath, climateTile)
+    reproducible::checkPath(workingPath, create = TRUE)
+    ow <- setwd(workingPath)
+    on.exit(options(ow))
     ## TODO: the zip files are being put inside the tile directory, but should be one level up
+    climateTileChar <- paste0("tile_", climateTile)
     preProcessOut <- lapply(climateURL[[as.character(climateTile)]], function(url) {
-      preProcess(
-        url = googledrive::as_id(url),
-        targetFile = NULL,
-        destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
-      ) ## TODO: how to best use Cache here?
-    })
-    names(preProcessOut) <- paste0("tile_", climateTile)
+      # inner <- preProcess(
+      #   url = googledrive::as_id(url),
+      #   alsoExtract = "none",
+      #   archive = "2_MSY_1990.zip",
+      #   # fun = quote(extractJustAFew(climatePath, climateTile, inner)),
+      #   targetFile = NA_character_, # don't extract anything
+      #   destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
+      # ) |> Cache(.functionName = paste0("preProcess_climateData_", climateTile, "_", url))
+
+      # This is previous version
+      # preProcess(
+      #   url = googledrive::as_id(url),
+      #   targetFile = NULL, # don't extract anything
+      #   destinationPath = file.path(climatePath, climateTile) ## keep tile dir structure
+      # ) |> Cache(.functionName = paste0("preProcess_climateData_", climateTile, "_", url))
+
+      abc <- reproducible::retry(retries = 2, reproducible:::assessGoogle(url)) # gets filename, file.size, md5sum
+      remoteMD5 <- attr(abc, "drive_resource")[[1]]$md5Checksum
+      localMD5 <- if (file.exists(abc)) unname(tools::md5sum(abc)) else ""
+      if (!identical(remoteMD5, localMD5)) {
+        for (i in 1:2) {
+          message("Downloading from Google Drive...")
+          dwnld <- googledrive::drive_download(file = googledrive::as_id(url), verbose = TRUE,  overwrite = TRUE)
+          abc <- file.path(getwd(), dwnld$local_path)
+          localMD5 <- unname(tools::md5sum(dwnld$name))
+          if (identical(remoteMD5, localMD5))
+            break
+          if (i == 2)
+            stop("Failed to correctly download file from Google Drive; please check connection")
+        }
+
+      } else {
+        message("skipping new download; local copy of zip already present and correct")
+      }
+      newFiles <- extractJustAFew(workingPath, abc, climateVarsGrep)
+      message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
+        # |> Cache(.functionName = paste0("preProcess_unzip_", climateTile, "_", url))
+
+      ##  TODO: how to best use Cache here?
+      # Eliot: suggesting this simple Cache --
+      #  It means that the Cache will be on the tile by date, with essentially no
+      #   digesting other than the url and the path, i.e., content is not assessed
+      #   This will be fine for a single computer, and when there are no climate
+      #   data updates
+
+    }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar))
+    names(preProcessOut) <- rep(climateTileChar, length(preProcessOut))
 
     return(preProcessOut)
   }) |>
     invisible()
+}
+
+extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
+  fia <- reproducible:::.listFilesInArchive(archiveFile)
+  filesToExtract <- grep(climateVarsGrep, fia, value = TRUE)
+  fff <- reproducible:::.whichExtractFn(archiveFile, args = list())
+  tf <- tempfile()
+  args <- list(file.path(archiveFile), files = filesToExtract)
+  dir.create(tf, showWarnings = FALSE, recursive = TRUE)
+  nam <- if (requireNamespace("archive", quietly = TRUE)) "dir" else "exdir"
+  exdir <- list(tf) |> stats::setNames(nam)
+
+  args <- append(args, exdir)
+  lala <- do.call(fff$fun, args)
+  if (any(fs::is_absolute_path(lala)))
+    if (nzchar(fs::path_common(c(tf, lala)))) {
+      lala <- fs::path_rel(lala, tf)
+    }
+
+  dirsToMake <- unique(dirname(file.path(workingPath, lala)))
+  de <- dir.exists(dirsToMake)
+  if (any(de %in% FALSE)) {
+    silence <- lapply(dirsToMake[de %in% FALSE], dir.create, showWarnings = FALSE, recursive = TRUE)
+  }
+  unlink(file.path(workingPath, lala), recursive = TRUE, force = TRUE)
+  reproducible::linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
+  lala
+}
+
+#' Build climate mosaic rasters from ClimateNA tiles
+#'
+#' Internal functions run in parallel by `buildClimateMosaics()` and
+#' `buildClimateMosaicsNormals()` to create the raster mosaics.
+#' For best performance, it's arguments should be small to minimize serialization overhead
+#' between the main R process and the workers.
+#'
+#' @param y integer specifying a single data year.
+#'
+#' @template ClimateNA_climVars
+#'
+#' @template ClimateNA_tile
+#'
+#' @template ClimateNA_srcdstdir
+#'
+#' @keywords internal
+#' @rdname climateMosaicsParallel
+climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
+  lapply(climVars, function(v) {
+    srcfiles <- srcdir |>
+      fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
+      fs::dir_ls(regexp = y, type = "directory") |>
+      fs::dir_ls(regexp = paste0("(/|\\\\)", v, "[.]asc$"), type = "file")
+
+    stopifnot(length(srcfiles) > 0)
+
+    ## vrts must be a single layer, so need to do e.g. monthly climVars by each month
+    lapply(unique(basename(srcfiles)), function(mv) {
+      mv <- tools::file_path_sans_ext(mv)
+      fname <- paste(mv, basename(basename(srcdir)), y, "t", paste(tile, collapse = "-"), sep = "_")
+      # dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
+      dsttif <- file.path(dstdir, paste0(fname, ".tif"))
+
+      # ss <- mget(ls())
+      # save(ss, file = paste0("~/tmp/stuff", basename(tempfile()), ".rda"))
+      if (length(srcfiles) == 1) {
+        newMosaic <- terra::rast(srcfiles)
+      } else {
+        newMosaic <- terra::sprc(srcfiles) |> terra::mosaic()
+      }
+
+      writeRaster(newMosaic, filename = dsttif, overwrite = TRUE)
+
+      ## TODO: by default, layer name is filename; update this to be `mv`
+      # sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
+      # sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
+
+      # on.exit(file.remove(dstvrt), add = TRUE)
+
+      return(dsttif)
+    }) |>
+      unlist()
+  }) |>
+    unlist()
 }
 
 #' Build climate mosaic rasters from ClimateNA tiles
@@ -174,6 +316,7 @@ getClimateTiles <- function(tile, climateURLs, climatePath) {
 #'
 #' @export
 #' @importFrom fs dir_ls
+#' @importFrom future.apply future_lapply
 #' @importFrom parallel parLapply stopCluster
 #' @importFrom parallelly availableCores
 #' @importFrom reproducible checkPath
@@ -196,49 +339,65 @@ buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = N
   srcdir <- checkPath(srcdir, create = TRUE)
   dstdir <- checkPath(dstdir, create = TRUE)
 
-  cores <- min(length(years), parallelly::availableCores(constraints = "connections"))
+  if (getOption("climateData.parallel.backend") == "parallel") {
+    if (is.null(cl)) {
+      ## TODO: use pemisc::optimalClusterNum() to determine cores based on number of years and tiles
+      cores <- min(length(years), parallelly::availableCores(constraints = "connections"))
 
-  if (is.null(cl)) {
-    cl <- parallelly::makeClusterPSOCK(cores,
-                                       default_packages = c("fs", "sf", "terra"),
-                                       rscript_libs = .libPaths(),
-                                       autoStop = TRUE)
-    on.exit(parallel::stopCluster(cl), add = TRUE)
+      cl <- parallelly::makeClusterPSOCK(cores,
+                                         default_packages = c("fs", "terra"),
+                                         rscript_libs = .libPaths(),
+                                         autoStop = TRUE)
+      on.exit(parallel::stopCluster(cl), add = TRUE)
+    }
+
+    ## don't flatten the out list; want to access list of climate variables per year
+    tifs <- parallel::parLapply(cl, years, fun = climateMosaicsParallel,
+                                climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+  } else if (getOption("climateData.parallel.backend") == "future") {
+    tifs <- future.apply::future_lapply(years, FUN = climateMosaicsParallel,
+                                        climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+  } else {
+    stopForInvalidBackend()
   }
 
-  parallel::clusterExport(cl, c("climVars", "dstdir", "srcdir", "tile"), envir = environment())
-
-  tifs <- parallel::parLapply(cl, years, function(y) {
-    lapply(climVars, function(v) {
-      srcfiles <- srcdir |>
-        fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
-        fs::dir_ls(regexp = y, type = "directory") |>
-        fs::dir_ls(regexp = paste0("(/|\\\\)", v, "[.]asc$"), type = "file")
-
-      stopifnot(length(srcfiles) > 0)
-
-      ## vrts must be a single layer, so need to do e.g. monthly climVars by each month
-      lapply(unique(basename(srcfiles)), function(mv) {
-        mv <- tools::file_path_sans_ext(mv)
-        fname <- paste(mv, basename(basename(srcdir)), y, "t", paste(tile, collapse = "-"), sep = "_")
-        dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
-        dsttif <- file.path(dstdir, paste0(fname, ".tif"))
-
-        ## TODO: by default, layer name is filename; update this to be `mv`
-        sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
-        sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
-
-        on.exit(file.remove(dstvrt), add = TRUE)
-
-        return(dsttif)
-      }) |>
-        unlist()
-    }) |>
-      unlist()
-  }) ## don't flatten the out list; want to access list of climate variables per year
   names(tifs) <- paste0(type, "_", years)
 
   return(tifs)
+}
+
+#' @param p character string specifying the period.
+#'
+#' @keywords internal
+#' @rdname climateMosaicsParallel
+climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
+  lapply(climVars, function(v) {
+    nv <- strsplit(v, "_normal")[[1]]
+    srcfiles <- srcdir |>
+      fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
+      fs::dir_ls(regexp = p, type = "directory") |>
+      fs::dir_ls(regexp = paste0("(/|\\\\)", nv, "[.]asc$"), type = "file")
+
+    stopifnot(length(srcfiles) > 0)
+
+    ## vrts must be a single layer, so need to do e.g. monthly climVars by each month
+    lapply(unique(basename(srcfiles)), function(mv) {
+      mv <- tools::file_path_sans_ext(mv)
+      fname <- paste(mv, basename(basename(srcdir)), p, "t", paste(tile, collapse = "-"), sep = "_")
+      dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
+      dsttif <- file.path(dstdir, paste0(fname, ".tif"))
+
+      ## TODO: by default, layer name is filename; update this to be `mv`
+      sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
+      sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
+
+      on.exit(file.remove(dstvrt), add = TRUE)
+
+      return(dsttif)
+    }) |>
+      unlist()
+  }) |>
+    unlist()
 }
 
 #' @template ClimateNA_period
@@ -260,55 +419,35 @@ buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL,
   srcdir <- checkPath(srcdir, create = TRUE)
   dstdir <- checkPath(dstdir, create = TRUE)
 
-  cores <- min(length(period), parallelly::availableCores(constraints = "connections"))
+  if (getOption("climateData.parallel.backend") == "parallel") {
+    if (is.null(cl)) {
+      ## TODO: use pemisc::optimalClusterNum() to determine cores based on number of periods and tiles
+      cores <- min(length(period), parallelly::availableCores(constraints = "connections"))
 
-  if (is.null(cl)) {
-    cl <- parallelly::makeClusterPSOCK(cores,
-                                       default_packages = c("fs", "sf", "terra"),
-                                       rscript_libs = .libPaths(),
-                                       autoStop = TRUE)
+      cl <- parallelly::makeClusterPSOCK(cores,
+                                         default_packages = c("fs", "sf", "terra"),
+                                         rscript_libs = .libPaths(),
+                                         autoStop = TRUE)
+      on.exit(parallel::stopCluster(cl), add = TRUE)
+    }
+
+    ## don't flatten the out list; want to access list of climate variables per year
+    tifs <- parallel::parLapply(cl, period, fun = climateMosaicsNormalsParallel,
+                                climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+  } else if (getOption("climateData.parallel.backend") == "future") {
+    tifs <- future.apply::future_lapply(period, FUN = climateMosaicsNormalsParallel,
+                                        climVars = climVars, tile = tile, srcdir = srcdir, dstdir = dstdir)
+  } else {
+    stopForInvalidBackend()
   }
-
-  parallel::clusterExport(cl, c("climVars", "dstdir", "srcdir", "tile"), envir = environment())
-
-  tifs <- parallel::parLapply(cl, period, function(p) {
-    lapply(climVars, function(v) {
-      nv <- strsplit(v, "_normal")[[1]]
-      srcfiles <- srcdir |>
-        fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
-        fs::dir_ls(regexp = p, type = "directory") |>
-        fs::dir_ls(regexp = paste0(nv, ".*[.]asc$"), type = "file") ## TODO: improve regex; e.g., bFFP, eFFP vs FFP
-
-      stopifnot(length(srcfiles) > 0)
-
-      ## vrts must be a single layer, so need to do e.g. monthly climVars by each month
-      lapply(unique(basename(srcfiles)), function(mv) {
-        mv <- tools::file_path_sans_ext(mv)
-        fname <- paste(mv, basename(basename(srcdir)), p, "t", paste(tile, collapse = "-"), sep = "_")
-        dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
-        dsttif <- file.path(dstdir, paste0(fname, ".tif"))
-
-        ## TODO: by default, layer name is filename; update this to be `mv`
-        sf::gdal_utils(util = "buildvrt", source = srcfiles, destination = dstvrt)
-        sf::gdal_utils(util = "warp", source = dstvrt, destination = dsttif)
-
-        on.exit(file.remove(dstvrt), add = TRUE)
-
-        return(dsttif)
-      }) |>
-        unlist()
-    }) |>
-      unlist()
-  }) ## don't flatten the out list; want to access list of climate variables per year
   names(tifs) <- paste0(type, "_", period)
 
   return(tifs)
 }
 
-
 #' Climate Stacks by Year
 #'
-#' @param tifs TODO
+#' @param tifs character specifying the filepaths to the climate rasters
 #'
 #' @template ClimateNA_type
 #'
@@ -319,7 +458,7 @@ buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL,
 #' @return list of `SpatRaster`s
 #'
 #' @export
-#' @importFrom terra rast set.names
+#' @importFrom terra rast
 #' @rdname climateStacksByYear
 climateStacksByYear <- function(tifs, climVars, type, years) {
   if (length(tifs) > 0) {
@@ -328,12 +467,12 @@ climateStacksByYear <- function(tifs, climVars, type, years) {
       rs <- lapply(tifs[[y]], function(files) {
         r <- terra::rast(files)
         shortName <- vapply(basename(files), function(f) strsplit(f, "_")[[1]][1], character(1))
-        terra::set.names(r, shortName)
+        names(r) <- shortName
 
         return(r)
       }) |>
         terra::rast()
-      terra::set.names(rs, climVars)
+      names(rs) <- climVars
 
       return(rs)
     })
@@ -348,22 +487,23 @@ climateStacksByYear <- function(tifs, climVars, type, years) {
 #' @template ClimateNA_period
 #'
 #' @export
-#' @importFrom terra rast set.names
+#' @importFrom terra rast
 #' @rdname climateStacksByYear
 climateStacksByPeriod <- function(tifs, climVars, type, period) {
+  stopifnot(length(type) == 1, type %in% c("historical", "future"))
   if (length(tifs) > 0) {
     namesPerPeriod <- paste0(type, "_", period)
     climStacks_nrm <- lapply(namesPerPeriod, function(p) {
       rs <- lapply(tifs[[p]], function(files) {
         r <- terra::rast(files)
         shortName <- vapply(basename(files), function(f) strsplit(f, "_")[[1]][1], character(1))
-        terra::set.names(r, shortName)
+        names(r) <- shortName
 
         return(r)
       }) |>
         terra::rast()
-      terra::set.names(rs, climVars)
-
+      shortName <- gsub(paste0("_", type), replacement = "", x = climVars)
+      names(rs) <- shortName
       return(rs)
     })
     names(climStacks_nrm) <- namesPerPeriod
