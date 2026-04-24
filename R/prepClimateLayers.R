@@ -223,7 +223,8 @@ prepClimateLayers <- function(
       msy <- strsplit(type_msyn, "historical_")[[1]] |> dplyr::last()
       climatePath_type <- file.path(climatePath, type)
       urls <- getClimateURLs(type = type, tile = tile, years = historical_years, msy = msy)
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(historical_years)),
@@ -234,7 +235,8 @@ prepClimateLayers <- function(
       type <- "historical_normals"
       climatePath_type <- file.path(climatePath, "historical", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y")
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(historical_period)),
@@ -253,7 +255,8 @@ prepClimateLayers <- function(
         gcm = gcm,
         ssp = ssp
       )
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(future_years)),
@@ -265,7 +268,8 @@ prepClimateLayers <- function(
       type <- "future_normals"
       climatePath_type <- file.path(climatePath, "future", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y", gcm = gcm, ssp = ssp)
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type)
+      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
+                             needVars = needVars)
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(future_period)),

@@ -80,9 +80,9 @@ test_that("prepClimateLayers works for multiple variable types", {
     })
   }
 
-    lapply(climateRasters[[backend]], function(x) {
-      expect_s4_class(x, "SpatRaster")
-    })
+  lapply(climateRasters[[backend]], function(x) {
+    expect_s4_class(x, "SpatRaster")
+  })
 
 
     #new climate variables

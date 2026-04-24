@@ -123,7 +123,7 @@ getNormalsPeriods <- function(type = NULL, tile = NULL, msy = "Y", gcm = NULL, s
 #' @importFrom data.table .SD as.data.table
 getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
                            gcm = NULL, ssp = NULL) {
-  years <- as.character(years)
+
   climate_dt <- getClimateTable(type = type, tile = tile, years = years, msy = msy,
                                 gcm = gcm, ssp = ssp) |>
     as.data.table()
@@ -154,7 +154,7 @@ getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
 #'
 #' @export
 #' @importFrom reproducible preProcess
-getClimateTiles <- function(tile, climateURLs, climatePath) {
+getClimateTiles <- function(tile, climateURLs, climatePath, needVars= NULL) {
   stopifnot(
     requireNamespace("googledrive", quietly = TRUE),
     requireNamespace("httr2", quietly = TRUE)
