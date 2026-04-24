@@ -11,3 +11,5 @@
 ^tmp$
 ^[.]?air[.]toml$
 ^\.vscode$
+^CLAUDE\.md$
+^\.claude$
