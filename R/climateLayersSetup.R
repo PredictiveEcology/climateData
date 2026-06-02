@@ -60,7 +60,7 @@ climateLayers <- function(.climVars = "CMD_sm", historical = TRUE, projected = T
         list(1991:2022)
       else
         list(2011:2100)
-      ll <- append(ll, list(.dots = .dots |> setNames(paste0(nam, "_years"))))
+      ll <- append(ll, list(.dots = .dots |> stats::setNames(paste0(nam, "_years"))))
     })
   }) |> unlist(recursive = FALSE)
 

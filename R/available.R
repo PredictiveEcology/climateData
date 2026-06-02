@@ -3,6 +3,7 @@
 # dir("~/data/climate/ClimateNA_data/historical/normals/yearly/16/Normal_1991_2020Y") |>
 #   tools::file_path_sans_ext() |>
 #   dput()
+## fmt: skip
 .allowedClimateVars_nrm <- c(
   "AHM", "bFFP", "CMD", "CMI", "DD_0", "DD_18", "DD1040", "DD18",
   "DD5", "eFFP", "EMT", "Eref", "EXT", "FFP", "MAP", "MAR", "MAT",
@@ -12,6 +13,7 @@
 # dir("~/data/climate/ClimateNA_data/historical/monthly/16/Year_2000M") |>
 #   tools::file_path_sans_ext() |>
 #   dput()
+## fmt: skip
 .allowedClimateVars_M <- c(
   "CMD01", "CMD02", "CMD03", "CMD04", "CMD05", "CMD06", "CMD07",
   "CMD08", "CMD09", "CMD10", "CMD11", "CMD12", "CMI01", "CMI02",
@@ -46,6 +48,7 @@
 #   tools::file_path_sans_ext() |>
 #   grep("_(at|sm|sp|wt)$", x = _, value = TRUE) |>
 #   dput()
+## fmt: skip
 .allowedClimateVars_S <- c(
   "CMD_at", "CMD_sm", "CMD_sp", "CMD_wt", "CMI_at", "CMI_sm",
   "CMI_sp", "CMI_wt", "DD_0_at", "DD_0_sm", "DD_0_sp", "DD_0_wt",
@@ -62,6 +65,7 @@
 # dir("~/data/climate/ClimateNA_data/historical/yearly/16/Year_2000Y") |>
 #   tools::file_path_sans_ext() |>
 #   dput()
+## fmt: skip
 .allowedClimateVars_Y <- c(
   "AHM", "bFFP", "CMD", "CMI", "DD_0", "DD_18", "DD1040", "DD18",
   "DD5", "eFFP", "EMT", "Eref", "EXT", "FFP", "MAP", "MAR", "MAT",
@@ -100,6 +104,7 @@ available <- function(type) {
     "585"
   )
 
+  ## fmt: skip
   switch(type,
     historical = list(
       years = 1901L:2022L

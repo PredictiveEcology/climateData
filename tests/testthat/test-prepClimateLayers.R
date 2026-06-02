@@ -3,8 +3,9 @@ test_that("prepClimateLayers works for multiple variable types", {
   skip_on_ci() ## needs to authorize googldrive package for downloads
   skip_if_not_installed("archive")
   skip_if_not_installed("googledrive")
+  skip_if_not_installed("withr")
 
-  dPath <- file.path(tempdir(), "test_prepClimateLayers")
+  dPath <- withr::local_tempdir("test_prepClimateLayers_")
   climateType <- "historical"
   climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
   climatePathOut <- file.path(climatePath, "outputs") |> reproducible::checkPath(create = TRUE)
@@ -66,11 +67,10 @@ test_that("prepClimateLayers works for multiple variable types", {
   ## test with all parallel backends
   climateRasters <- list()
   for (backend in .parallelBackends) {
-    withr::with_options(
-      list(climateData.parallel.backend = backend), {
+    withr::with_options(list(climateData.parallel.backend = backend), {
       climateRasters[[backend]] <- prepClimateLayers(
         climateVarsList = climateVariables,
-        srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
+        srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
         dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
         tile = tileIDs,
         gcm = GCM,
@@ -91,20 +91,18 @@ test_that("prepClimateLayers works for multiple variable types", {
   skip_if_not_installed("SpaDES.tools")
 
   studyArea <- SpaDES.tools::randomStudyArea(size = 1e10)
-  rasterToMatch <- terra::rast(studyArea, resolution = 250) |>
-    terra::rasterize(studyArea, y = _)
+  rasterToMatch <- terra::rast(studyArea, resolution = 250) |> terra::rasterize(studyArea, y = _)
 
   ## test with all parallel backends
   climateRasters <- list()
   for (backend in .parallelBackends) {
-    withr::with_options(
-      list(climateData.parallel.backend = backend), {
+    withr::with_options(list(climateData.parallel.backend = backend), {
       ## spurious warning:
       ## attribute variables are assumed to be spatially constant throughout all geometries
       climateRastersStudyArea <- suppressWarnings({
         prepClimateLayers(
           climateVarsList = climateVariables,
-          srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
+          srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
           dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
           # tile = tileIDs, ## when passing `studyArea`/`rasterToMatch` then `tile` isn't needed
           gcm = GCM,
@@ -122,7 +120,7 @@ test_that("prepClimateLayers works for multiple variable types", {
     })
   }
 
-  unlink(dPath, recursive = TRUE)
+  withr::deferred_run()
 })
 
 test_that("prepClimateLayers properly handles unordered tileIDs", {
@@ -130,8 +128,9 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
   skip_on_ci() ## needs to authorize googldrive package for downloads
   skip_if_not_installed("archive")
   skip_if_not_installed("googledrive")
+  skip_if_not_installed("withr")
 
-  dPath <- file.path(tempdir(), "test_prepClimateLayers")
+  dPath <- withr::local_tempdir("test_prepClimateLayers_")
   climateType <- "historical"
   climatePath <- file.path(dPath, "climate") |> reproducible::checkPath(create = TRUE)
   climatePathOut <- file.path(climatePath, "outputs") |> reproducible::checkPath(create = TRUE)
@@ -153,7 +152,7 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
 
   climateRasters <- prepClimateLayers(
     climateVarsList = climateVariables,
-    srcdir = climatePath,    ## 'src' is the place for raw inputs, downloaded from Google Drive
+    srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
     dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
     tile = tileIDs,
     gcm = NULL,
@@ -168,5 +167,5 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
     expect_s4_class(x, "SpatRaster")
   })
 
-  unlink(dPath, recursive = TRUE)
+  withr::deferred_run()
 })

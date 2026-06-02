@@ -31,8 +31,8 @@ devtools::load_all(prjDir)
 
 ## adjust these values for your user / machine
 
-ClimateNAdir <- "C:/Climatena_v742"
-ClimateNAexe <- "ClimateNA_v7.42.exe"
+ClimateNAdir <- "C:/Climatena_v760"
+ClimateNAexe <- "ClimateNA_v7.60.exe"
 ClimateNAdata <- switch(Sys.info()[["sysname"]],
                         Linux = "/mnt/data/climate/ClimateNA_data",
                         Windows = "C:/ClimateNA_data")
