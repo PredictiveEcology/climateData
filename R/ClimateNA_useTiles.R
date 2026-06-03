@@ -166,7 +166,6 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
     preProcessOut <- Map(
       url = climateURL[[as.character(climateTile)]], 
       preHash = preHashes, function(url, preHash) {
-        
         remoteMD5 <- preHash[["remoteHash"]]
         
         #if (packageVersion("reproducible") >= "3.0.0.9026") { # needs updates to alsoExtract that can work by grep
@@ -303,6 +302,62 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
     unlist()
 }
 
+#' Spawn a PSOCK cluster, freeing R connections first.
+#'
+#' Calls [closeAllConnections()], [terra::tmpFiles()] (orphan cleanup), and [gc()] before
+#' [parallelly::makeClusterPSOCK()] so finalizers can release file descriptors held by
+#' orphaned connections / unreferenced scratch tifs. On the cryptic
+#' "file descriptor is too large for select()" failure, defers to
+#' `SpaDES.project::openFdsReport()` (if installed) for a bucketed `/proc/self/fd` dump
+#' identifying the holders.
+#'
+#' @param cores integer. Number of workers.
+#'
+#' @return a PSOCK cluster (as from [parallelly::makeClusterPSOCK()]).
+#'
+#' @keywords internal
+#' @importFrom parallelly makeClusterPSOCK
+makeClimateCluster <- function(cores) {
+  ## free R-level connections and trigger finalizers for orphaned terra/sqlite/curl handles;
+  ## fd numbers can still be >= FD_SETSIZE, but lowering open-fd pressure often avoids it
+  closeAllConnections()
+  ## delete unreferenced terra scratch tifs (safe: only removes files no live SpatRaster points to)
+  try(terra::tmpFiles(remove = TRUE, orphan = TRUE), silent = TRUE)
+  gc()
+
+  tryCatch(
+    parallelly::makeClusterPSOCK(
+      cores,
+      default_packages = c("fs", "sf", "terra"),
+      rscript_libs = .libPaths(),
+      autoStop = TRUE
+    ),
+    error = function(e) {
+      msg <- conditionMessage(e)
+      if (grepl("file descriptor is too large for select", msg, fixed = TRUE)) {
+        diag <- if (requireNamespace("SpaDES.project", quietly = TRUE)) {
+          SpaDES.project::openFdsReport()
+        } else {
+          "Install 'SpaDES.project' for a bucketed /proc/self/fd diagnostic.\n"
+        }
+        stop(
+          "Could not spawn PSOCK cluster: a new socket was assigned a file descriptor ",
+          ">= FD_SETSIZE (typically 1024), which R's select()-based socket layer cannot ",
+          "handle. The R session is holding live (not orphaned) high-numbered fds; ",
+          "closeAllConnections() + gc() did not release them.\n",
+          diag,
+          "\nWorkarounds: (1) build the cluster earlier in the session and pass it via the ",
+          "`cl =` argument, before any reproducible::Cache or terra reads; (2) restart R; ",
+          "(3) raise the OS limit with `ulimit -n` (note: this does NOT change FD_SETSIZE, ",
+          "but lower fds get reused faster under a higher cap).\nOriginal error: ", msg,
+          call. = FALSE
+        )
+      }
+      stop(e)
+    }
+  )
+}
+
 #' Build climate mosaic rasters from ClimateNA tiles
 #'
 #' @template ClimateNA_type
@@ -352,10 +407,7 @@ buildClimateMosaics <- function(type, tile, climVars, years, gcm = NULL, ssp = N
       ## TODO: use pemisc::optimalClusterNum() to determine cores based on number of years and tiles
       cores <- min(length(years), parallelly::availableCores(constraints = "connections"))
 
-      cl <- parallelly::makeClusterPSOCK(cores,
-                                         default_packages = c("fs", "terra"),
-                                         rscript_libs = .libPaths(),
-                                         autoStop = TRUE)
+      cl <- makeClimateCluster(cores)
       on.exit(parallel::stopCluster(cl), add = TRUE)
     }
 
@@ -432,10 +484,7 @@ buildClimateMosaicsNormals <- function(type, tile, climVars, period, gcm = NULL,
       ## TODO: use pemisc::optimalClusterNum() to determine cores based on number of periods and tiles
       cores <- min(length(period), parallelly::availableCores(constraints = "connections"))
 
-      cl <- parallelly::makeClusterPSOCK(cores,
-                                         default_packages = c("fs", "sf", "terra"),
-                                         rscript_libs = .libPaths(),
-                                         autoStop = TRUE)
+      cl <- makeClimateCluster(cores)
       on.exit(parallel::stopCluster(cl), add = TRUE)
     }
 
