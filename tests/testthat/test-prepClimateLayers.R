@@ -121,9 +121,9 @@ test_that("prepClimateLayers works for multiple variable types", {
         expect_s4_class(x, "SpatRaster")
       })
 
-      ras1a <- climateRasters[[1]][[1]][[1]]
-      ras1b <- climateRasters[[1]][[1]][[2]]
-      ras2a <- climateRasters[[1]][[2]][[1]]
+      ras1a <- climateRasters[[backend]][[1]][[1]]
+      ras1b <- climateRasters[[backend]][[1]][[2]]
+      ras2a <- climateRasters[[backend]][[2]][[1]]
 
       #avoid false just because of layer name
       names(ras1a) <- names(ras1b)
