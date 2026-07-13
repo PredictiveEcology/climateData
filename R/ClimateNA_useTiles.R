@@ -121,11 +121,22 @@ getNormalsPeriods <- function(type = NULL, tile = NULL, msy = "Y", gcm = NULL, s
 #'
 #' @export
 #' @importFrom data.table .SD as.data.table
-getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
-                           gcm = NULL, ssp = NULL) {
-
-  climate_dt <- getClimateTable(type = type, tile = tile, years = years, msy = msy,
-                                gcm = gcm, ssp = ssp) |>
+getClimateURLs <- function(
+  type = NULL,
+  tile = NULL,
+  years = NULL,
+  msy = NULL,
+  gcm = NULL,
+  ssp = NULL
+) {
+  climate_dt <- getClimateTable(
+    type = type,
+    tile = tile,
+    years = years,
+    msy = msy,
+    gcm = gcm,
+    ssp = ssp
+  ) |>
     as.data.table()
   subsetdt <- climate_dt[, .SD, .SDcols = c("tileid", "gid")] |> unique()
   url <- lapply(unique(subsetdt$tileid), function(t) {
@@ -148,21 +159,22 @@ getClimateURLs <- function(type = NULL, tile = NULL, years = NULL, msy = NULL,
 #'   with a prefix of either `historical_` or `future_`.
 #'   e.g., `c("historical_CMD_sm", "future_CMD_sp")`.
 #'   If `NULL`, the default, then all files will be extracted.
-#' @param type A character string, either "historical", "future", "projected"
 #'
 #' @return (invisibly) a list of length `tileIDs` containing the result of `preProcess()` calls
 #'
 #' @export
 #' @importFrom reproducible preProcess
-getClimateTiles <- function(tile, climateURLs, climatePath, needVars= NULL) {
+#' @importFrom utils packageVersion
+getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
   stopifnot(
     requireNamespace("googledrive", quietly = TRUE),
     requireNamespace("httr2", quietly = TRUE)
   )
 
   # needVars <- get("needVars", whereInStack("needVars"))
-  if (is.null(needVars))
+  if (is.null(needVars)) {
     needVars <- ""
+  }
   climateVars <- unique(gsub("historical\\_|future\\_|projected_", "", needVars))
   climateVars <- unique(gsub("_normal", "", climateVars)) #normals are in their own archive
   climateVarsGrep <- paste(climateVars, collapse = "|")
@@ -177,37 +189,47 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars= NULL) {
     ## TODO: the zip files are being put inside the tile directory, but should be one level up
     climateTileChar <- paste0("tile_", climateTile)
     preHashes <- Map(url = climateURL[[as.character(climateTile)]], function(url) {
-      # preProcess(url = reproducible:::googledriveIDtoHumanURL(url))
-      reproducible:::getRemoteMetadata(url = reproducible:::googledriveIDtoHumanURL(url), isGDurl = TRUE)[c("remoteHash", "targetFile")]
+      # preProcess(url = googledriveIDtoHumanURL(url))
+      getRemoteMetadata(url = googledriveIDtoHumanURL(url), isGDurl = TRUE)[c(
+        "remoteHash",
+        "targetFile"
+      )]
     })
     preProcessOut <- Map(
       url = climateURL[[as.character(climateTile)]],
-      preHash = preHashes, function(url, preHash) {
-
+      preHash = preHashes,
+      function(url, preHash) {
         remoteMD5 <- preHash[["remoteHash"]]
 
-        if (packageVersion("reproducible") >= "3.0.0.9026") {
-          outs <- preProcess(url =  reproducible:::googledriveIDtoHumanURL(url),
-                             alsoExtract = climateVarsGrep, fun = NA,
-                             destinationPath = workingPath)#,
+        if (utils::packageVersion("reproducible") >= "3.0.0.9026") {
+          outs <- preProcess(
+            url = googledriveIDtoHumanURL(url),
+            alsoExtract = climateVarsGrep,
+            fun = NA,
+            destinationPath = workingPath
+          ) #,
           newFiles <- outs$checkSums$actualFile[outs$checkSums$checksum.x != "dir"]
         } else {
-
           remoteMD5 <- preHash[["remoteHash"]]
           localFile <- preHash$targetFile
           localMD5 <- if (file.exists(localFile)) unname(tools::md5sum(localFile)) else ""
           if (!identical(remoteMD5, localMD5)) {
             for (i in 1:2) {
               message("Downloading from Google Drive...")
-              dwnld <- googledrive::drive_download(file = googledrive::as_id(url), verbose = TRUE,  overwrite = TRUE)
+              dwnld <- googledrive::drive_download(
+                file = googledrive::as_id(url),
+                verbose = TRUE,
+                overwrite = TRUE
+              )
               localFile <- file.path(getwd(), dwnld$local_path)
               localMD5 <- unname(tools::md5sum(dwnld$name))
-              if (identical(remoteMD5, localMD5))
+              if (identical(remoteMD5, localMD5)) {
                 break
-              if (i == 2)
+              }
+              if (i == 2) {
                 stop("Failed to correctly download file from Google Drive; please check connection")
+              }
             }
-
           } else {
             message("skipping new download; local copy of zip already present and correct")
           }
@@ -223,9 +245,21 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars= NULL) {
           #  fixes the above issue
         }
         message("extracted to ", workingPath, ":\n", paste(newFiles, collapse = ", "))
-
-      }) |> Cache(.functionName = paste0("preProcess_climateData_", basename(climatePath), "_", climateTileChar),
-                  .cacheExtra = list(preHashes = preHashes, climateVarsGrep = climateVarsGrep, workingPath = workingPath))
+      }
+    ) |>
+      Cache(
+        .functionName = paste0(
+          "preProcess_climateData_",
+          basename(climatePath),
+          "_",
+          climateTileChar
+        ),
+        .cacheExtra = list(
+          preHashes = preHashes,
+          climateVarsGrep = climateVarsGrep,
+          workingPath = workingPath
+        )
+      )
     names(preProcessOut) <- rep(climateTileChar, length(preProcessOut))
 
     return(preProcessOut)
@@ -234,9 +268,9 @@ getClimateTiles <- function(tile, climateURLs, climatePath, needVars= NULL) {
 }
 
 extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
-  fia <- reproducible:::.listFilesInArchive(archiveFile)
+  fia <- .listFilesInArchive(archiveFile)
   filesToExtract <- grep(climateVarsGrep, fia, value = TRUE)
-  fff <- reproducible:::.whichExtractFn(archiveFile, args = list())
+  fff <- .whichExtractFn(archiveFile, args = list())
   tf <- tempfile()
   args <- list(file.path(archiveFile), files = filesToExtract)
   dir.create(tf, showWarnings = FALSE, recursive = TRUE)
@@ -245,10 +279,11 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
 
   args <- append(args, exdir)
   lala <- do.call(fff$fun, args)
-  if (any(fs::is_absolute_path(lala)))
+  if (any(fs::is_absolute_path(lala))) {
     if (nzchar(fs::path_common(c(tf, lala)))) {
       lala <- fs::path_rel(lala, tf)
     }
+  }
 
   dirsToMake <- unique(dirname(file.path(workingPath, lala)))
   de <- dir.exists(dirsToMake)
@@ -256,7 +291,12 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
     silence <- lapply(dirsToMake[de %in% FALSE], dir.create, showWarnings = FALSE, recursive = TRUE)
   }
   unlink(file.path(workingPath, lala), recursive = TRUE, force = TRUE)
-  reproducible::linkOrCopy(file.path(tf, lala), file.path(workingPath, lala), symlink = FALSE, verbose = FALSE)
+  reproducible::linkOrCopy(
+    file.path(tf, lala),
+    file.path(workingPath, lala),
+    symlink = FALSE,
+    verbose = FALSE
+  )
   lala
 }
 

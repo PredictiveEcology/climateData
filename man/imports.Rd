@@ -2,6 +2,10 @@
 % Please edit documentation in R/imports.R
 \name{assessGoogle}
 \alias{assessGoogle}
+\alias{.listFilesInArchive}
+\alias{.whichExtractFn}
+\alias{getRemoteMetadata}
+\alias{googledriveIDtoHumanURL}
 \title{non-exported objects and functions from other packages}
 \usage{
 assessGoogle(
@@ -12,6 +16,14 @@ assessGoogle(
   verbose = getOption("reproducible.verbose", 1),
   team_drive = NULL
 )
+
+.listFilesInArchive(archive, dontUse = NULL)
+
+.whichExtractFn(archive, args, dontUse = NULL)
+
+getRemoteMetadata(targetFile, isGDurl, url)
+
+googledriveIDtoHumanURL(id)
 }
 \description{
 non-exported objects and functions from other packages

@@ -10,11 +10,9 @@
 - refactor `prepClimateLayers()` to use pipe-style `postProcessTo(...) |> Cache(...)` for improved readability;
 - fix incorrect downloading and caching in `prepClimateLayers()` when multiple parallel cores are sharing disk space;
 - use `stats::setNames()` namespace prefix in `climateLayers()` for CRAN compliance;
+- `getClimateTiles()` and `extractJustAFew()` now access internal `reproducible` helpers via `utils::getFromNamespace()` instead of `:::`, and `getClimateTiles()` imports `utils::packageVersion()`, resolving R CMD check NOTEs (CRAN compliance);
 - drop support for R < 4.4 due to changes in dependency packages;
 - explicitly add dependency `digest`, which was used to create datasets;
-
-- use package prefix `reproducible::` for `linkOrCopy`
-
 - removed `calcATA` and `calcCMI` as pre-existing functions, as the functions were incompatible with 
 use cases of calcAsIS containing multiple normal periods
 - fixed errors in `calcAsIs` where multiple climate normal periods and variables are retrieved
