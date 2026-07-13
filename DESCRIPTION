@@ -55,6 +55,7 @@ Suggests:
 VignetteBuilder:
     knitr
 Remotes:
+    PredictiveEcology/reproducible@development,
     PredictiveEcology/SpaDES.tools@development
 ByteCompile: yes
 Config/testthat/edition: 3
