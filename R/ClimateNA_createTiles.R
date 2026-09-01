@@ -81,11 +81,22 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
 sqlite_connect_db <- function(dbfile) {
   firstRun <- file.exists(dbfile)
 
+  ## `extended_types = TRUE` makes RSQLite return DATETIME columns as hms /
+  ## POSIXct, which requires the `hms` package AT RUNTIME. RSQLite declares hms
+  ## only in its Suggests, not Imports, so nothing in the dependency graph
+  ## guarantees it is installed -- `RSQLite::dbConnect(extended_types = TRUE)`
+  ## then fails with `check_suggested("hms", "dbConnect")`.
+  ##
+  ## That is invisible in a normal check, where Suggests are present anyway, but
+  ## fails under _R_CHECK_DEPENDS_ONLY_=true (the no-suggests CI leg), which
+  ## builds a library containing only this package's Depends/Imports/LinkingTo.
+  ## climateData therefore declares hms in its own Imports: the requirement is
+  ## real and RSQLite does not state it correctly.
   db <- RSQLite::dbConnect(
     drv = RSQLite::SQLite(),
     dbname = dbfile,
     synchronous = "normal",
-    extended_types = TRUE ## for DATETIME
+    extended_types = TRUE ## for DATETIME -- see note above re: hms
   )
 
   if (isTRUE(firstRun)) {
