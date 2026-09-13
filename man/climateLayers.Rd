@@ -8,7 +8,9 @@ climateLayers(
   .climVars = "CMD_sm",
   historical = TRUE,
   projected = TRUE,
-  fun = quote(calcAsIs)
+  fun = quote(calcAsIs),
+  historicalYears = 1991:2022,
+  projectedYears = 2011:2100
 )
 }
 \arguments{
@@ -22,6 +24,11 @@ of interest, as specified in the Climate NA web page documentation. See:
 
 \item{fun}{A quoted function name, e.g., \code{quote(calcAsIs)}, which is the default.
 No other examples have been used and may not work.}
+
+\item{historicalYears}{Integer vector of the historical years to request. The latest year
+available as tiles is given by \code{\link[=latestHistoricalYear]{latestHistoricalYear()}}.}
+
+\item{projectedYears}{Integer vector of the projected years to request.}
 }
 \value{
 A named list of named lists that can be passed to the \code{sim} object named

@@ -14,6 +14,11 @@
 #' @param fun A quoted function name, e.g., `quote(calcAsIs)`, which is the default.
 #'   No other examples have been used and may not work.
 #'
+#' @param historicalYears Integer vector of the historical years to request. The latest year
+#'   available as tiles is given by [latestHistoricalYear()].
+#'
+#' @param projectedYears Integer vector of the projected years to request.
+#'
 #' @details
 #'
 #' The canClimateData module requires a particular format to specify which
@@ -45,7 +50,8 @@
 #'
 #' @export
 climateLayers <- function(.climVars = "CMD_sm", historical = TRUE, projected = TRUE,
-                          fun = quote(calcAsIs)) {
+                          fun = quote(calcAsIs), historicalYears = 1991:2022,
+                          projectedYears = 2011:2100) {
   hps <- c()
   if (isTRUE(historical))
     hps <- c(historical = "historical")
@@ -57,9 +63,9 @@ climateLayers <- function(.climVars = "CMD_sm", historical = TRUE, projected = T
       ll <- list(vars = paste0(nam, "_", cv),
                  fun = fun)
       .dots = if (nam == "historical")
-        list(1991:2022)
+        list(historicalYears)
       else
-        list(2011:2100)
+        list(projectedYears)
       ll <- append(ll, list(.dots = .dots |> stats::setNames(paste0(nam, "_years"))))
     })
   }) |> unlist(recursive = FALSE)
