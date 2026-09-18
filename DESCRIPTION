@@ -24,6 +24,7 @@ Imports:
     fs,
     future.apply,
     glue,
+    hms,
     methods,
     parallel,
     parallelly,
