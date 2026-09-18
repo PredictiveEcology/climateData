@@ -9,6 +9,10 @@
 
 # climateData 2.2.3
 
+- add the 2023 and 2024 historical rows to the tile index (`inst/extdata/ClimateNA_tiles.sqlite`).
+The Drive archives have held these years since the 2020-decade zips were re-uploaded, and
+`available("historical")` already reported `1901:2024`, but the index stopped at 2022, so
+`getClimateURLs()` returned nothing for them and `latestHistoricalYear()` reported 2022;
 - add retry logic (via `reproducible::retry()`) for Google Drive file assessment in `getClimateTiles()` to improve resilience against transient network failures;
 - fix path tracking of downloaded file after Google Drive download in `getClimateTiles()`;
 - fix archive extraction in `extractJustAFew()` to support both `archive` and base R extraction functions by dynamically selecting the correct directory argument (`dir` vs `exdir`);
