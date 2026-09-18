@@ -281,7 +281,7 @@ prepClimateLayers <- function(
       stop("unknown climate variable type: ", type_msyn)
     }
 
-    stopifnot(all(dir.exists(allDirs)))
+    .stopIfMissingClimateDirs(allDirs)
 
     return(out)
   })

@@ -1,3 +1,12 @@
+# climateData (development version)
+
+- `climateMosaicsParallel()` and `climateMosaicsNormalsParallel()` select tile directories with the
+  tile number anchored at the path separator. They matched `"<tile>$"`, so tile 6 also picked up
+  directories 16, 26, 36, ... left in the same climate folder by an earlier, larger study area. Those
+  extra tiles went into the mosaics, and where they lacked a year (several tiles have no 1980s data)
+  the yearly mosaics differed in extent and `prepClimateLayers()` stopped with
+  "[rast] extents do not match".
+
 # climateData 2.2.3
 
 - add the 2023 and 2024 historical rows to the tile index (`inst/extdata/ClimateNA_tiles.sqlite`).
