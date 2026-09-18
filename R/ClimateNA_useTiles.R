@@ -320,7 +320,8 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
 climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
   lapply(climVars, function(v) {
     srcfiles <- srcdir |>
-      fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
+      ## anchor at the path separator: "6$" alone also matches tile directories 16, 26, ...
+      fs::dir_ls(regexp = paste0("(/|\\\\)", tile, "$", collapse = "|"), type = "directory") |>
       fs::dir_ls(regexp = y, type = "directory") |>
       fs::dir_ls(regexp = paste0("(/|\\\\)", v, "[.]asc$"), type = "file")
 
@@ -460,7 +461,8 @@ climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
   lapply(climVars, function(v) {
     nv <- strsplit(v, "_normal")[[1]]
     srcfiles <- srcdir |>
-      fs::dir_ls(regexp = paste0(tile, "$", collapse = "|"), type = "directory") |>
+      ## anchor at the path separator: "6$" alone also matches tile directories 16, 26, ...
+      fs::dir_ls(regexp = paste0("(/|\\\\)", tile, "$", collapse = "|"), type = "directory") |>
       fs::dir_ls(regexp = p, type = "directory") |>
       fs::dir_ls(regexp = paste0("(/|\\\\)", nv, "[.]asc$"), type = "file")
 
