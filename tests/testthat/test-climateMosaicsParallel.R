@@ -25,3 +25,27 @@ test_that("climateMosaicsParallel only mosaics the requested tiles", {
   expect_equal(as.vector(terra::ext(m)), c(0, 2, 0, 2), ignore_attr = TRUE)
   expect_true(all(terra::values(m) == 6))
 })
+
+## The year directory was selected with regexp = y, matched against the FULL path. fireSense's climate
+## folders sit under ".../1990-2020/...", so for y = 1990 (and 2020) every Year_*MSY directory matched and
+## the "1990" mosaic was the mean of all years (fireSense ELF 13.1, 2026-09-22: the 1990 and 2020 layers
+## were identical, a 45-year average).
+test_that("climateMosaicsParallel matches the year in the directory name, not elsewhere in the path", {
+  skip_if_not_installed("withr")
+  root <- withr::local_tempdir("climate")
+  src <- file.path(root, "1990-2020", "historical")
+  dst <- withr::local_tempdir("mosaics")
+  yearRaster <- function(year, value) {
+    r <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2, crs = "EPSG:4326")
+    terra::values(r) <- value
+    dir.create(file.path(src, 6, sprintf("Year_%dMSY", year)), recursive = TRUE)
+    terra::writeRaster(r, file.path(src, 6, sprintf("Year_%dMSY", year), "CMD_sm.asc"), overwrite = TRUE)
+  }
+  yearRaster(1990, 100)
+  yearRaster(2000, 300)
+
+  m1990 <- terra::rast(climateMosaicsParallel(y = "1990", climVars = "CMD_sm", tile = 6, srcdir = src, dstdir = dst))
+  m2000 <- terra::rast(climateMosaicsParallel(y = "2000", climVars = "CMD_sm", tile = 6, srcdir = src, dstdir = dst))
+  expect_true(all(terra::values(m1990) == 100))
+  expect_true(all(terra::values(m2000) == 300))
+})
