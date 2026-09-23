@@ -31,8 +31,8 @@ available as tiles is given by \code{\link[=latestHistoricalYear]{latestHistoric
 
 \item{projectedYears}{Integer vector of the projected years to request.}
 
-\item{spinupYears}{Integer. For \code{"oMDC"} only: how many years before the first requested year to
-also request, so the year-to-year recursion in \code{\link[=calcOMDC]{calcOMDC()}} has settled by then. Limited to the
+\item{spinupYears}{Integer. For \code{"cumMDC"} only: how many years before the first requested year to
+also request, so the year-to-year recursion in \code{\link[=calcCumMDC]{calcCumMDC()}} has settled by then. Limited to the
 first year available.}
 }
 \value{
@@ -61,7 +61,7 @@ climater layers to download. For example:
 )
 }\if{html}{\out{</div>}}
 
-\code{"oMDC"} in \code{.climVars} is not a ClimateNA variable: it is derived by \code{\link[=calcOMDC]{calcOMDC()}} from monthly
+\code{"cumMDC"} in \code{.climVars} is not a ClimateNA variable: it is derived by \code{\link[=calcCumMDC]{calcCumMDC()}} from monthly
 \code{PPT01}-\code{PPT12} and \code{Tmax04}-\code{Tmax10}, with \code{spinupYears} extra years before the first one.
 
 The above shows that it must be a list of lists, where the names of the list elements

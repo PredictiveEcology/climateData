@@ -3,14 +3,14 @@
 \name{calcAsIs}
 \alias{calcAsIs}
 \alias{calcMDC}
-\alias{calcOMDC}
+\alias{calcCumMDC}
 \title{Create raster stacks of climate variables}
 \usage{
 calcAsIs(stacks, layers, .dots = NULL)
 
 calcMDC(stacks, layers, .dots = NULL)
 
-calcOMDC(stacks, layers, .dots = NULL)
+calcCumMDC(stacks, layers, .dots = NULL)
 }
 \arguments{
 \item{stacks}{named list of \code{SpatRaster} objects.
@@ -45,7 +45,7 @@ the mean of the May to September mid-month values.
 
 Years must be consecutive, because each year starts from the previous one. The first year starts
 at 15 (a fully wet spring), so the first few years are approximate: supply spin-up years before
-those you need. \code{\link[=climateLayers]{climateLayers()}} does this for \code{"oMDC"}. Layers are returned for every supplied
+those you need. \code{\link[=climateLayers]{climateLayers()}} does this for \code{"cumMDC"}. Layers are returned for every supplied
 year.
 
 Needs monthly \code{PPT01}-\code{PPT12} and \code{Tmax04}-\code{Tmax10}.

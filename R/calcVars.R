@@ -206,7 +206,7 @@ calcMDC <- function(stacks, layers, .dots = NULL) {
   pmax(400 * log(800 / Qs), 15)
 }
 
-#' Create raster of overwintered Monthly Drought Code (oMDC)
+#' Create raster of cumulative Monthly Drought Code (cumMDC)
 #'
 #' The Drought Code carried from month to month (April to October) and from year to year: each
 #' April starts from the previous October's value, reduced by that winter's precipitation
@@ -216,7 +216,7 @@ calcMDC <- function(stacks, layers, .dots = NULL) {
 #'
 #' Years must be consecutive, because each year starts from the previous one. The first year starts
 #' at 15 (a fully wet spring), so the first few years are approximate: supply spin-up years before
-#' those you need. [climateLayers()] does this for `"oMDC"`. Layers are returned for every supplied
+#' those you need. [climateLayers()] does this for `"cumMDC"`. Layers are returned for every supplied
 #' year.
 #'
 #' Needs monthly `PPT01`-`PPT12` and `Tmax04`-`Tmax10`.
@@ -224,11 +224,11 @@ calcMDC <- function(stacks, layers, .dots = NULL) {
 #' @export
 #' @importFrom terra setValues values
 #' @rdname calcVars
-calcOMDC <- function(stacks, layers, .dots = NULL) {
+calcCumMDC <- function(stacks, layers, .dots = NULL) {
   type <- calcStackLayersType(stacks, layers)
   yrs <- sort(as.integer(.dots[[paste0(type, "_years")]]))
   if (length(yrs) > 1 && any(diff(yrs) != 1L)) {
-    stop("calcOMDC() needs consecutive years (each year starts from the previous October); got ",
+    stop("calcCumMDC() needs consecutive years (each year starts from the previous October); got ",
          paste(yrs, collapse = ", "))
   }
   stack_years <- stacks[paste0(type, "_", yrs)]
@@ -236,7 +236,7 @@ calcOMDC <- function(stacks, layers, .dots = NULL) {
   need <- c(sprintf("PPT%02d", 1:12), sprintf("Tmax%02d", 4:10))
   missingVars <- setdiff(need, gsub(paste0("^", type, "_"), "", layers))
   if (length(missingVars)) {
-    stop("calcOMDC() needs monthly ", paste(missingVars, collapse = ", "))
+    stop("calcCumMDC() needs monthly ", paste(missingVars, collapse = ", "))
   }
 
   v <- function(x, nm) values(x[[nm]], mat = FALSE)
@@ -259,6 +259,6 @@ calcOMDC <- function(stacks, layers, .dots = NULL) {
     out[[i]] <- setValues(x[[1]], sumMid / 5)
   }
   out <- rast(out)
-  set.names(out, paste0("oMDC_", names(stack_years)))
+  set.names(out, paste0("cumMDC_", names(stack_years)))
   out
 }

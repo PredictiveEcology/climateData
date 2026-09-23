@@ -73,8 +73,8 @@
 )
 
 .allowedClimateVars_MSY <- c(.allowedClimateVars_M, .allowedClimateVars_S, .allowedClimateVars_Y)
-## derived here, not by ClimateNA (see calcOMDC())
-.derivedClimateVars <- c("oMDC")
+## derived here, not by ClimateNA (see calcCumMDC())
+.derivedClimateVars <- c("cumMDC")
 .allowedClimateVars <- c(.allowedClimateVars_nrm, .allowedClimateVars_MSY, .derivedClimateVars)
 
 #' Identify ClimateNA data available via this package

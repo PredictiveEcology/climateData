@@ -1,4 +1,4 @@
-## calcOMDC(): the overwintered Monthly Drought Code (FireSense, 2026-09-23). A year-level probe over six
+## calcCumMDC(): the cumulative Monthly Drought Code (FireSense, 2026-09-23). A year-level probe over six
 ## ELFs ranked its May-September mean with the best climate covariates for area burned, and in held-out
 ## spread fits it beat CMD_sm in ELF 4.3.
 
@@ -11,10 +11,10 @@ monthlyStack <- function(ppt, tmax, ncell = 2L) {
   names(s) <- c(sprintf("PPT%02d", 1:12), sprintf("Tmax%02d", 4:10))
   s
 }
-omdcLayers <- paste0("historical_", c(sprintf("PPT%02d", 1:12), sprintf("Tmax%02d", 4:10)))
+cumMdcLayers <- paste0("historical_", c(sprintf("PPT%02d", 1:12), sprintf("Tmax%02d", 4:10)))
 
 ## An independent, deliberately plain version of the same arithmetic, one cell and one year at a time
-refOMDC <- function(pptByYear, tmaxByYear) {
+refCumMDC <- function(pptByYear, tmaxByYear) {
   Lf <- c(-1.6, -1.6, -1.6, 0.9, 3.8, 5.8, 6.4, 5.0, 2.4, 0.4, -1.6, -1.6)
   nd <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
   out <- numeric(0); oct <- NA; winter <- NA
@@ -46,16 +46,16 @@ test_that("the overwintering step matches cffdrs::overwinter_drought_code()", {
   expect_equal(climateData:::.overwinterDC(20, 1000), 15)
 })
 
-test_that("calcOMDC() carries the drought code across months and years", {
+test_that("calcCumMDC() carries the drought code across months and years", {
   ppt <- list(c(30, 25, 30, 35, 50, 70, 80, 70, 60, 45, 35, 30),
               c(20, 15, 20, 20, 30, 40, 50, 45, 40, 30, 25, 20),
               c(40, 35, 40, 45, 70, 90, 100, 90, 80, 55, 45, 40))
   tmax <- list(c(8, 16, 21, 24, 22, 15, 6), c(10, 19, 25, 28, 26, 18, 8), c(6, 14, 19, 21, 19, 13, 5))
   stacks <- setNames(Map(monthlyStack, ppt, tmax), paste0("historical_", 2001:2003))
-  out <- calcOMDC(stacks, omdcLayers, .dots = list(historical_years = 2001:2003))
+  out <- calcCumMDC(stacks, cumMdcLayers, .dots = list(historical_years = 2001:2003))
   expect_s4_class(out, "SpatRaster")
-  expect_identical(names(out), paste0("oMDC_historical_", 2001:2003))
-  expect_equal(unname(unlist(terra::global(out, "mean"))), refOMDC(ppt, tmax), tolerance = 1e-9)
+  expect_identical(names(out), paste0("cumMDC_historical_", 2001:2003))
+  expect_equal(unname(unlist(terra::global(out, "mean"))), refCumMDC(ppt, tmax), tolerance = 1e-9)
 })
 
 test_that("a dry autumn raises next year's value; the first year has no memory", {
@@ -64,31 +64,31 @@ test_that("a dry autumn raises next year's value; the first year has no memory",
   tmax <- c(8, 16, 21, 24, 22, 15, 6)
   run <- function(p1) {
     s <- setNames(list(monthlyStack(p1, tmax), monthlyStack(wet, tmax)), paste0("historical_", 2001:2002))
-    unname(unlist(terra::global(calcOMDC(s, omdcLayers, list(historical_years = 2001:2002)), "mean")))
+    unname(unlist(terra::global(calcCumMDC(s, cumMdcLayers, list(historical_years = 2001:2002)), "mean")))
   }
   wetRun <- run(wet); dryRun <- run(dry)
   expect_gt(dryRun[2], wetRun[2])           # carried over into 2002
   ## calcMDC() restarts every month from 0, so the same autumn leaves no trace there
 })
 
-test_that("calcOMDC() refuses gaps between years and missing months", {
+test_that("calcCumMDC() refuses gaps between years and missing months", {
   s <- setNames(list(monthlyStack(rep(30, 12), rep(15, 7)), monthlyStack(rep(30, 12), rep(15, 7))),
                 paste0("historical_", c(2001, 2003)))
-  expect_error(calcOMDC(s, omdcLayers, list(historical_years = c(2001, 2003))), "consecutive")
+  expect_error(calcCumMDC(s, cumMdcLayers, list(historical_years = c(2001, 2003))), "consecutive")
   s2 <- setNames(list(monthlyStack(rep(30, 12), rep(15, 7))[[-1]]), "historical_2001")
-  expect_error(calcOMDC(s2, omdcLayers[-1], list(historical_years = 2001)), "PPT01")
+  expect_error(calcCumMDC(s2, cumMdcLayers[-1], list(historical_years = 2001)), "PPT01")
 })
 
-test_that("climateLayers('oMDC') requests the monthly inputs and spin-up years", {
-  cl <- climateLayers("oMDC", historicalYears = 1985:2024, projectedYears = 2025:2044, spinupYears = 5)
-  h <- cl[["historical_oMDC"]]
-  expect_identical(h$fun, quote(calcOMDC))
+test_that("climateLayers('cumMDC') requests the monthly inputs and spin-up years", {
+  cl <- climateLayers("cumMDC", historicalYears = 1985:2024, projectedYears = 2025:2044, spinupYears = 5)
+  h <- cl[["historical_cumMDC"]]
+  expect_identical(h$fun, quote(calcCumMDC))
   expect_setequal(h$vars, paste0("historical_", c(sprintf("PPT%02d", 1:12), sprintf("Tmax%02d", 4:10))))
   expect_identical(h$.dots$historical_years, 1980:2024)
-  p <- cl[["projected_oMDC"]]
+  p <- cl[["projected_cumMDC"]]
   expect_identical(p$.dots$future_years, 2020:2044)
   ## spin-up cannot go before the first year that exists
-  expect_identical(climateLayers("oMDC", historical = FALSE, projectedYears = 2011:2020)[[1]]$.dots$future_years,
+  expect_identical(climateLayers("cumMDC", historical = FALSE, projectedYears = 2011:2020)[[1]]$.dots$future_years,
                    2011:2020)
   ## other variables are unchanged
   expect_identical(climateLayers("CMD_sm", historicalYears = 1991:2000)[["historical_CMDsm"]]$.dots$historical_years,
