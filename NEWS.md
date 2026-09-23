@@ -1,5 +1,11 @@
 # climateData (development version)
 
+- `dbplyr` moves from Suggests to Imports. `dplyr::tbl()` on the tile database needs it at run time, so without it
+  `getClimateTable()`, `ClimateNA_sql()` and everything that looks up tiles failed (R CMD check without Suggests).
+- `climateMosaicsParallel()` and `climateMosaicsNormalsParallel()` match the year (or period) in the
+  directory's own name. They matched it anywhere in the full path, so under a folder such as
+  `.../1990-2020/...` the 1990 and 2020 mosaics were built from every year's files and came out as
+  multi-year averages.
 - `climateMosaicsParallel()` and `climateMosaicsNormalsParallel()` select tile directories with the
   tile number anchored at the path separator. They matched `"<tile>$"`, so tile 6 also picked up
   directories 16, 26, 36, ... left in the same climate folder by an earlier, larger study area. Those

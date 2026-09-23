@@ -119,9 +119,12 @@ sqlite_connect_db <- function(dbfile) {
 #'
 #' @export
 #' @importFrom DBI dbCreateTable dbExecute dbExistsTable
+#' @importFrom dbplyr dbplyr_edition
 #' @importFrom dplyr tbl
 #' @importFrom RSQLite dbConnect SQLite
 #' @rdname ClimateNA_sql
+## dplyr::tbl() on a DBI connection needs dbplyr at run time (dplyr's check_dbplyr() stops without it), so
+## dbplyr is an Import: without it every tile lookup fails, as R CMD check without Suggests showed.
 ClimateNA_sql <- function(dbfile, type) {
   db <- sqlite_connect_db(dbfile)
 

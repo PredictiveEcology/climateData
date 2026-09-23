@@ -29,57 +29,76 @@ export(whereAmI)
 export(whichMSYN)
 export(whichTypes)
 import(methods)
-importFrom(DBI,dbCreateTable)
-importFrom(DBI,dbDisconnect)
-importFrom(DBI,dbExecute)
-importFrom(DBI,dbExistsTable)
-importFrom(RSQLite,SQLite)
-importFrom(RSQLite,dbConnect)
-importFrom(data.table,.SD)
-importFrom(data.table,as.data.table)
-importFrom(data.table,data.table)
-importFrom(dplyr,collect)
-importFrom(dplyr,filter)
-importFrom(dplyr,first)
-importFrom(dplyr,last)
-importFrom(dplyr,pull)
-importFrom(dplyr,tbl)
+importFrom(DBI,
+  dbCreateTable,
+  dbDisconnect,
+  dbExecute,
+  dbExistsTable
+)
+importFrom(RSQLite,
+  SQLite,
+  dbConnect
+)
+importFrom(data.table,
+  .SD,
+  as.data.table,
+  data.table
+)
+importFrom(dbplyr,dbplyr_edition)
+importFrom(dplyr,
+  collect,
+  filter,
+  first,
+  last,
+  pull,
+  tbl
+)
 importFrom(fs,dir_ls)
 importFrom(future.apply,future_lapply)
-importFrom(parallel,parLapply)
-importFrom(parallel,stopCluster)
+importFrom(parallel,
+  parLapply,
+  stopCluster
+)
 importFrom(parallelly,availableCores)
 importFrom(purrr,transpose)
-importFrom(reproducible,.robustDigest)
-importFrom(reproducible,Cache)
-importFrom(reproducible,checkPath)
-importFrom(reproducible,postProcessTo)
-importFrom(reproducible,preProcess)
-importFrom(reproducible,prepInputs)
-importFrom(sf,gdal_utils)
-importFrom(sf,st_read)
-importFrom(sf,st_union)
+importFrom(reproducible,
+  .robustDigest,
+  Cache,
+  checkPath,
+  postProcessTo,
+  preProcess,
+  prepInputs
+)
+importFrom(sf,
+  gdal_utils,
+  st_read,
+  st_union
+)
 importFrom(stats,na.omit)
 importFrom(stringr,str_remove)
-importFrom(terra,"crs<-")
-importFrom(terra,aggregate)
-importFrom(terra,buffer)
-importFrom(terra,compareGeom)
-importFrom(terra,crop)
-importFrom(terra,crs)
-importFrom(terra,mask)
-importFrom(terra,ncell)
-importFrom(terra,project)
-importFrom(terra,rast)
-importFrom(terra,resample)
-importFrom(terra,same.crs)
-importFrom(terra,set.names)
-importFrom(terra,setValues)
-importFrom(terra,trim)
-importFrom(terra,values)
-importFrom(terra,vect)
-importFrom(terra,writeRaster)
+importFrom(terra,
+  "crs<-",
+  aggregate,
+  buffer,
+  compareGeom,
+  crop,
+  crs,
+  mask,
+  ncell,
+  project,
+  rast,
+  resample,
+  same.crs,
+  set.names,
+  setValues,
+  trim,
+  values,
+  vect,
+  writeRaster
+)
 importFrom(tools,file_path_sans_ext)
-importFrom(utils,getFromNamespace)
-importFrom(utils,packageVersion)
-importFrom(utils,write.table)
+importFrom(utils,
+  getFromNamespace,
+  packageVersion,
+  write.table
+)

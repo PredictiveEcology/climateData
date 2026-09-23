@@ -322,7 +322,8 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
     srcfiles <- srcdir |>
       ## anchor at the path separator: "6$" alone also matches tile directories 16, 26, ...
       fs::dir_ls(regexp = paste0("(/|\\\\)", tile, "$", collapse = "|"), type = "directory") |>
-      fs::dir_ls(regexp = y, type = "directory") |>
+      ## match the year in the directory's OWN name: the full path may contain it too (".../1990-2020/...")
+      fs::dir_ls(regexp = paste0("[^/\\\\]*", y, "[^/\\\\]*$"), type = "directory") |>
       fs::dir_ls(regexp = paste0("(/|\\\\)", v, "[.]asc$"), type = "file")
 
     stopifnot(length(srcfiles) > 0)
@@ -463,7 +464,7 @@ climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
     srcfiles <- srcdir |>
       ## anchor at the path separator: "6$" alone also matches tile directories 16, 26, ...
       fs::dir_ls(regexp = paste0("(/|\\\\)", tile, "$", collapse = "|"), type = "directory") |>
-      fs::dir_ls(regexp = p, type = "directory") |>
+      fs::dir_ls(regexp = paste0("[^/\\\\]*", p, "[^/\\\\]*$"), type = "directory") |>
       fs::dir_ls(regexp = paste0("(/|\\\\)", nv, "[.]asc$"), type = "file")
 
     stopifnot(length(srcfiles) > 0)
