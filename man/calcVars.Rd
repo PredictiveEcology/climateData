@@ -31,11 +31,13 @@ with layers corresponding to year or period.
 Produce a \code{SpatRaster} object corresponding to a single climate variable,
 with layers corresponding to climate years or periods.
 
-The Drought Code carried from month to month (April to October) and from year to year: each
-April starts from the previous October's value, reduced by that winter's precipitation
-(November to March) as in \code{cffdrs::overwinter_drought_code()}. \code{calcMDC()} instead starts every
-month from 0, so it has no memory of an earlier dry month or a dry autumn. The value for a year is
-the mean of the May to September mid-month values.
+Each month's value (April to October) is the previous month's value, updated by this month's
+weather: drying adds to it and rain removes a fraction of it. For April, the previous value is last
+October's, reduced by the winter's precipitation (November to March) as in
+\code{cffdrs::overwinter_drought_code()}. So earlier months, and last year, carry through, fading with
+each rain. \code{calcMDC()} instead starts every month from 0, so it measures each month's weather alone.
+A year's value is the average of the May to September mid-month values (a month's mid-month value
+is the mean of its start and end values).
 }
 \details{
 \itemize{
