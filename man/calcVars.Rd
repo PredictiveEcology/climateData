@@ -3,11 +3,14 @@
 \name{calcAsIs}
 \alias{calcAsIs}
 \alias{calcMDC}
+\alias{calcOMDC}
 \title{Create raster stacks of climate variables}
 \usage{
 calcAsIs(stacks, layers, .dots = NULL)
 
 calcMDC(stacks, layers, .dots = NULL)
+
+calcOMDC(stacks, layers, .dots = NULL)
 }
 \arguments{
 \item{stacks}{named list of \code{SpatRaster} objects.
@@ -27,12 +30,25 @@ with layers corresponding to year or period.
 \description{
 Produce a \code{SpatRaster} object corresponding to a single climate variable,
 with layers corresponding to climate years or periods.
+
+The Drought Code carried from month to month (April to October) and from year to year: each
+April starts from the previous October's value, reduced by that winter's precipitation
+(November to March) as in \code{cffdrs::overwinter_drought_code()}. \code{calcMDC()} instead starts every
+month from 0, so it has no memory of an earlier dry month or a dry autumn. The value for a year is
+the mean of the May to September mid-month values.
 }
 \details{
 \itemize{
 \item \code{calcAsIs()} returns the climate variable without modification;
 \item \code{calcMDC()} calculates Monthly Drought Code (MDC) from \code{Tmax} and \code{PPT} for April-September;
 }
+
+Years must be consecutive, because each year starts from the previous one. The first year starts
+at 15 (a fully wet spring), so the first few years are approximate: supply spin-up years before
+those you need. \code{\link[=climateLayers]{climateLayers()}} does this for \code{"oMDC"}. Layers are returned for every supplied
+year.
+
+Needs monthly \code{PPT01}-\code{PPT12} and \code{Tmax04}-\code{Tmax10}.
 }
 \author{
 Alex Chubaty, Ian Eddy, Tati Micheletti
