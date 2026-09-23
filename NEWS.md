@@ -2,7 +2,8 @@
 
 - New `calcOMDC()`: the overwintered Monthly Drought Code. The Drought Code is carried from month to month
   (April to October) and from year to year: each April starts from the previous October, reduced by the winter's
-  precipitation as in `cffdrs::overwinter_drought_code()`. A year's value is the May to September mean. `calcMDC()`
+  precipitation as in `cffdrs::overwinter_drought_code()`. Each year gets one value per pixel: the average of
+  the May to September mid-month values. `calcMDC()`
   starts every month from 0, so it has no memory of a dry autumn. `climateLayers("oMDC")` requests the monthly
   inputs (`PPT01`-`PPT12`, `Tmax04`-`Tmax10`) with `spinupYears` (default 5) extra years first.
 - `dbplyr` moves from Suggests to Imports. `dplyr::tbl()` on the tile database needs it at run time, so without it
