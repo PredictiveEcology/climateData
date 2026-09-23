@@ -20,6 +20,7 @@ Depends:
 Imports:
     data.table,
     DBI,
+    dbplyr (>= 2.2.1),
     dplyr,
     fs,
     future.apply,
@@ -39,7 +40,6 @@ Imports:
     utils
 Suggests:
     archive,
-    dbplyr (>= 2.2.1),
     digest,
     geodata,
     googledrive,
@@ -64,4 +64,4 @@ Encoding: UTF-8
 Language: en-CA
 LazyData: true
 Roxygen: list(markdown = TRUE)
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
