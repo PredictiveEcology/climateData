@@ -180,3 +180,87 @@ calcMDC <- function(stacks, layers, .dots = NULL) {
 
 	return(annualMDC)
 }
+
+## Drought Code constants (Van Wagner 1987, as in cffdrs): day-length factors for the northern
+## hemisphere (cffdrs `fl01`) and days per month, January to December.
+.mdcLf <- c(-1.6, -1.6, -1.6, 0.9, 3.8, 5.8, 6.4, 5.0, 2.4, 0.4, -1.6, -1.6)
+.mdcDays <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+## One month of the Drought Code from its value at the start of the month (`dc0`), the month's mean
+## daily maximum temperature (`tmax`, C) and total precipitation (`ppt`, mm): half the month's drying,
+## then the month's rain, then the other half (Girardin & Wotton 2009). Potential evapotranspiration
+## per day is cffdrs's 0.5 * (0.36 * (T + 2.8) + Lf) with T >= -2.8; effective rain is 0.83 * P (the
+## daily -1.27 mm per rain event is dropped, as the number of events in a month is unknown).
+.mdcStep <- function(dc0, tmax, ppt, m) {
+  pe <- pmax(0.5 * (0.36 * (pmax(tmax, -2.8) + 2.8) + .mdcLf[m]), 0)
+  half <- dc0 + 0.5 * .mdcDays[m] * pe
+  Q <- 800 * exp(-half / 400) + 3.937 * 0.83 * ppt
+  pmax(400 * log(800 / Q), 0) + 0.5 * .mdcDays[m] * pe
+}
+
+## Spring Drought Code from last autumn's value (`DCf`) and the winter's precipitation (`rw`, mm), with
+## carry-over fraction `a` and precipitation effectiveness `b` (cffdrs::overwinter_drought_code(); Lawson
+## & Armitage 2008). Never below 15, the standard spring start.
+.overwinterDC <- function(DCf, rw, a = 0.75, b = 0.75) {
+  Qs <- a * 800 * exp(-DCf / 400) + b * 3.94 * rw
+  pmax(400 * log(800 / Qs), 15)
+}
+
+#' Create raster of cumulative Monthly Drought Code (cumMDC)
+#'
+#' Each month's value (April to October) is the previous month's value, updated by this month's
+#' weather: drying adds to it and rain removes a fraction of it. For April, the previous value is last
+#' October's, reduced by the winter's precipitation (November to March) as in
+#' `cffdrs::overwinter_drought_code()`. So earlier months, and last year, carry through, fading with
+#' each rain. `calcMDC()` instead starts every month from 0, so it measures each month's weather alone.
+#' A year's value is the average of the May to September mid-month values (a month's mid-month value
+#' is the mean of its start and end values).
+#'
+#' Years must be consecutive, because each year starts from the previous one. The first year starts
+#' at 15 (a fully wet spring), so the first few years are approximate: supply spin-up years before
+#' those you need. [climateLayers()] does this for `"cumMDC"`. Layers are returned for every supplied
+#' year.
+#'
+#' Needs monthly `PPT01`-`PPT12` and `Tmax04`-`Tmax10`.
+#'
+#' @export
+#' @importFrom terra setValues values
+#' @rdname calcVars
+calcCumMDC <- function(stacks, layers, .dots = NULL) {
+  type <- calcStackLayersType(stacks, layers)
+  yrs <- sort(as.integer(.dots[[paste0(type, "_years")]]))
+  if (length(yrs) > 1 && any(diff(yrs) != 1L)) {
+    stop("calcCumMDC() needs consecutive years (each year starts from the previous October); got ",
+         paste(yrs, collapse = ", "))
+  }
+  stack_years <- stacks[paste0(type, "_", yrs)]
+  checkCalcStackLayers(stack_years, layers)
+  need <- c(sprintf("PPT%02d", 1:12), sprintf("Tmax%02d", 4:10))
+  missingVars <- setdiff(need, gsub(paste0("^", type, "_"), "", layers))
+  if (length(missingVars)) {
+    stop("calcCumMDC() needs monthly ", paste(missingVars, collapse = ", "))
+  }
+
+  v <- function(x, nm) values(x[[nm]], mat = FALSE)
+  octPrev <- NULL
+  winterPrev <- NULL
+  out <- vector("list", length(stack_years))
+  for (i in seq_along(stack_years)) {
+    x <- stack_years[[i]]
+    ppt <- lapply(1:12, function(m) v(x, sprintf("PPT%02d", m)))
+    dc <- if (is.null(octPrev)) rep(15, length(ppt[[1]])) else
+      .overwinterDC(octPrev, winterPrev + ppt[[1]] + ppt[[2]] + ppt[[3]])
+    sumMid <- 0
+    for (m in 4:10) {
+      dcEnd <- .mdcStep(dc, v(x, sprintf("Tmax%02d", m)), ppt[[m]], m)
+      if (m %in% 5:9) sumMid <- sumMid + (dc + dcEnd) / 2
+      dc <- dcEnd
+    }
+    octPrev <- dc
+    winterPrev <- ppt[[11]] + ppt[[12]]
+    out[[i]] <- setValues(x[[1]], sumMid / 5)
+  }
+  out <- rast(out)
+  set.names(out, paste0("cumMDC_", names(stack_years)))
+  out
+}

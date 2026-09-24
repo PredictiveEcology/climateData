@@ -1,5 +1,10 @@
 # climateData (development version)
 
+- New `calcCumMDC()`, a cumulative Monthly Drought Code. Each month's value is the previous month's value,
+  updated by this month's weather: drying adds to it and rain removes a fraction of it. For April, the previous
+  value is last October's, reduced by the winter's precipitation (`cffdrs::overwinter_drought_code()`). A year's
+  value is the average over May to September. `calcMDC()` instead starts every month from 0. `climateLayers("cumMDC")`
+  requests the monthly inputs (`PPT01`-`PPT12`, `Tmax04`-`Tmax10`) with `spinupYears` (default 5) extra years first.
 - `dbplyr` moves from Suggests to Imports. `dplyr::tbl()` on the tile database needs it at run time, so without it
   `getClimateTable()`, `ClimateNA_sql()` and everything that looks up tiles failed (R CMD check without Suggests).
 - `climateMosaicsParallel()` and `climateMosaicsNormalsParallel()` match the year (or period) in the

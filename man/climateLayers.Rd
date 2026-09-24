@@ -10,7 +10,8 @@ climateLayers(
   projected = TRUE,
   fun = quote(calcAsIs),
   historicalYears = 1991:2022,
-  projectedYears = 2011:2100
+  projectedYears = 2011:2100,
+  spinupYears = 5L
 )
 }
 \arguments{
@@ -29,6 +30,10 @@ No other examples have been used and may not work.}
 available as tiles is given by \code{\link[=latestHistoricalYear]{latestHistoricalYear()}}.}
 
 \item{projectedYears}{Integer vector of the projected years to request.}
+
+\item{spinupYears}{Integer. For \code{"cumMDC"} only: how many years before the first requested year to
+also request, so the year-to-year recursion in \code{\link[=calcCumMDC]{calcCumMDC()}} has settled by then. Limited to the
+first year available.}
 }
 \value{
 A named list of named lists that can be passed to the \code{sim} object named
@@ -55,6 +60,9 @@ climater layers to download. For example:
   )
 )
 }\if{html}{\out{</div>}}
+
+\code{"cumMDC"} in \code{.climVars} is not a ClimateNA variable: it is derived by \code{\link[=calcCumMDC]{calcCumMDC()}} from monthly
+\code{PPT01}-\code{PPT12} and \code{Tmax04}-\code{Tmax10}, with \code{spinupYears} extra years before the first one.
 
 The above shows that it must be a list of lists, where the names of the list elements
 must have one underscore, but the variables of the same climate layers may

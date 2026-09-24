@@ -19,6 +19,10 @@
 #'
 #' @param projectedYears Integer vector of the projected years to request.
 #'
+#' @param spinupYears Integer. For `"cumMDC"` only: how many years before the first requested year to
+#'   also request, so the year-to-year recursion in [calcCumMDC()] has settled by then. Limited to the
+#'   first year available.
+#'
 #' @details
 #'
 #' The canClimateData module requires a particular format to specify which
@@ -37,6 +41,9 @@
 #'   )
 #' )
 #' ```
+#' `"cumMDC"` in `.climVars` is not a ClimateNA variable: it is derived by [calcCumMDC()] from monthly
+#' `PPT01`-`PPT12` and `Tmax04`-`Tmax10`, with `spinupYears` extra years before the first one.
+#'
 #' The above shows that it must be a list of lists, where the names of the list elements
 #' must have one underscore, but the variables of the same climate layers may
 #' need two underscores. Similarly, the default function to pass to `prepClimateLayers`
@@ -51,7 +58,7 @@
 #' @export
 climateLayers <- function(.climVars = "CMD_sm", historical = TRUE, projected = TRUE,
                           fun = quote(calcAsIs), historicalYears = 1991:2022,
-                          projectedYears = 2011:2100) {
+                          projectedYears = 2011:2100, spinupYears = 5L) {
   hps <- c()
   if (isTRUE(historical))
     hps <- c(historical = "historical")
@@ -60,13 +67,18 @@ climateLayers <- function(.climVars = "CMD_sm", historical = TRUE, projected = T
 
   rr <- Map(hp = unname(hps), nam = names(hps), function(hp, nam) {
     Map(cv = .climVars, function(cv) {
-      ll <- list(vars = paste0(nam, "_", cv),
-                 fun = fun)
-      .dots = if (nam == "historical")
-        list(historicalYears)
-      else
-        list(projectedYears)
-      ll <- append(ll, list(.dots = .dots |> stats::setNames(paste0(nam, "_years"))))
+      yrs <- if (nam == "historical") historicalYears else projectedYears
+      if (identical(cv, "cumMDC")) {
+        ## derived from monthly variables, and each year needs the previous one
+        firstAvail <- min(available(nam)[["years"]])
+        yrs <- seq(max(firstAvail, min(yrs) - spinupYears), max(yrs))
+        ll <- list(vars = paste0(nam, "_", c(sprintf("PPT%02d", 1:12), sprintf("Tmax%02d", 4:10))),
+                   fun = quote(calcCumMDC))
+      } else {
+        ll <- list(vars = paste0(nam, "_", cv),
+                   fun = fun)
+      }
+      ll <- append(ll, list(.dots = list(yrs) |> stats::setNames(paste0(nam, "_years"))))
     })
   }) |> unlist(recursive = FALSE)
 

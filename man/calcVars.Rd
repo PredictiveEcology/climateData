@@ -3,11 +3,14 @@
 \name{calcAsIs}
 \alias{calcAsIs}
 \alias{calcMDC}
+\alias{calcCumMDC}
 \title{Create raster stacks of climate variables}
 \usage{
 calcAsIs(stacks, layers, .dots = NULL)
 
 calcMDC(stacks, layers, .dots = NULL)
+
+calcCumMDC(stacks, layers, .dots = NULL)
 }
 \arguments{
 \item{stacks}{named list of \code{SpatRaster} objects.
@@ -27,12 +30,27 @@ with layers corresponding to year or period.
 \description{
 Produce a \code{SpatRaster} object corresponding to a single climate variable,
 with layers corresponding to climate years or periods.
+
+Each month's value (April to October) is the previous month's value, updated by this month's
+weather: drying adds to it and rain removes a fraction of it. For April, the previous value is last
+October's, reduced by the winter's precipitation (November to March) as in
+\code{cffdrs::overwinter_drought_code()}. So earlier months, and last year, carry through, fading with
+each rain. \code{calcMDC()} instead starts every month from 0, so it measures each month's weather alone.
+A year's value is the average of the May to September mid-month values (a month's mid-month value
+is the mean of its start and end values).
 }
 \details{
 \itemize{
 \item \code{calcAsIs()} returns the climate variable without modification;
 \item \code{calcMDC()} calculates Monthly Drought Code (MDC) from \code{Tmax} and \code{PPT} for April-September;
 }
+
+Years must be consecutive, because each year starts from the previous one. The first year starts
+at 15 (a fully wet spring), so the first few years are approximate: supply spin-up years before
+those you need. \code{\link[=climateLayers]{climateLayers()}} does this for \code{"cumMDC"}. Layers are returned for every supplied
+year.
+
+Needs monthly \code{PPT01}-\code{PPT12} and \code{Tmax04}-\code{Tmax10}.
 }
 \author{
 Alex Chubaty, Ian Eddy, Tati Micheletti
