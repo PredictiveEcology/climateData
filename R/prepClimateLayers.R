@@ -197,18 +197,8 @@ prepClimateLayers <- function(
   needVars <- purrr::transpose(climateVarsList)[["vars"]] |> unlist() |> unname() |> unique()
   types <- whichTypes(needVars)
   MSYN <- whichMSYN(needVars)
-  unique_types_msy <- paste0(types, "_", MSYN) |> gsub("_normal", "", x = _) |> unique()
-  ## TODO: for now, seasonal variables are only available in the MSY ("all") archives
-  unique_types_msy <- gsub("^historical_S$", "historical_MSY", unique_types_msy) |> unique()
-  unique_types_msy <- gsub("^future_S$", "future_MSY", unique_types_msy) |> unique()
-
-  ## consolidate types -- if all needed, download all variables in same archive
-  if (all(c("historical_M", "historical_S", "historical_Y") %in% unique_types_msy)) {
-    unique_types_msy <- gsub("^historical_(M|S|Y)$", "historical_MSY", unique_types_msy) |> unique()
-  }
-  if (all(c("future_M", "future_S", "future_Y") %in% unique_types_msy)) {
-    unique_types_msy <- gsub("^future_(M|S|Y)$", "future_MSY", unique_types_msy) |> unique()
-  }
+  unique_types_msy <- paste0(types, "_", MSYN) |> gsub("_normal", "", x = _) |> unique() |>
+    .consolidateClimateTypes()
 
   ## determine which years / periods we need to get
   historical_years <- extractTimes(climateVarsList, "historical_years")
@@ -511,4 +501,19 @@ prepClimateLayers <- function(
   names(climData) <- names(climDataFun) ## TODO: verify
 
   return(climData)
+}
+
+## Which archives to download, from the needed "<type>_<M|S|Y|N>" types. Seasonal variables exist
+## only in the MSY ("all") archives, and an MSY archive holds every file of the M and Y archives
+## (checked: 180 monthly and 25 yearly files per year, historical and future). So once MSY is needed,
+## M and Y come from it too; downloading them separately is redundant, and some M archives on the
+## server are incomplete (e.g. tile 46's future 2080s lacks 2085), which stopped runs.
+.consolidateClimateTypes <- function(types) {
+  types <- sub("_S$", "_MSY", types)
+  for (tp in c("historical", "future")) {
+    if (paste0(tp, "_MSY") %in% types) {
+      types <- sub(paste0("^", tp, "_(M|Y)$"), paste0(tp, "_MSY"), types)
+    }
+  }
+  unique(types)
 }

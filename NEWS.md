@@ -1,5 +1,10 @@
 # climateData (development version)
 
+- When a seasonal variable is needed, monthly and yearly variables now come from the same MSY ("all")
+  archive, which contains all their files. Before, they were also downloaded from their own M and Y archives
+  unless M, S and Y were all needed. Some M archives on the server are incomplete (tile 46's future 2080s
+  has no 2085), so a run needing monthly variables (e.g. for `calcCumMDC()`) plus a seasonal one stopped with
+  "Climate data folders are missing for tile 46 ... @2085M".
 - New `calcCumMDC()`, a cumulative Monthly Drought Code. Each month's value is the previous month's value,
   updated by this month's weather: drying adds to it and rain removes a fraction of it. For April, the previous
   value is last October's, reduced by the winter's precipitation (`cffdrs::overwinter_drought_code()`). A year's
