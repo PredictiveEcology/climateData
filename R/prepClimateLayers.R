@@ -471,6 +471,7 @@ prepClimateLayers <- function(
     "studyAreaName"
   ) |>
     mget(envir = environment()) |>
+    c(list(gdalOptions = .climateStackGdalOptions)) |> ## so older pixel-interleaved files are rebuilt
     .robustDigest(object = _)
 
   climData <- lapply(names(climDataFun), function(nm) {
@@ -484,6 +485,7 @@ prepClimateLayers <- function(
         to = rasterToMatch,
         maskTo = studyArea,
         writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
+        gdal = if (terra::nlyr(newClimRast) > 1) .climateStackGdalOptions, ## needs reproducible >= the version with `writeTo(gdal = )`
         useCache = FALSE, ## use internal cache for postProcessTo
         overwrite = TRUE
       ) |>
@@ -517,3 +519,11 @@ prepClimateLayers <- function(
   }
   unique(types)
 }
+
+## GDAL creation options for the multi-layer climate stacks. A yearly layer is read on its own
+## (one `year<YYYY>` layer out of ~90), which is slow if the layers are pixel-interleaved in
+## 1-row strips (GDAL's default): every read decompresses all layers. Band-interleaved 256 x 256
+## tiles (GDAL's usual tile size: small enough that one layer touches few tiles, big enough to
+## compress well) let a single layer be read without touching the others.
+## Compression is left to terra's default (LZW), as before.
+.climateStackGdalOptions <- c("INTERLEAVE=BAND", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256")
