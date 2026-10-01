@@ -1,6 +1,6 @@
 # climateData (development version)
 
-- `prepClimateLayers()` now writes multi-layer climate stacks band-interleaved in 256 x 256 tiles (`INTERLEAVE=BAND`, `TILED=YES`) instead of pixel-interleaved 1-row strips, so reading one year's layer no longer decompresses every layer in the file (about 8.8 s down to 0.14 s for a 90-layer stack). Values are unchanged. The creation options are part of the cache key, so existing stacks are rebuilt the next time `prepClimateLayers()` runs.
+- `prepClimateLayers()` now writes multi-layer climate stacks band-interleaved in 256 x 256 tiles (`INTERLEAVE=BAND`, `TILED=YES`) through `postProcessTo(writeTo = , gdal = )`, instead of pixel-interleaved 1-row strips, so reading one year's layer no longer decompresses every layer in the file (about 8.8 s down to 0.14 s for a 90-layer stack). Values are unchanged. This needs a `reproducible` in which `writeTo()` honours `gdal` (older versions ignore it and write the old layout). The creation options are part of the cache key, so existing stacks are rebuilt the next time `prepClimateLayers()` runs.
 - When a seasonal variable is needed, monthly and yearly variables now come from the same MSY ("all")
   archive, which contains all their files. Before, they were also downloaded from their own M and Y archives
   unless M, S and Y were all needed. Some M archives on the server are incomplete (tile 46's future 2080s

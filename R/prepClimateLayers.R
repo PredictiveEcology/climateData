@@ -480,11 +480,14 @@ prepClimateLayers <- function(
     var <- stringr::str_remove(nm, paste0(type, "_"))
     fname <- paste(var, type, studyAreaName, sep = "_")
     climRast <-
-      .postProcessAndWriteClimate(
+      postProcessTo(
         from = newClimRast,
         to = rasterToMatch,
         maskTo = studyArea,
-        writeTo = file.path(climatePathOut, paste0(fname, ".tif"))
+        writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
+        gdal = if (terra::nlyr(newClimRast) > 1) .climateStackGdalOptions, ## needs reproducible >= the version with `writeTo(gdal = )`
+        useCache = FALSE, ## use internal cache for postProcessTo
+        overwrite = TRUE
       ) |>
       Cache(
         omitArgs = c("to", "maskTo", "overwrite"), # don't digest these each time
@@ -524,33 +527,3 @@ prepClimateLayers <- function(
 ## compress well) let a single layer be read without touching the others.
 ## Compression is left to terra's default (LZW), as before.
 .climateStackGdalOptions <- c("INTERLEAVE=BAND", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256")
-
-#' Post-process a climate raster and write it
-#'
-#' Same as `postProcessTo(writeTo = )`, except that stacks with more than one layer are written
-#' with `.climateStackGdalOptions`. `reproducible::postProcessTo(writeTo = )` does not pass
-#' `gdal` creation options on to `terra::writeRaster()`, so the write is done here.
-#' @noRd
-.postProcessAndWriteClimate <- function(from, to, maskTo, writeTo) {
-  out <- postProcessTo(
-    from = from,
-    to = to,
-    maskTo = maskTo,
-    useCache = FALSE, ## use internal cache for postProcessTo
-    overwrite = TRUE
-  )
-  .writeClimateStack(out, writeTo)
-}
-
-.writeClimateStack <- function(x, filename) {
-  if (file.exists(filename)) {
-    unlink(filename)
-  }
-  ## NUM_THREADS=1 as in reproducible::writeTo(): a default write leaves a GDAL thread pool
-  ## that makes a later fork() deadlock
-  gdal <- "NUM_THREADS=1"
-  if (terra::nlyr(x) > 1) {
-    gdal <- c(.climateStackGdalOptions, gdal)
-  }
-  terra::writeRaster(x, filename = filename, overwrite = TRUE, gdal = gdal)
-}
