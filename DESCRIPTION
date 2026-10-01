@@ -30,7 +30,7 @@ Imports:
     parallel,
     parallelly,
     purrr,
-    reproducible (>= 2.0.8),
+    reproducible (>= 3.2.1.9057),
     RSQLite,
     sf,
     stats,

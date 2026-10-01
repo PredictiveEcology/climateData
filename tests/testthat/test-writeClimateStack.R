@@ -1,15 +1,8 @@
-## needs the `reproducible` version in which `writeTo()` honours `gdal`
+## needs reproducible (>= 3.2.1.9057), in which `writeTo()` honours `gdal` (DESCRIPTION Imports)
 test_that("postProcessTo(writeTo, gdal = .climateStackGdalOptions) writes band-interleaved tiles with identical values", {
   skip_if_not_installed("terra")
   skip_if_not_installed("sf")
   skip_if_not_installed("withr")
-  ## skip with a `reproducible` whose writeTo() ignores `gdal`
-  probe <- withr::local_tempfile(fileext = ".tif")
-  p <- terra::rast(nrows = 300, ncols = 400, nlyrs = 2, vals = 1)
-  reproducible::postProcessTo(p, writeTo = probe, gdal = "TILED=YES", useCache = FALSE)
-  skip_if_not(grepl("Block=256x256", sf::gdal_utils("info", probe, quiet = TRUE)),
-              "reproducible::writeTo() ignores `gdal`")
-
   r <- terra::rast(nrows = 300, ncols = 400, nlyrs = 6, xmin = 0, xmax = 400, ymin = 0, ymax = 300,
                    crs = "EPSG:3857")
   set.seed(1)
