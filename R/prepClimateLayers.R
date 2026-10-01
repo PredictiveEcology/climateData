@@ -471,6 +471,7 @@ prepClimateLayers <- function(
     "studyAreaName"
   ) |>
     mget(envir = environment()) |>
+    c(list(gdalOptions = .climateStackGdalOptions)) |> ## so older pixel-interleaved files are rebuilt
     .robustDigest(object = _)
 
   climData <- lapply(names(climDataFun), function(nm) {
@@ -479,13 +480,11 @@ prepClimateLayers <- function(
     var <- stringr::str_remove(nm, paste0(type, "_"))
     fname <- paste(var, type, studyAreaName, sep = "_")
     climRast <-
-      postProcessTo(
+      .postProcessAndWriteClimate(
         from = newClimRast,
         to = rasterToMatch,
         maskTo = studyArea,
-        writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
-        useCache = FALSE, ## use internal cache for postProcessTo
-        overwrite = TRUE
+        writeTo = file.path(climatePathOut, paste0(fname, ".tif"))
       ) |>
       Cache(
         omitArgs = c("to", "maskTo", "overwrite"), # don't digest these each time
@@ -516,4 +515,42 @@ prepClimateLayers <- function(
     }
   }
   unique(types)
+}
+
+## GDAL creation options for the multi-layer climate stacks. A yearly layer is read on its own
+## (one `year<YYYY>` layer out of ~90), which is slow if the layers are pixel-interleaved in
+## 1-row strips (GDAL's default): every read decompresses all layers. Band-interleaved 256 x 256
+## tiles (GDAL's usual tile size: small enough that one layer touches few tiles, big enough to
+## compress well) let a single layer be read without touching the others.
+## Compression is left to terra's default (LZW), as before.
+.climateStackGdalOptions <- c("INTERLEAVE=BAND", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256")
+
+#' Post-process a climate raster and write it
+#'
+#' Same as `postProcessTo(writeTo = )`, except that stacks with more than one layer are written
+#' with `.climateStackGdalOptions`. `reproducible::postProcessTo(writeTo = )` does not pass
+#' `gdal` creation options on to `terra::writeRaster()`, so the write is done here.
+#' @noRd
+.postProcessAndWriteClimate <- function(from, to, maskTo, writeTo) {
+  out <- postProcessTo(
+    from = from,
+    to = to,
+    maskTo = maskTo,
+    useCache = FALSE, ## use internal cache for postProcessTo
+    overwrite = TRUE
+  )
+  .writeClimateStack(out, writeTo)
+}
+
+.writeClimateStack <- function(x, filename) {
+  if (file.exists(filename)) {
+    unlink(filename)
+  }
+  ## NUM_THREADS=1 as in reproducible::writeTo(): a default write leaves a GDAL thread pool
+  ## that makes a later fork() deadlock
+  gdal <- "NUM_THREADS=1"
+  if (terra::nlyr(x) > 1) {
+    gdal <- c(.climateStackGdalOptions, gdal)
+  }
+  terra::writeRaster(x, filename = filename, overwrite = TRUE, gdal = gdal)
 }
