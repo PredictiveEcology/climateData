@@ -300,6 +300,25 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
   lala
 }
 
+#' Read a tile's climate file, with invalid cells set to NA
+#'
+#' ClimateNA tiles 6 and 7 have cells south of the Canada/US border where the DEM is not valid:
+#' all 12 monthly `PPT` values are exactly 0 and temperatures are nonsense. Such cells are set
+#' to NA, for every variable, so an overlapping valid tile can show through in the mosaic.
+#' The `PPT01`-`PPT12` files are read from the same year directory as `file`.
+#'
+#' @param file character. A single tile-year climate file.
+#' @return a `SpatRaster`.
+#' @keywords internal
+maskInvalidPPT <- function(file) {
+  r <- terra::rast(file)
+  ppt <- file.path(dirname(file), sprintf("PPT%02d.asc", 1:12))
+  if (all(file.exists(ppt))) {
+    r <- terra::mask(r, sum(terra::rast(ppt)) == 0, maskvalues = TRUE)
+  }
+  r
+}
+
 #' Build climate mosaic rasters from ClimateNA tiles
 #'
 #' Internal functions run in parallel by `buildClimateMosaics()` and
@@ -338,9 +357,9 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
       # ss <- mget(ls())
       # save(ss, file = paste0("~/tmp/stuff", basename(tempfile()), ".rda"))
       if (length(srcfiles) == 1) {
-        newMosaic <- terra::rast(srcfiles)
+        newMosaic <- maskInvalidPPT(srcfiles)
       } else {
-        newMosaic <- terra::sprc(srcfiles) |> terra::mosaic()
+        newMosaic <- lapply(srcfiles, maskInvalidPPT) |> terra::sprc() |> terra::mosaic()
       }
 
       writeRaster(newMosaic, filename = dsttif, overwrite = TRUE)
