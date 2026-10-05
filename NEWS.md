@@ -1,5 +1,9 @@
 # climateData (development version)
 
+- `climateMosaicsParallel()` sets every variable to NA, for that year, in cells where all 12 monthly `PPT` values are
+  exactly 0. ClimateNA tiles 6 and 7 have such cells south of the Canada/US border (45.8-49 N), where the DEM is
+  not valid and temperatures are nonsense (Tmax up to 42.7 C); they gave absurd `cumMDC` and `CMD`.
+
 - When a seasonal variable is needed, monthly and yearly variables now come from the same MSY ("all")
   archive, which contains all their files. Before, they were also downloaded from their own M and Y archives
   unless M, S and Y were all needed. Some M archives on the server are incomplete (tile 46's future 2080s
