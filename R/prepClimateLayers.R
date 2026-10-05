@@ -1,5 +1,25 @@
 .allowedClimDotsNames <- c("historical_period", "historical_years", "future_period", "future_years")
 
+## Internal functions that build the layers `prepClimateLayers()` caches. Their bodies are part of the
+## cache key, so a change to any of them (e.g. `maskInvalidPPT()`) rebuilds the cached layers.
+.climateBuilders <- c(
+  "climateMosaicsParallel", "climateMosaicsNormalsParallel", "maskInvalidPPT",
+  "climateStacksByYear", "climateStacksByPeriod",
+  "calcStackLayersType", "calcAsIs", "calcMDC", "calcCumMDC"
+)
+
+#' Digest of the bodies of the layer-building functions
+#'
+#' @param envir environment in which to find `.climateBuilders`.
+#' @return a digest string.
+#' @keywords internal
+#' @importFrom reproducible .robustDigest
+climateBuilderDigest <- function(envir = topenv()) {
+  mget(.climateBuilders, envir = envir) |>
+    lapply(function(f) list(formals(f), body(f))) |>
+    .robustDigest()
+}
+
 #' Determine MSYN type of a climate variable
 #'
 #' @template ClimateNA_climVars
@@ -472,6 +492,7 @@ prepClimateLayers <- function(
   ) |>
     mget(envir = environment()) |>
     c(list(gdalOptions = .climateStackGdalOptions)) |> ## so older pixel-interleaved files are rebuilt
+    c(builders = climateBuilderDigest()) |>
     .robustDigest(object = _)
 
   climData <- lapply(names(climDataFun), function(nm) {
