@@ -1,5 +1,11 @@
 # climateData (development version)
 
+- The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
+  (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
+  before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept
+  coming back from the cache. Every existing entry is rebuilt once. Mosaics themselves were always rebuilt
+  (`overwrite = TRUE`); only the final cached `postProcessTo()` step was stale.
+
 - `climateMosaicsParallel()` sets every variable to NA, for that year, in cells where all 12 monthly `PPT` values are
   exactly 0. ClimateNA tiles 6 and 7 have such cells south of the Canada/US border (45.8-49 N), where the DEM is
   not valid and temperatures are nonsense (Tmax up to 42.7 C); they gave absurd `cumMDC` and `CMD`.
