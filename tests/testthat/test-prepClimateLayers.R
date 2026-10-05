@@ -218,3 +218,18 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
   withr::deferred_run()
 })
 
+
+## Layers cached before maskInvalidPPT() (or before the postProcessTo smoothing fix) kept coming back,
+## because the prepClimateLayers() cache key did not change when the builder functions did.
+test_that("the prepClimateLayers cache key changes when a layer-building function changes", {
+  env <- new.env()
+  for (nm in .climateBuilders) assign(nm, function(x) x, envir = env)
+  d1 <- climateBuilderDigest(env)
+  expect_identical(d1, climateBuilderDigest(env))
+
+  assign("maskInvalidPPT", function(x) x + 1, envir = env)
+  expect_false(identical(d1, climateBuilderDigest(env)))
+
+  ## the real functions are covered
+  expect_true(all(.climateBuilders %in% ls(asNamespace("climateData"))))
+})
