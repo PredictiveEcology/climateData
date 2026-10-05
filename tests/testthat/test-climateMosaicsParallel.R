@@ -49,3 +49,23 @@ test_that("climateMosaicsParallel matches the year in the directory name, not el
   expect_true(all(terra::values(m1990) == 100))
   expect_true(all(terra::values(m2000) == 300))
 })
+
+## ClimateNA tiles 6 and 7 hold cells south of the border where PPT01-PPT12 are all 0 and temperatures
+## are nonsense (the DEM is not valid there). They reached the mosaics and gave absurd cumMDC and CMD.
+test_that("climateMosaicsParallel sets every variable to NA where all 12 monthly PPT are 0", {
+  skip_if_not_installed("withr")
+  src <- withr::local_tempdir("historical")
+  dst <- withr::local_tempdir("mosaics")
+  yd <- file.path(src, 6, "Year_2000MSY")
+  dir.create(yd, recursive = TRUE)
+  mk <- function(v, f) {
+    r <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2, crs = "EPSG:4326")
+    terra::values(r) <- v
+    terra::writeRaster(r, file.path(yd, f), overwrite = TRUE)
+  }
+  for (m in 1:12) mk(c(0, 5, 5, 5), sprintf("PPT%02d.asc", m))  # cell 1: all months 0
+  mk(c(40, 10, 10, 10), "Tmax_sm.asc")
+
+  out <- climateMosaicsParallel(y = "2000", climVars = "Tmax_sm", tile = 6, srcdir = src, dstdir = dst)
+  expect_equal(as.vector(terra::values(terra::rast(out))), c(NA, 10, 10, 10))
+})
