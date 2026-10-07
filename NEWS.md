@@ -1,5 +1,7 @@
 # climateData (development version)
 
+- `prepClimateLayers()` now writes multi-layer climate stacks band-interleaved in 256 x 256 tiles (`INTERLEAVE=BAND`, `TILED=YES`) through `postProcessTo(writeTo = , gdal = )`, instead of pixel-interleaved 1-row strips, so reading one year's layer no longer decompresses every layer in the file (about 8.8 s down to 0.14 s for a 90-layer stack). Values are unchanged. Needs reproducible >= 3.2.1.9057, in which `writeTo()` honours `gdal`. The options are an argument of the cached `postProcessTo()` call, so existing multi-layer stacks are rebuilt the next time `prepClimateLayers()` runs. New exported `climateStackGdalOptions()` returns them, for code that rewrites the stacks or caches `prepClimateLayers()` (e.g., canClimateData).
+
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
   (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
   before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept
