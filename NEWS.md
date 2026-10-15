@@ -1,5 +1,6 @@
 # climateData (development version)
 
+- New exported `checkCalendarYears(start, end, module, hint, years)`: stops with a message saying what to set when a run's start is not a calendar year the climate data cover (1901 to 2100, from `available()`, or the range of `years` when given). For modules such as canClimateData and climateYear, to fail early on model-year times (0-10, as `setupProject()` gives without `times`).
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
   (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
   before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept
