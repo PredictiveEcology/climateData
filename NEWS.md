@@ -2,6 +2,8 @@
 
 - `prepClimateLayers()` now writes multi-layer climate stacks band-interleaved in 256 x 256 tiles (`INTERLEAVE=BAND`, `TILED=YES`) through `postProcessTo(writeTo = , gdal = )`, instead of pixel-interleaved 1-row strips, so reading one year's layer no longer decompresses every layer in the file (about 8.8 s down to 0.14 s for a 90-layer stack). Values are unchanged. This needs a `reproducible` in which `writeTo()` honours `gdal` (older versions ignore it and write the old layout). The creation options are part of the cache key, so existing stacks are rebuilt the next time `prepClimateLayers()` runs.
 - New exported `checkCalendarYears(start, end, module, hint, years)`: stops with a message saying what to set when a run's start is not a calendar year the climate data cover (1901 to 2100, from `available()`, or the range of `years` when given). For modules such as canClimateData and climateYear, to fail early on model-year times (0-10, as `setupProject()` gives without `times`).
+- `prepClimateLayers()` now writes multi-layer climate stacks band-interleaved in 256 x 256 tiles (`INTERLEAVE=BAND`, `TILED=YES`) through `postProcessTo(writeTo = , gdal = )`, instead of pixel-interleaved 1-row strips, so reading one year's layer no longer decompresses every layer in the file (about 8.8 s down to 0.14 s for a 90-layer stack). Values are unchanged. Needs reproducible >= 3.2.1.9057, in which `writeTo()` honours `gdal`. The options are an argument of the cached `postProcessTo()` call, so existing multi-layer stacks are rebuilt the next time `prepClimateLayers()` runs. New exported `climateStackGdalOptions()` returns them, for code that rewrites the stacks or caches `prepClimateLayers()` (e.g., canClimateData).
+
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
   (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
   before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept
@@ -11,6 +13,7 @@
 - `climateMosaicsParallel()` sets every variable to NA, for that year, in cells where all 12 monthly `PPT` values are
   exactly 0. ClimateNA tiles 6 and 7 have such cells south of the Canada/US border (45.8-49 N), where the DEM is
   not valid and temperatures are nonsense (Tmax up to 42.7 C); they gave absurd `cumMDC` and `CMD`.
+
 - When a seasonal variable is needed, monthly and yearly variables now come from the same MSY ("all")
   archive, which contains all their files. Before, they were also downloaded from their own M and Y archives
   unless M, S and Y were all needed. Some M archives on the server are incomplete (tile 46's future 2080s

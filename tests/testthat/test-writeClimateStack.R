@@ -1,5 +1,5 @@
 ## needs reproducible (>= 3.2.1.9057), in which `writeTo()` honours `gdal` (DESCRIPTION Imports)
-test_that("postProcessTo(writeTo, gdal = .climateStackGdalOptions) writes band-interleaved tiles with identical values", {
+test_that("postProcessTo(writeTo, gdal = climateStackGdalOptions()) writes band-interleaved tiles with identical values", {
   skip_if_not_installed("terra")
   skip_if_not_installed("sf")
   skip_if_not_installed("withr")
@@ -17,7 +17,7 @@ test_that("postProcessTo(writeTo, gdal = .climateStackGdalOptions) writes band-i
   old <- reproducible::postProcessTo(r, to = to, maskTo = mask, writeTo = oldFile,
                                      useCache = FALSE, overwrite = TRUE)
   new <- reproducible::postProcessTo(r, to = to, maskTo = mask, writeTo = newFile,
-                                     gdal = climateData:::.climateStackGdalOptions,
+                                     gdal = climateStackGdalOptions(),
                                      useCache = FALSE, overwrite = TRUE)
   expect_match(sf::gdal_utils("info", oldFile, quiet = TRUE), "INTERLEAVE=PIXEL")
   info <- sf::gdal_utils("info", newFile, quiet = TRUE)
