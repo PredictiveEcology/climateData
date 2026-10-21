@@ -505,6 +505,7 @@ prepClimateLayers <- function(
         to = rasterToMatch,
         maskTo = studyArea,
         writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
+        gdal = if (terra::nlyr(newClimRast) > 1) climateStackGdalOptions(), ## an argument, so in the Cache() key
         useCache = FALSE, ## use internal cache for postProcessTo
         overwrite = TRUE
       ) |>
@@ -537,4 +538,24 @@ prepClimateLayers <- function(
     }
   }
   unique(types)
+}
+
+#' GDAL creation options for the multi-layer climate stacks
+#'
+#' A yearly layer is read on its own (one `year<YYYY>` layer out of ~90), which is slow if the
+#' layers are pixel-interleaved in 1-row strips (GDAL's default): every read decompresses all
+#' layers. Band-interleaved 256 x 256 tiles (GDAL's usual tile size: small enough that one layer
+#' touches few tiles, big enough to compress well) let a single layer be read without touching
+#' the others. Compression is left to terra's default (LZW).
+#'
+#' `prepClimateLayers()` writes its multi-layer stacks with these options. Code that rewrites
+#' those stacks, or caches a call to `prepClimateLayers()`, can use them too: add the value to
+#' the cache key (e.g., `.cacheExtra`), because `Cache()` digests a function's source, not the
+#' values it refers to.
+#'
+#' @return character vector of GDAL creation options, for `terra::writeRaster(gdal = )` or
+#'   `reproducible::postProcessTo(gdal = )`.
+#' @export
+climateStackGdalOptions <- function() {
+  c("INTERLEAVE=BAND", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256")
 }
