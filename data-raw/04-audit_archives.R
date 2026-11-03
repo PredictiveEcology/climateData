@@ -145,14 +145,27 @@ stopOnWorkerErrors <- function(x, what) {
 }
 
 ## local zips: MD5 and listing, in parallel (reads from the share)
+## a zip that can't be read is reported (problem "unreadable_zip") and checked as empty,
+## so its folders show as missing, rather than stopping the audit
+readListing <- function(f) {
+  l <- tryCatch(.zipListing(f), error = \(e) e)
+  if (inherits(l, "error")) {
+    return(list(
+      listing = data.frame(path = character(0), size = numeric(0)),
+      error = conditionMessage(l)
+    ))
+  }
+  list(listing = l, error = NA_character_)
+}
+
 message("Reading local zips")
 local <- parallel::mclapply(
   file.path(ClimateNAdata, zips$zipfile),
   function(f) {
     if (!file.exists(f)) {
-      return(list(md5 = NA_character_, listing = NULL))
+      return(list(md5 = NA_character_, listing = NULL, error = NA_character_))
     }
-    list(md5 = unname(tools::md5sum(f)), listing = .zipListing(f))
+    c(list(md5 = unname(tools::md5sum(f))), readListing(f))
   },
   mc.cores = nCores
 ) |>
@@ -164,6 +177,8 @@ useLocal <- !is.na(zips$md5_local) & !is.na(zips$md5_drive) & zips$md5_local == 
 toDownload <- which(!useLocal & zips$on_drive)
 message("Downloading ", length(toDownload), " zips whose local copy is missing or differs")
 listings <- lapply(local, `[[`, "listing")
+unreadable <- vapply(local, `[[`, character(1), "error")
+unreadable[!useLocal] <- NA_character_
 zips$source <- ifelse(useLocal, "local", "none")
 for (i in toDownload) {
   dl <- file.path(downloadDir, basename(zips$zipfile[i]))
@@ -178,7 +193,9 @@ for (i in toDownload) {
     }
   )
   if (ok) {
-    listings[[i]] <- .zipListing(dl)
+    r <- readListing(dl)
+    listings[[i]] <- r$listing
+    unreadable[i] <- r$error
     zips$source[i] <- "drive"
   }
 }
@@ -286,6 +303,13 @@ for (i in differs) {
     zipCols(i),
     problem = "md5_differs",
     item = paste0("local ", zips$md5_local[i], " / drive ", zips$md5_drive[i])
+  )
+}
+for (i in which(!is.na(unreadable))) {
+  report[[length(report) + 1]] <- cbind(
+    zipCols(i),
+    problem = "unreadable_zip",
+    item = unreadable[i]
   )
 }
 for (i in which(vapply(problems, nrow, integer(1)) > 0)) {

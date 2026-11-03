@@ -51,9 +51,18 @@
 
 ## File listing of a zip, without directory entries.
 .zipListing <- function(zipfile) {
+  ## utils::unzip() cannot open a zip with no entries (only the 22-byte end-of-archive record)
+  if (.isEmptyZip(zipfile)) {
+    return(data.frame(path = character(0), size = numeric(0)))
+  }
   x <- utils::unzip(zipfile, list = TRUE)
   x <- x[!endsWith(x$Name, "/"), , drop = FALSE]
   data.frame(path = x$Name, size = as.numeric(x$Length))
+}
+
+.isEmptyZip <- function(zipfile) {
+  identical(file.size(zipfile), 22) &&
+    identical(readBin(zipfile, "raw", 4L), as.raw(c(0x50, 0x4b, 0x05, 0x06)))
 }
 
 ## File listing of `folders` under `root`, with paths relative to `root`.

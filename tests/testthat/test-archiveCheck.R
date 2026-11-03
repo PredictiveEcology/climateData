@@ -87,6 +87,21 @@ test_that(".zipListing and .dirListing return relative paths and sizes", {
   expect_gt(d$size, 0)
 })
 
+## Published as 9_CanESM5_370_MSY_2100.zip: 22 bytes, an end-of-archive record and nothing
+## else. utils::unzip() cannot open it, which stopped the first full audit.
+test_that(".zipListing reads an empty zip as an empty listing", {
+  skip_if_not_installed("withr")
+  z <- withr::local_tempfile(fileext = ".zip")
+  writeBin(as.raw(c(0x50, 0x4b, 0x05, 0x06, rep(0, 18))), z)
+
+  l <- .zipListing(z)
+  expect_equal(nrow(l), 0L)
+  expected <- .archiveExpected(rowsH(2100), "historical")
+  p <- .archiveCheck(l, expected)
+  expect_equal(p$problem, "missing_folder")
+  expect_equal(p$item, "Year_2100Y")
+})
+
 test_that(".archiveIndexGaps finds years the index lacks", {
   idx <- rowsH(setdiff(available("historical")$years, 2013L))
   g <- .archiveIndexGaps(idx, "historical")
