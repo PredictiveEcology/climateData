@@ -246,3 +246,34 @@ checksums_sql <- function(dbfile, type) {
 
   return(list(db = db, df = df))
 }
+
+## One fingerprint per published zip (see data-raw/06-archive_fingerprints.R).
+## Written with explicit SQL types: dplyr::rows_*() would remap them.
+.archivesColumns <- c("gid", "type", "zipfile", "md5", "n_files", "size", "verified")
+
+.archivesCreate <- function(db) {
+  DBI::dbExecute(
+    db,
+    "CREATE TABLE IF NOT EXISTS archives (
+      gid      TEXT PRIMARY KEY,  -- Google Drive file ID
+      type     TEXT NOT NULL,     -- historical | historical_normals | future
+      zipfile  TEXT NOT NULL,     -- path relative to the ClimateNA data root
+      md5      TEXT NOT NULL,     -- Drive md5Checksum of the published file
+      n_files  INTEGER NOT NULL,  -- members in the zip (directory entries excluded)
+      size     REAL NOT NULL,     -- bytes
+      verified REAL               -- epoch seconds when it last passed the check; NULL if never
+    )"
+  )
+  invisible(db)
+}
+
+.archivesUpsert <- function(db, df) {
+  sql <- paste0(
+    "INSERT OR REPLACE INTO archives (",
+    paste(.archivesColumns, collapse = ", "),
+    ") VALUES (",
+    paste(rep("?", length(.archivesColumns)), collapse = ", "),
+    ")"
+  )
+  DBI::dbExecute(db, sql, params = unname(as.list(df[.archivesColumns]))) |> as.integer()
+}
