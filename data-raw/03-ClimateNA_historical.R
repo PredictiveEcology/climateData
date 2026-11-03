@@ -26,21 +26,76 @@ climate_db <- dbdf[["db"]]
 climate_historical_df <- dbdf[["df"]]
 rm(dbdf)
 
-MSYs <- c("MSY", "M", "S", "Y")
+MSYs <- c("MSY", "M", "Y") ## no "S" archives exist: no database rows, no Drive folder below
 
-historical_years <- available(climateType)[["years"]]
+## only years not yet in the database; available(climateType)[["years"]] for a full rebuild
+historical_years <- 2025L
 # historical_years <- 1901L:1990L
 # historical_years <- 1991L:2024L
 historical_decades <- (historical_years %/% 10 * 10) |> unique() |> as.integer()
 period_ann <- paste0("Year_", historical_years, ".ann")
 
+tilesToRun <- NULL ## all tiles; or e.g. 26L to check one tile first
+
+if (isTRUE(useClimateNAr)) {
+  ClimateNAr_checkYears(historical_years)
+
+  ## Restore each tile's existing archives for the decades written here, so the decade zips below
+  ## are rebuilt with all their years, and for the latest year already done, whose outputs give
+  ## each tile's grid (for the DEM) and the variables of each archive.
+  done <- dplyr::collect(climate_historical_df)
+  templateYear <- max(setdiff(done$year, historical_years))
+  restore <- done[
+    done$msy %in% MSYs &
+      (done$year == templateYear | (done$year %/% 10L * 10L) %in% historical_decades),
+  ] |>
+    dplyr::distinct(msy, tileid, zipfile, gid)
+  if (!is.null(tilesToRun)) {
+    restore <- restore[restore$tileid %in% tilesToRun, ]
+  }
+  for (i in seq_len(nrow(restore))) {
+    fzip <- file.path(ClimateNAdata, restore$zipfile[i])
+    if (!file.exists(fzip)) {
+      dir.create(dirname(fzip), recursive = TRUE, showWarnings = FALSE)
+      googledrive::drive_download(googledrive::as_id(restore$gid[i]), path = fzip)
+    }
+    archive::archive_extract(
+      fzip,
+      dir = ClimateNA_path(ClimateNAdata, tile = restore$tileid[i], type = climateType, restore$msy[i])
+    )
+  }
+
+  dem_dir <- file.path(ClimateNAdata, "dem_ClimateNAr")
+  dir.create(dem_dir, showWarnings = FALSE)
+  dem_ff <- vapply(unique(restore$tileid), function(tile) {
+    f <- file.path(dem_dir, paste0("can_dem_", tile, ".asc"))
+    if (!file.exists(f)) {
+      tmpl <- file.path(
+        ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, "MSY"),
+        paste0("Year_", templateYear, "MSY"),
+        "Tmax07.asc"
+      )
+      ClimateNAr_tileDEM(
+        tmpl,
+        f,
+        destinationPath = file.path(ClimateNAdata, "dem_src"),
+        cachePath = file.path(ClimateNAdata, "cache")
+      )
+    }
+    f
+  }, character(1))
+}
+
 if (!exists("dem_ff")) {
   dem_ff <- list.files(file.path(ClimateNAdata, "dem"), pattern = "[.]asc$", full.names = TRUE)
   stopifnot(length(dem_ff) > 0)
 }
+if (!is.null(tilesToRun)) {
+  dem_ff <- dem_ff[tileID(dem_ff) %in% tilesToRun]
+}
 
 # plan(sequential)
-plan("callr", workers = min(length(dem_ff), maxCores))
+plan("callr", workers = min(length(dem_ff), if (isTRUE(useClimateNAr)) maxWorkersClimateNAr else maxCores))
 
 # get ClimateNA historical time series ----------------------------------------------------------
 
@@ -75,7 +130,22 @@ progressr::with_progress({
             dplyr::collect()
 
           if (nrow(row) == 0) {
-            if (isTRUE(runClimateNA)) {
+            if (isTRUE(runClimateNA) && isTRUE(useClimateNAr)) {
+              ## one ClimateNAr run writes all of MSYs for this year
+              if (!dir.exists(file.path(ClimateNAout, paste0("Year_", yr, msy)))) {
+                message(glue::glue("Running ClimateNAr for tile {tile}: {ann} ..."))
+                outDirs <- sapply(MSYs, function(m) {
+                  climateData::ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, m)
+                }, simplify = FALSE)
+                ## each archive keeps the variables it had for templateYear
+                vars <- Map(function(d, m) {
+                  list.files(file.path(d, paste0("Year_", templateYear, m)), "[.]asc$") |>
+                    tools::file_path_sans_ext()
+                }, outDirs, names(outDirs))
+                ClimateNAr_tile(ClimateNAr_fn(), f, yr, outDirs, vars, file.path(ClimateNAdata, "tmp"))
+                message(glue::glue("... completed ClimateNAr for tile {tile}: {ann}"))
+              }
+            } else if (isTRUE(runClimateNA)) {
               message(glue::glue("Running ClimateNA for tile {tile}: {ann} {msy} ..."))
               withr::local_dir(ClimateNAdir)
               sys::exec_wait(
@@ -123,8 +193,9 @@ progressr::with_progress({
 })
 new_rows_historic <- dplyr::bind_rows(new_rows_historic)
 
+## new rows have no rowid: SQLite assigns it (AUTOINCREMENT). Numbering them from 1, as before,
+## collides with the existing rows.
 if (!"rowid" %in% colnames(new_rows_historic)) {
-  new_rows_historic <- tibble::rowid_to_column(new_rows_historic)
   dplyr::rows_append(climate_historical_df, new_rows_historic, copy = TRUE, in_place = TRUE)
 } else {
   dplyr::rows_update(
@@ -247,6 +318,9 @@ if (createZips) {
             ) |>
               dplyr::collect()
 
+            ## the zip replaces the decade's archive: every year it lists must be on disk
+            stopifnot(all(dir.exists(file.path(ClimateNAout, paste0("Year_", row$year, msy)))))
+
             files2add <- fs::dir_ls(
               ClimateNAout,
               regexp = paste0("Year_(", paste(dcd + 0:9, collapse = "|"), ")", msy, "$")
@@ -282,6 +356,12 @@ if (createZips) {
     )
   })
   new_rows_historic <- dplyr::bind_rows(new_rows_historic)
+
+  ## the connection was closed after the first section
+  dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
+  climate_db <- dbdf[["db"]]
+  climate_historical_df <- dbdf[["df"]]
+  rm(dbdf)
 
   rows_update(
     climate_historical_df,
@@ -368,6 +448,11 @@ if (uploadArchives) {
     )
   })
   new_rows_historic <- dplyr::bind_rows(new_rows_historic)
+
+  dbdf <- ClimateNA_sql(wrkngDBfile, climateType)
+  climate_db <- dbdf[["db"]]
+  climate_historical_df <- dbdf[["df"]]
+  rm(dbdf)
 
   rows_update(
     climate_historical_df,

@@ -34,16 +34,24 @@ devtools::load_all(prjDir)
 
 ClimateNAdir <- "C:/Climatena_v760"
 ClimateNAexe <- "ClimateNA_v7.60.exe"
-ClimateNAdata <- switch(
+ClimateNAdata <- Sys.getenv("CLIMATENA_DATA", switch(
   Sys.info()[["sysname"]],
   Linux = "/mnt/data/climate/ClimateNA_data",
   Windows = "C:/ClimateNA_data"
-)
+))
 stopifnot(dir.exists(ClimateNAdata))
 
-userEmail <- "achubaty@for-cast.ca"
+## TRUE: historical tiles are made with the ClimateNAr R package (any OS; see 00-ClimateNAr.R)
+## instead of ClimateNAexe
+useClimateNAr <- TRUE
+maxWorkersClimateNAr <- 8L ## each ClimateNAr() call peaks at about 7 GB
+source(file.path(prjDir, "data-raw", "00-ClimateNAr.R"))
+
+userEmail <- Sys.getenv("CLIMATENA_DRIVE_EMAIL", "achubaty@for-cast.ca")
 oauthCachePath <- file.path(prjDir, ".secrets")
-googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
+if (!googledrive::drive_has_token()) {
+  googledrive::drive_auth(email = userEmail, cache = oauthCachePath)
+}
 
 maxCores <- parallelly::availableCores() * 0.75
 
