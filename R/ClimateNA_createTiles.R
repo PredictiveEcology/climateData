@@ -100,7 +100,7 @@ sqlite_connect_db <- function(dbfile) {
   )
 
   if (isTRUE(firstRun)) {
-    DBI::dbExecute(db, "PRAGMA journal_mode = WAL")   ## using WAL allows concurrency
+    DBI::dbExecute(db, "PRAGMA journal_mode = WAL") ## using WAL allows concurrency
     DBI::dbExecute(db, "PRAGMA busy_timeout = 60000") ## set busy timeout (ms); allows concurrency.
   }
 
@@ -132,51 +132,51 @@ ClimateNA_sql <- function(dbfile, type) {
     type,
     historical_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
-      period = "CHARACTER",    ## climate period
-      tileid = "INTEGER",      ## tile ID
-      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
-      zipfile = "CHARACTER",   ## relative file path
-      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
-      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER", ## climate period
+      tileid = "INTEGER", ## tile ID
+      created = "DATETIME", ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER", ## relative file path
+      archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
     ),
     future_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      gcm = "CHARACTER",       ## climate scenario GCM
-      ssp = "CHARACTER",       ## climate scenario SSP
-      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
-      period = "CHARACTER",    ## climate period
-      tileid = "INTEGER",      ## tile ID
-      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
-      zipfile = "CHARACTER",   ## relative file path
-      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
-      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
+      gcm = "CHARACTER", ## climate scenario GCM
+      ssp = "CHARACTER", ## climate scenario SSP
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER", ## climate period
+      tileid = "INTEGER", ## tile ID
+      created = "DATETIME", ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER", ## relative file path
+      archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
     ),
     historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "INTEGER",        ## climate year
-      tileid = "INTEGER",      ## tile ID
-      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
-      zipfile = "CHARACTER",   ## relative file path
-      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
-      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "INTEGER", ## climate year
+      tileid = "INTEGER", ## tile ID
+      created = "DATETIME", ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER", ## relative file path
+      archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
     ),
     future = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      gcm = "CHARACTER",       ## climate scenario GCM
-      ssp = "CHARACTER",       ## climate scenario SSP
-      msy = "CHARACTER",       ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "INTEGER",        ## climate year
-      tileid = "INTEGER",      ## tile ID
-      created = "DATETIME",    ## timestamp of when tile set was created using ClimateNA
-      zipfile = "CHARACTER",   ## relative file path
-      archived = "DATETIME",   ## timestamp of when tile set archive was created (zipped)
-      gid = "CHARACTER",       ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME"    ## timestamp of when archive uploaded to google drive
+      gcm = "CHARACTER", ## climate scenario GCM
+      ssp = "CHARACTER", ## climate scenario SSP
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "INTEGER", ## climate year
+      tileid = "INTEGER", ## tile ID
+      created = "DATETIME", ## timestamp of when tile set was created using ClimateNA
+      zipfile = "CHARACTER", ## relative file path
+      archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
+      gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
+      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
     )
   )
 
@@ -200,39 +200,39 @@ checksums_sql <- function(dbfile, type) {
     type,
     historical_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
-      period = "CHARACTER",     ## climate period
-      tileid = "INTEGER",       ## tile ID
-      filename = "CHARACTER",   ## file name
-      filehash = "CHARACTER"    ## file hash (checksum)
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER", ## climate period
+      tileid = "INTEGER", ## tile ID
+      filename = "CHARACTER", ## file name
+      filehash = "CHARACTER" ## file hash (checksum)
     ),
     future_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      gcm = "CHARACTER",        ## climate scenario GCM
-      ssp = "CHARACTER",        ## climate scenario SSP
-      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
-      period = "CHARACTER",     ## climate period
-      tileid = "INTEGER",       ## tile ID
-      filename = "CHARACTER",   ## file name
-      filehash = "CHARACTER"    ## file hash (checksum)
+      gcm = "CHARACTER", ## climate scenario GCM
+      ssp = "CHARACTER", ## climate scenario SSP
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      period = "CHARACTER", ## climate period
+      tileid = "INTEGER", ## tile ID
+      filename = "CHARACTER", ## file name
+      filehash = "CHARACTER" ## file hash (checksum)
     ),
     historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "INTEGER",         ## climate year
-      tileid = "INTEGER",       ## tile ID
-      filename = "CHARACTER",   ## file name
-      filehash = "CHARACTER"    ## file hash (checksum)
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "INTEGER", ## climate year
+      tileid = "INTEGER", ## tile ID
+      filename = "CHARACTER", ## file name
+      filehash = "CHARACTER" ## file hash (checksum)
     ),
     future = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
-      gcm = "CHARACTER",        ## climate scenario GCM
-      ssp = "CHARACTER",        ## climate scenario SSP
-      msy = "CHARACTER",        ## one of: 'M', 'S', 'Y', 'MSY'
-      year = "INTEGER",         ## climate year
-      tileid = "INTEGER",       ## tile ID
-      filename = "CHARACTER",   ## file name
-      filehash = "CHARACTER"    ## file hash (checksum)
+      gcm = "CHARACTER", ## climate scenario GCM
+      ssp = "CHARACTER", ## climate scenario SSP
+      msy = "CHARACTER", ## one of: 'M', 'S', 'Y', 'MSY'
+      year = "INTEGER", ## climate year
+      tileid = "INTEGER", ## tile ID
+      filename = "CHARACTER", ## file name
+      filehash = "CHARACTER" ## file hash (checksum)
     )
   )
 
