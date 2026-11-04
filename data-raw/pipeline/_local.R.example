@@ -1,0 +1,33 @@
+## Machine-specific settings for the ClimateNA pipeline. Copy to _local.R (gitignored) and edit.
+
+local <- list(
+  ## the release settings; NULL for the committed data-raw/pipeline/release.yml
+  release_file = NULL,
+
+  ## the package checkout (workers load it with devtools::load_all())
+  pkg_dir = normalizePath("."),
+
+  ## an unpacked ClimateNA release, mounted read-only into the containers
+  climatena_dir = "/path/to/ClimateNA_v7.70",
+
+  ## DEM tiles (can_dem_<tile>.asc, Windows line endings) at the release's resolution
+  dem_dir = "/path/to/ClimateNA_data/dem",
+
+  ## everything this release writes: raw/, zips/, _targets/ and the index
+  out_root = "/path/to/releases/cna-v7.70-3arcmin",
+
+  ## user the containers run as (must match the image's build args)
+  uid = 1000L,
+  gid = 1000L,
+
+  ## NULL for all tiles with a DEM, or a subset for testing, e.g. 39L
+  tiles = NULL,
+
+  ## TRUE: build everything but upload nothing to Drive
+  dry_run = TRUE,
+
+  ## how many ClimateNA runs at once: one worker per core on one machine...
+  controller = crew::crew_controller_local(workers = 4)
+  ## ...or across nodes (FOR-CAST/crew.ssh):
+  ## controller = crew.ssh::crew_controller_ssh(nodes = c(node1 = 60L, node2 = 90L), ...)
+)
