@@ -30,6 +30,10 @@ local <- list(
   ## TRUE: build everything but upload nothing to Drive
   dry_run = TRUE,
 
+  ## the previous release's index: zips identical to its (same path and MD5) reuse its Drive
+  ## files instead of being uploaded again. NULL for the package's shipped index.
+  previous_index = NULL,
+
   ## seconds before a ClimateNA run is stopped and its period counted as failed
   run_timeout = 3600,
 

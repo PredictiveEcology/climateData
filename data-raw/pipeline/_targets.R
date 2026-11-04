@@ -27,6 +27,9 @@ container_gid <- local$gid
 tile_subset <- local$tiles
 dry_run <- local$dry_run
 run_timeout <- local$run_timeout %||% 3600 # seconds per ClimateNA run
+## the previous release's index, whose identical zips are reused rather than uploaded again
+previous_index_path <- local$previous_index %||%
+  file.path(local$pkg_dir, "inst", "extdata", "ClimateNA_tiles.sqlite")
 
 devtools::load_all(pkg_dir_path, quiet = TRUE) # the main process uses the checkout too
 
@@ -109,10 +112,11 @@ mapped <- tar_map(
     deployment = "worker"
   ),
 
-  ## each zip as a new file in the release's Drive folder (main process, where the token is)
+  ## each zip as an earlier release's identical file, or a new file in the release's Drive folder
+  ## (main process, where the token is)
   tar_target(
     uploads,
-    upload_zips(zips, specs, release_id, drive_parent, dry_run),
+    upload_zips(zips, specs, release_id, drive_parent, dry_run, previous_archives),
     pattern = map(zips, specs)
   )
 )
@@ -131,6 +135,8 @@ list(
   tar_target(dem_dir, dem_dir_path),
   tar_target(out_root, out_root_path),
   tar_target(tiles, pipeline_tiles(dem_dir, tile_subset)),
+  tar_target(previous_index, previous_index_path, format = "file"),
+  tar_target(previous_archives, pipeline_previous_archives(previous_index)),
 
   mapped,
 
