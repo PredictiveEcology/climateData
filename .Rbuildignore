@@ -13,3 +13,4 @@
 ^\.vscode$
 ^CLAUDE\.md$
 ^\.claude$
+^_tmp$

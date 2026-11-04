@@ -3,9 +3,15 @@
 ## Internal functions that build the layers `prepClimateLayers()` caches. Their bodies are part of the
 ## cache key, so a change to any of them (e.g. `maskInvalidPPT()`) rebuilds the cached layers.
 .climateBuilders <- c(
-  "climateMosaicsParallel", "climateMosaicsNormalsParallel", "maskInvalidPPT",
-  "climateStacksByYear", "climateStacksByPeriod",
-  "calcStackLayersType", "calcAsIs", "calcMDC", "calcCumMDC"
+  "climateMosaicsParallel",
+  "climateMosaicsNormalsParallel",
+  "maskInvalidPPT",
+  "climateStacksByYear",
+  "climateStacksByPeriod",
+  "calcStackLayersType",
+  "calcAsIs",
+  "calcMDC",
+  "calcCumMDC"
 )
 
 #' Digest of the bodies of the layer-building functions
@@ -215,9 +221,12 @@ prepClimateLayers <- function(
   ## seasonal vars: XXX_zz
   ## normal vars: will need to be prefixed with 'normal_'
   needVars <- purrr::transpose(climateVarsList)[["vars"]] |> unlist() |> unname() |> unique()
+  .stopIfLegacyRadiation(needVars)
   types <- whichTypes(needVars)
   MSYN <- whichMSYN(needVars)
-  unique_types_msy <- paste0(types, "_", MSYN) |> gsub("_normal", "", x = _) |> unique() |>
+  unique_types_msy <- paste0(types, "_", MSYN) |>
+    gsub("_normal", "", x = _) |>
+    unique() |>
     .consolidateClimateTypes()
 
   ## determine which years / periods we need to get
@@ -233,8 +242,12 @@ prepClimateLayers <- function(
       msy <- strsplit(type_msyn, "historical_")[[1]] |> dplyr::last()
       climatePath_type <- file.path(climatePath, type)
       urls <- getClimateURLs(type = type, tile = tile, years = historical_years, msy = msy)
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
-                             needVars = needVars)
+      out <- getClimateTiles(
+        tile = tile,
+        climateURLs = urls,
+        climatePath = climatePath_type,
+        needVars = needVars
+      )
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(historical_years)),
@@ -245,8 +258,12 @@ prepClimateLayers <- function(
       type <- "historical_normals"
       climatePath_type <- file.path(climatePath, "historical", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y")
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
-                             needVars = needVars)
+      out <- getClimateTiles(
+        tile = tile,
+        climateURLs = urls,
+        climatePath = climatePath_type,
+        needVars = needVars
+      )
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(historical_period)),
@@ -265,8 +282,12 @@ prepClimateLayers <- function(
         gcm = gcm,
         ssp = ssp
       )
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
-                             needVars = needVars)
+      out <- getClimateTiles(
+        tile = tile,
+        climateURLs = urls,
+        climatePath = climatePath_type,
+        needVars = needVars
+      )
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(future_years)),
@@ -278,8 +299,12 @@ prepClimateLayers <- function(
       type <- "future_normals"
       climatePath_type <- file.path(climatePath, "future", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y", gcm = gcm, ssp = ssp)
-      out <- getClimateTiles(tile = tile, climateURLs = urls, climatePath = climatePath_type,
-                             needVars = needVars)
+      out <- getClimateTiles(
+        tile = tile,
+        climateURLs = urls,
+        climatePath = climatePath_type,
+        needVars = needVars
+      )
       allDirs <- file.path(
         climatePath_type,
         rep(tile, length(future_period)),
@@ -468,11 +493,7 @@ prepClimateLayers <- function(
       ))
     }
     ## end assertions/checks
-    funOut <- do.call(eval(climFun), list(
-      stacks = climStacks,
-      layers = climVars,
-      .dots = climDots
-    ))
+    funOut <- do.call(eval(climFun), list(stacks = climStacks, layers = climVars, .dots = climDots))
 
     return(funOut)
   })
@@ -499,15 +520,14 @@ prepClimateLayers <- function(
     type <- strsplit(nm, "_")[[1]] |> dplyr::first()
     var <- stringr::str_remove(nm, paste0(type, "_"))
     fname <- paste(var, type, studyAreaName, sep = "_")
-    climRast <-
-      postProcessTo(
-        from = newClimRast,
-        to = rasterToMatch,
-        maskTo = studyArea,
-        writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
-        useCache = FALSE, ## use internal cache for postProcessTo
-        overwrite = TRUE
-      ) |>
+    climRast <- postProcessTo(
+      from = newClimRast,
+      to = rasterToMatch,
+      maskTo = studyArea,
+      writeTo = file.path(climatePathOut, paste0(fname, ".tif")),
+      useCache = FALSE, ## use internal cache for postProcessTo
+      overwrite = TRUE
+    ) |>
       Cache(
         omitArgs = c("to", "maskTo", "overwrite"), # don't digest these each time
         .functionName = paste0("prepClimateLayers_", fname),
