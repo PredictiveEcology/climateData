@@ -1,0 +1,62 @@
+## Build the ClimateNA-under-Wine image (docker/climatena/), smoke-test Wine, and push it to
+## ghcr.io. ClimateNA itself is not in the image, so CI can only check that Wine and the VB6
+## runtime start; ClimateNA runs are validated on a compute node (see the maintainer vignette).
+
+name: docker-climatena
+
+on:
+  push:
+    branches: [main, development]
+    paths: ["docker/climatena/**", ".github/workflows/docker-climatena.yaml"]
+  pull_request:
+    branches: [main, development]
+    paths: ["docker/climatena/**", ".github/workflows/docker-climatena.yaml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/predictiveecology/climatena-wine
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag
+        id: tag
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/climatena
+          load: true
+          push: false
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:sha-${{ steps.tag.outputs.short }}
+
+      - name: Smoke test (Wine and the VB6 runtime start)
+        run: |
+          docker run --rm --entrypoint sh "$IMAGE:latest" -c \
+            'wine --version && xvfb-run -a wine cmd /c exit && test -f "$WINEPREFIX/drive_c/windows/system32/msvbvm60.dll"'
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        run: |
+          docker push "$IMAGE:latest"
+          docker push "$IMAGE:sha-${{ steps.tag.outputs.short }}"
