@@ -9,14 +9,22 @@ test_that("M and Y come from the MSY archive whenever MSY is needed", {
   expect_setequal(.consolidateClimateTypes(c("future_Y", "future_S")), "future_MSY")
   expect_setequal(.consolidateClimateTypes(c("future_M", "future_S", "future_Y")), "future_MSY")
   expect_setequal(.consolidateClimateTypes(c("historical_M", "historical_S")), "historical_MSY")
-  expect_setequal(.consolidateClimateTypes(c("historical_M", "historical_S", "future_M")),
-                  c("historical_MSY", "future_M"))
+  expect_setequal(
+    .consolidateClimateTypes(c("historical_M", "historical_S", "future_M")),
+    c("historical_MSY", "future_M")
+  )
 })
 
 test_that("without a seasonal variable, M and Y keep their own archives", {
   expect_setequal(.consolidateClimateTypes("future_M"), "future_M")
-  expect_setequal(.consolidateClimateTypes(c("historical_M", "historical_Y")), c("historical_M", "historical_Y"))
-  expect_setequal(.consolidateClimateTypes(c("historical_N", "historical_S")), c("historical_N", "historical_MSY"))
+  expect_setequal(
+    .consolidateClimateTypes(c("historical_M", "historical_Y")),
+    c("historical_M", "historical_Y")
+  )
+  expect_setequal(
+    .consolidateClimateTypes(c("historical_N", "historical_S")),
+    c("historical_N", "historical_MSY")
+  )
 })
 
 test_that("prepClimateLayers downloads only the MSY archive for monthly plus seasonal variables", {
@@ -33,14 +41,26 @@ test_that("prepClimateLayers downloads only the MSY archive for monthly plus sea
     buildClimateMosaics = function(...) stop("stop after downloads")
   )
   vars <- list(
-    future_cumMDC = list(vars = c("future_PPT05", "future_Tmax05"), fun = quote(calcAsIs),
-                         .dots = list(future_years = 2083:2085)),
-    future_CMD_sm = list(vars = "future_CMD_sm", fun = quote(calcAsIs),
-                         .dots = list(future_years = 2083:2085))
+    future_cumMDC = list(
+      vars = c("future_PPT05", "future_Tmax05"),
+      fun = quote(calcAsIs),
+      .dots = list(future_years = 2083:2085)
+    ),
+    future_CMD_sm = list(
+      vars = "future_CMD_sm",
+      fun = quote(calcAsIs),
+      .dots = list(future_years = 2083:2085)
+    )
   )
   expect_error(
-    prepClimateLayers(vars, srcdir = d, dstdir = file.path(d, "out"), tile = 46,
-                      gcm = "CNRM-ESM2-1", ssp = 370),
+    prepClimateLayers(
+      vars,
+      srcdir = d,
+      dstdir = file.path(d, "out"),
+      tile = 46,
+      gcm = "CNRM-ESM2-1",
+      ssp = 370
+    ),
     "stop after downloads"
   )
   expect_identical(unique(requested), "future_MSY")
@@ -56,7 +76,13 @@ test_that("monthly variables load from an MSY folder", {
   dir.create(msy, recursive = TRUE)
   terra::writeRaster(r, file.path(msy, "PPT05.asc"), overwrite = TRUE)
 
-  out <- climateMosaicsParallel(y = "2085", climVars = "PPT05", tile = 46, srcdir = src, dstdir = dst)
+  out <- climateMosaicsParallel(
+    y = "2085",
+    climVars = "PPT05",
+    tile = 46,
+    srcdir = src,
+    dstdir = dst
+  )
   expect_length(out, 1)
   expect_true(all(terra::values(terra::rast(out)) == 5))
 })
