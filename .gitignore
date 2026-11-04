@@ -34,3 +34,6 @@ tmp/
 
 ## scratch: drafts, plans, handoffs
 _tmp/
+
+## pkgdown site (built by GitHub Actions)
+docs/

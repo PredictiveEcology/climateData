@@ -13,7 +13,8 @@ Authors@R: c(
 Description: Utilities for working with North American climate data from
     'ClimateNA' <https://climatena.ca/>.
 License: GPL-3
-URL: https://github.com/PredictiveEcology/climateData
+URL: https://predictiveecology.github.io/climateData/,
+    https://github.com/PredictiveEcology/climateData
 BugReports: https://github.com/PredictiveEcology/climateData/issues
 Depends:
     R (>= 4.4)

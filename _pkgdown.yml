@@ -1,0 +1,46 @@
+url: https://predictiveecology.github.io/climateData/
+
+template:
+  bootstrap: 5
+
+articles:
+  - title: Using climateData
+    navbar: ~
+    contents:
+      - climateData
+
+reference:
+  - title: Getting climate data
+    contents:
+      - prepClimateLayers
+      - climateLayers
+      - available
+      - climateDataRelease
+      - latestHistoricalYear
+      - whereAmI
+  - title: Derived variables
+    contents:
+      - calcAsIs
+      - calcStackLayersType
+      - checkCalcStackLayers
+      - whichMSYN
+      - extractTimes
+  - title: Archives and the tile index
+    contents:
+      - getClimateURLs
+      - getClimateTiles
+      - getClimateTable
+      - getNormalsPeriods
+      - ClimateNA_tiles_sqlite
+  - title: Mosaics and stacks
+    contents:
+      - buildClimateMosaics
+      - climateStacksByYear
+  - title: Maintainer tools
+    desc: For building the climate archives and the tile index.
+    contents:
+      - ClimateNA_path
+      - ClimateNA_sql
+      - makeClimateDEM
+      - rewrite_asc
+      - tileID
