@@ -8,6 +8,9 @@ articles:
     navbar: ~
     contents:
       - climateData
+  - title: Maintaining climateData
+    contents:
+      - maintaining-climate-data
 
 reference:
   - title: Getting climate data
