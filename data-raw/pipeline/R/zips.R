@@ -50,7 +50,12 @@ pipeline_zip_rows <- function(spec, subset, zipfile) {
 ## Each subset zip holds each period's folder under the subset's own name (Year_2020M, ...), as
 ## a ClimateNA /M, /S or /Y run would have written it and as the package's reader expects. Files
 ## are staged by hard link (copied when linking isn't possible) and every zip is checked.
+## No zips when the batch failed (manifest NULL under error = "null"): its folders may hold a
+## killed run's truncated files, which the zip check (file names only) would not catch.
 zip_batch <- function(spec, manifest, outRoot, pkgDir) {
+  if (length(manifest) == 0) {
+    return(character(0))
+  }
   pipeline_load(pkgDir)
   tileDir <- pipeline_tile_dir(outRoot, spec)
   normals <- spec$type %in% c("historical_normals", "future_normals")
