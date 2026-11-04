@@ -25,6 +25,32 @@ pipeline_image_digest <- function(image) {
   d[1]
 }
 
+## A node-local directory for ClimateNA to write into. Writing straight to an NFS share is very
+## slow: ClimateNA checks its open files as it writes, which forces every write out to the
+## server, and 90 such runs at once stall in I/O wait. CLIMATENA_WORK_DIR when set (local crew
+## workers inherit it from the main process), otherwise the worker's tempdir().
+pipeline_work_dir <- function() {
+  d <- Sys.getenv("CLIMATENA_WORK_DIR")
+  if (nzchar(d)) d else tempdir()
+}
+
+## Copy an output folder from the work directory into `to` (a tile's raw folder), keeping
+## modification times, and check that the copy has the same files with the same sizes.
+pipeline_copy_folder <- function(from, to, folder) {
+  dir.create(to, recursive = TRUE, showWarnings = FALSE)
+  ok <- file.copy(file.path(from, folder), to, recursive = TRUE, copy.date = TRUE)
+  m <- merge(.dirListing(from, folder), .dirListing(to, folder), by = "path", all = TRUE)
+  isTRUE(ok) && nrow(m) > 0 && !anyNA(m) && all(m$size.x == m$size.y)
+}
+
+## Append a run's log to a batch log, and remove it.
+pipeline_append_log <- function(log, runLog) {
+  if (file.exists(runLog)) {
+    file.append(log, runLog)
+    unlink(runLog)
+  }
+}
+
 ## Run ClimateNA once in a container; TRUE on a clean exit. A timed-out run's container (which
 ## this function started and named) is removed, so it can't keep running in the background.
 pipeline_run_climatena <- function(args, name, log, timeout) {
@@ -37,9 +63,11 @@ pipeline_run_climatena <- function(args, name, log, timeout) {
 }
 
 ## Run every period of a batch that isn't already done, check each output, stamp it, and write
-## the batch's manifest. Stops (so the target errors and is retried next time) naming any
-## periods that failed. The target runs on every tar_make() (cue "always"), so a damaged or
-## deleted output folder is found and rerun; finished periods cost only a listing.
+## the batch's manifest. Each run writes to the node-local work directory; its output is checked
+## there, copied to the tile's raw folder, and stamped once the copy is checked. Stops (so the
+## target errors and is retried next time) naming any periods that failed. The target runs on
+## every tar_make() (cue "always"), so a damaged or deleted output folder is found and rerun;
+## finished periods cost only a listing.
 run_batch <- function(
   spec,
   climatenaExe,
@@ -66,6 +94,7 @@ run_batch <- function(
 
   imageDigest <- NULL
   failed <- character(0)
+  workDir <- file.path(pipeline_work_dir(), spec$id)
   for (p in spec$periods) {
     folder <- .periodFolder(spec$type, p, spec$msy, spec$gcm, spec$ssp)
     expected <- file.path(folder, paste0(vars, ".asc"))
@@ -76,23 +105,29 @@ run_batch <- function(
       imageDigest <- pipeline_image_digest(image)
       Sys.sleep(stats::runif(1, 0, 30)) # stagger container starts across batches
     }
-    unlink(file.path(tileDir, folder), recursive = TRUE) # clear any partial output
-    unlink(.stampPath(tileDir, folder))
+    unlink(.stampPath(tileDir, folder)) # no stamp until a checked copy is in place
+    unlink(file.path(tileDir, folder), recursive = TRUE) # clear any old or partial output
+    unlink(file.path(workDir, folder), recursive = TRUE)
+    dir.create(workDir, recursive = TRUE, showWarnings = FALSE)
+    runLog <- file.path(workDir, paste0(folder, ".log"))
     name <- paste0("cna-", gsub("[^A-Za-z0-9_.-]", "-", paste(spec$id, p, sep = "-")))
     args <- .climatenaDockerArgs(
       name = name,
       image = image,
       climatenaDir = climatenaDir,
       demFile = demFile,
-      outDir = tileDir,
+      outDir = workDir,
       exe = climatenaExe,
       msy = spec$msy,
       periodArg = .periodArg(spec$type, p, spec$gcm, spec$ssp),
       uid = uid,
       gid = gid
     )
-    ok <- pipeline_run_climatena(args, name, log, timeout) &&
-      .archiveComplete(.archiveCheck(.dirListing(tileDir, folder), expected))
+    ok <- pipeline_run_climatena(args, name, runLog, timeout) &&
+      .archiveComplete(.archiveCheck(.dirListing(workDir, folder), expected)) &&
+      pipeline_copy_folder(workDir, tileDir, folder)
+    pipeline_append_log(log, runLog)
+    unlink(file.path(workDir, folder), recursive = TRUE)
     if (ok) {
       .writeStamp(tileDir, folder, climatenaVersion, demHash, imageDigest)
     } else {

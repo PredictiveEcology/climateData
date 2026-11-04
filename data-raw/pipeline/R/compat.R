@@ -56,8 +56,10 @@ compat_check <- function(
     unique(c(s[1], s[length(s)]))
   }))
 
-  scratchRoot <- file.path(outRoot, "compat", climatenaVersion, type)
-  imageDigest <- pipeline_image_digest(image)
+  ## reruns go to the node-local work directory (see pipeline_work_dir()); the log to outRoot
+  scratchRoot <- file.path(pipeline_work_dir(), "compat", climatenaVersion, type)
+  logDir <- file.path(outRoot, "logs")
+  dir.create(logDir, recursive = TRUE, showWarnings = FALSE)
   comparisons <- lapply(sample, function(stamp) {
     tileDir <- dirname(stamp)
     folder <- sub("[.]stamp$", "", basename(stamp))
@@ -80,11 +82,15 @@ compat_check <- function(
       uid = uid,
       gid = gid
     )
-    log <- file.path(scratchRoot, "compat.log")
-    if (!pipeline_run_climatena(args, name, log, timeout)) {
+    runLog <- file.path(scratch, paste0(folder, ".log"))
+    ok <- pipeline_run_climatena(args, name, runLog, timeout)
+    pipeline_append_log(file.path(logDir, paste0("compat_", type, ".log")), runLog)
+    if (!ok) {
       stop("ClimateNA ", climatenaVersion, " failed for the compatibility sample ", folder)
     }
-    .compareFolders(file.path(scratch, folder), file.path(tileDir, folder))
+    cmp <- .compareFolders(file.path(scratch, folder), file.path(tileDir, folder))
+    unlink(file.path(scratch, folder), recursive = TRUE)
+    cmp
   })
   verdict <- .compatVerdict(do.call(rbind, comparisons))
   if (verdict == "changed") {

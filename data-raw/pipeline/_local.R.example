@@ -16,6 +16,10 @@ local <- list(
   ## zips are reused.
   out_root = "/path/to/ClimateNA_data/pipeline/3arcmin",
 
+  ## node-local directory ClimateNA writes into before each output is copied to out_root
+  ## (ClimateNA writes very slowly to an NFS share); NULL for each worker's tempdir()
+  work_dir = NULL,
+
   ## user the containers run as (must match the image's build args)
   uid = 1000L,
   gid = 1000L,

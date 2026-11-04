@@ -29,6 +29,11 @@ run_timeout <- local$run_timeout %||% 3600 # seconds per ClimateNA run
 ## the previous release's index, whose identical zips are reused rather than uploaded again
 ## (relative, so it is the same path in any checkout)
 previous_index_path <- local$previous_index %||% "inst/extdata/ClimateNA_tiles.sqlite"
+## node-local directory for ClimateNA's output before it is copied to out_root (an environment
+## variable, so it is no target's dependency; local crew workers inherit it)
+if (!is.null(local$work_dir)) {
+  Sys.setenv(CLIMATENA_WORK_DIR = local$work_dir)
+}
 drive_email <- local$drive_email # the Google account whose cached token uploads use
 if (!is.null(drive_email)) {
   options(gargle_oauth_email = drive_email)
