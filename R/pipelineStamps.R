@@ -1,8 +1,8 @@
 ## Period stamps for the data pipeline (data-raw/pipeline/).
 ##
-## Each ClimateNA output folder gets a sibling `<folder>.stamp` file (DCF) recording the
-## ClimateNA version, the DEM tile's hash and the Docker image digest that produced it. The stamp
-## sits next to the folder, not inside it, so it never ends up in a zip.
+## Each stored ClimateNA output (`<folder>.zip`) gets a sibling `<folder>.stamp` file (DCF)
+## recording the ClimateNA version, the DEM tile's hash and the Docker image digest that produced
+## it. The stamp sits next to the zip, not inside it, so it never ends up in a published zip.
 
 .stampPath <- function(tileDir, folder) {
   file.path(tileDir, paste0(folder, ".stamp"))
@@ -30,7 +30,13 @@
   as.list(read.dcf(path)[1, ])
 }
 
-## A period is done when its folder passes the archive check and its stamp shows a ClimateNA
+## Each finished period is stored as one zip, `<folder>.zip` (holding `<folder>/<var>.asc`), next
+## to its stamp: a single file per period keeps the raw tree small and cheap on a network share.
+.periodZip <- function(tileDir, folder) {
+  file.path(tileDir, paste0(folder, ".zip"))
+}
+
+## A period is done when its stored zip passes the archive check and its stamp shows a ClimateNA
 ## version at or above `minVersion` and the same DEM. Anything else is rerun.
 .periodDone <- function(tileDir, folder, expected, minVersion, demHash) {
   stamp <- .readStamp(tileDir, folder)
@@ -43,7 +49,11 @@
   if (!identical(stamp$dem_hash, demHash)) {
     return(FALSE)
   }
-  listing <- .dirListing(tileDir, folder)
+  zip <- .periodZip(tileDir, folder)
+  if (!file.exists(zip)) {
+    return(FALSE)
+  }
+  listing <- .zipListing(zip)
   e <- .archiveExpectedByVersion(listing, expected)$expected
   .archiveComplete(.archiveCheck(listing, e))
 }

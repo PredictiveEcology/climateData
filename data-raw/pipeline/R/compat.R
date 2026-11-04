@@ -88,8 +88,10 @@ compat_check <- function(
     if (!ok) {
       stop("ClimateNA ", climatenaVersion, " failed for the compatibility sample ", folder)
     }
-    cmp <- .compareFolders(file.path(scratch, folder), file.path(tileDir, folder))
-    unlink(file.path(scratch, folder), recursive = TRUE)
+    stored <- file.path(scratch, "stored")
+    utils::unzip(.periodZip(tileDir, folder), exdir = stored)
+    cmp <- .compareFolders(file.path(scratch, folder), file.path(stored, folder))
+    unlink(c(file.path(scratch, folder), stored), recursive = TRUE)
     cmp
   })
   verdict <- .compatVerdict(do.call(rbind, comparisons))

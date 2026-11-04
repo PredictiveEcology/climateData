@@ -1,7 +1,7 @@
 ## Running ClimateNA for one batch, in the climatena-wine Docker image.
 
-## Raw outputs: <outRoot>/raw/<type>[/<gcm>_ssp<ssp>]/<tile>/<period folder>, with a sibling
-## <period folder>.stamp for each finished period.
+## Raw outputs: <outRoot>/raw/<type>[/<gcm>_ssp<ssp>]/<tile>/<period folder>.zip, with a sibling
+## <period folder>.stamp, for each finished period.
 pipeline_tile_dir <- function(outRoot, spec) {
   scen <- if (is.na(spec$gcm)) character(0) else paste0(spec$gcm, "_ssp", spec$ssp)
   do.call(file.path, as.list(c(outRoot, "raw", spec$type, scen, spec$tile)))
@@ -34,13 +34,19 @@ pipeline_work_dir <- function() {
   if (nzchar(d)) d else tempdir()
 }
 
-## Copy an output folder from the work directory into `to` (a tile's raw folder), keeping
-## modification times, and check that the copy has the same files with the same sizes.
-pipeline_copy_folder <- function(from, to, folder) {
-  dir.create(to, recursive = TRUE, showWarnings = FALSE)
-  ok <- file.copy(file.path(from, folder), to, recursive = TRUE, copy.date = TRUE)
-  m <- merge(.dirListing(from, folder), .dirListing(to, folder), by = "path", all = TRUE)
-  isTRUE(ok) && nrow(m) > 0 && !anyNA(m) && all(m$size.x == m$size.y)
+## Store a checked output folder from the work directory as one zip in the tile's raw folder
+## (`.periodZip()`): zipped locally (byte-identical for identical files), copied, and checked by
+## MD5. One file per period instead of a few hundred keeps the share fast and the raw tree small.
+pipeline_store_period <- function(workDir, tileDir, folder) {
+  local <- file.path(workDir, paste0(folder, ".zip"))
+  unlink(local)
+  pipeline_write_zip(local, workDir, file.path(folder, list.files(file.path(workDir, folder))))
+  dir.create(tileDir, recursive = TRUE, showWarnings = FALSE)
+  dest <- .periodZip(tileDir, folder)
+  ok <- file.copy(local, dest, overwrite = TRUE, copy.date = TRUE)
+  ok <- isTRUE(ok) && identical(unname(tools::md5sum(local)), unname(tools::md5sum(dest)))
+  unlink(local)
+  ok
 }
 
 ## Append a run's log to a batch log, and remove it.
@@ -64,10 +70,10 @@ pipeline_run_climatena <- function(args, name, log, timeout) {
 
 ## Run every period of a batch that isn't already done, check each output, stamp it, and write
 ## the batch's manifest. Each run writes to the node-local work directory; its output is checked
-## there, copied to the tile's raw folder, and stamped once the copy is checked. Stops (so the
-## target errors and is retried next time) naming any periods that failed. The target runs on
-## every tar_make() (cue "always"), so a damaged or deleted output folder is found and rerun;
-## finished periods cost only a listing.
+## there, stored as one zip in the tile's raw folder, and stamped once the copy is checked. Stops
+## (so the target errors and is retried next time) naming any periods that failed. The target
+## runs on every tar_make() (cue "always"), so a damaged or deleted period zip is found and rerun;
+## finished periods cost only reading the zip's listing.
 run_batch <- function(
   spec,
   climatenaExe,
@@ -106,7 +112,8 @@ run_batch <- function(
       Sys.sleep(stats::runif(1, 0, 30)) # stagger container starts across batches
     }
     unlink(.stampPath(tileDir, folder)) # no stamp until a checked copy is in place
-    unlink(file.path(tileDir, folder), recursive = TRUE) # clear any old or partial output
+    unlink(.periodZip(tileDir, folder))
+    unlink(file.path(tileDir, folder), recursive = TRUE) # a folder from the earlier layout
     unlink(file.path(workDir, folder), recursive = TRUE)
     dir.create(workDir, recursive = TRUE, showWarnings = FALSE)
     runLog <- file.path(workDir, paste0(folder, ".log"))
@@ -125,7 +132,7 @@ run_batch <- function(
     )
     ok <- pipeline_run_climatena(args, name, runLog, timeout) &&
       .archiveComplete(.archiveCheck(.dirListing(workDir, folder), expected)) &&
-      pipeline_copy_folder(workDir, tileDir, folder)
+      pipeline_store_period(workDir, tileDir, folder)
     pipeline_append_log(log, runLog)
     unlink(file.path(workDir, folder), recursive = TRUE)
     if (ok) {
@@ -148,7 +155,7 @@ run_batch <- function(
   stamps <- lapply(folders, \(f) .readStamp(tileDir, f))
   manifest <- data.frame(
     folder = folders,
-    n_files = vapply(folders, \(f) length(list.files(file.path(tileDir, f))), integer(1)),
+    n_files = vapply(folders, \(f) nrow(.zipListing(.periodZip(tileDir, f))), integer(1)),
     climatena_version = vapply(stamps, `[[`, character(1), "climatena_version"),
     dem_hash = vapply(stamps, `[[`, character(1), "dem_hash"),
     time = vapply(stamps, `[[`, character(1), "time")

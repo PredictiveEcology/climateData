@@ -69,9 +69,9 @@ The pipeline reads two files:
 - `data-raw/pipeline/release.yml` (committed) defines the release: `release_id`, the ClimateNA executable and version, the DEM resolution, the archive types, the years, GCMs, SSPs and normals periods, the minimum ClimateNA version to keep per type (`min_version`), the image, and the Drive folder (`drive_parent`).
 - `data-raw/pipeline/_local.R` (gitignored; copy `_local.R.example`) holds what depends on the machine: paths (ClimateNA directory, DEM tiles, output root, and a node-local `work_dir`), the container user, an optional tile subset, `dry_run`, `run_timeout`, `previous_index`, the Drive account (`drive_email`), `upload_workers`, and the `crew` controller. The checkout's own path is in neither file and no target depends on it, so running from a different checkout rebuilds nothing.
 
-ClimateNA writes each output into `work_dir` (by default each worker's temporary directory) on the node's own disk, and the pipeline copies the checked folder to `out_root`. ClimateNA writes very slowly straight to an NFS share: with many runs at once they stall waiting on the server.
+ClimateNA writes each output into `work_dir` (by default each worker's temporary directory) on the node's own disk. The pipeline checks it there and stores it in `out_root` as a single zip per tile and year or period. ClimateNA writes very slowly straight to an NFS share, and copying hundreds of small files per run overloads the file server; one zip per run avoids both.
 
-`out_root` in `_local.R` holds everything a release writes: raw ClimateNA outputs (`raw/`), zips (`zips/`), the targets store (`_targets/`), logs, the index and the report. **Keep the same `out_root` from one release to the next**: the next release then reuses the raw outputs and zips that haven't changed, and their Drive files.
+`out_root` in `_local.R` holds everything a release writes: raw ClimateNA outputs (`raw/`, one zip and one stamp per tile and year or period), the published zips (`zips/`), the targets store (`_targets/`), logs, the index and the report. **Keep the same `out_root` from one release to the next**: the next release then reuses the raw outputs and zips that haven't changed, and their Drive files.
 
 ## Where it runs
 

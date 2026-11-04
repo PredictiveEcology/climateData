@@ -47,15 +47,19 @@ pipeline_zip_rows <- function(spec, subset, zipfile) {
   rows
 }
 
-## Write `dir`'s files into `zip` so that the zip is byte-identical whenever the files are (names,
-## contents and modification times): names in C-locale order, no directory entries (-D), and no
-## extra attributes such as access times or owners (-X). An unchanged zip then keeps its MD5
-## when it is rebuilt, and the next release can reuse its Drive file. Needs the `zip` program.
-pipeline_write_zip <- function(zip, dir) {
+## Write files below `dir` (`files`, relative to it; default all) into `zip` so that the zip is
+## byte-identical whenever the files are (names, contents and modification times): names in
+## C-locale order, no directory entries (-D), and no extra attributes such as access times or
+## owners (-X). An unchanged zip then keeps its MD5 when it is rebuilt, and the next release can
+## reuse its Drive file. Needs the `zip` program.
+pipeline_write_zip <- function(zip, dir, files = NULL) {
   zip <- normalizePath(zip, mustWork = FALSE)
   owd <- setwd(dir)
   on.exit(setwd(owd))
-  files <- sort(list.files(".", recursive = TRUE), method = "radix")
+  if (is.null(files)) {
+    files <- list.files(".", recursive = TRUE)
+  }
+  files <- sort(files, method = "radix")
   rc <- system2("zip", c("-X", "-D", "-q", "-9", zip, "-@"), input = files)
   if (!identical(as.integer(rc), 0L)) {
     stop("zip exited with status ", rc, " for ", zip)
@@ -64,11 +68,10 @@ pipeline_write_zip <- function(zip, dir) {
 }
 
 ## Each subset zip holds each period's folder under the subset's own name (Year_2020M, ...), as
-## a ClimateNA /M, /S or /Y run would have written it and as the package's reader expects. Files
-## are staged by hard link under outRoot (the raw outputs' filesystem), so they keep their
-## modification times, and every zip is checked.
-## No zips when the batch failed (manifest NULL under error = "null"): its folders may hold a
-## killed run's truncated files, which the zip check (file names only) would not catch.
+## a ClimateNA /M, /S or /Y run would have written it and as the package's reader expects. The
+## batch's stored period zips are extracted once into the node-local work directory, keeping the
+## files' times; each subset is staged there by hard link, zipped, and checked.
+## No zips when the batch failed (manifest NULL under error = "null").
 zip_batch <- function(spec, manifest, outRoot) {
   if (length(manifest) == 0) {
     return(character(0))
@@ -76,13 +79,20 @@ zip_batch <- function(spec, manifest, outRoot) {
   pipeline_load()
   tileDir <- pipeline_tile_dir(outRoot, spec)
   normals <- spec$type %in% c("historical_normals", "future_normals")
+  work <- file.path(pipeline_work_dir(), paste0("zip-", spec$id))
+  unlink(work, recursive = TRUE) # left by a killed run
+  on.exit(unlink(work, recursive = TRUE), add = TRUE)
+  raw <- file.path(work, "raw")
+  for (p in spec$periods) {
+    folder <- .periodFolder(spec$type, p, spec$msy, spec$gcm, spec$ssp)
+    utils::unzip(.periodZip(tileDir, folder), exdir = raw, setTimes = TRUE)
+  }
   out <- character(0)
   for (subset in pipeline_subsets(spec$type)) {
     vars <- if (normals) .allowedClimateVars_nrm else get(paste0(".allowedClimateVars_", subset))
-    staging <- file.path(outRoot, "staging", paste(spec$id, subset, sep = "-"))
-    unlink(staging, recursive = TRUE) # left by a killed run
+    staging <- file.path(work, subset)
     for (p in spec$periods) {
-      src <- file.path(tileDir, .periodFolder(spec$type, p, spec$msy, spec$gcm, spec$ssp))
+      src <- file.path(raw, .periodFolder(spec$type, p, spec$msy, spec$gcm, spec$ssp))
       dst <- file.path(staging, .periodFolder(spec$type, p, subset, spec$gcm, spec$ssp))
       dir.create(dst, recursive = TRUE)
       from <- file.path(src, paste0(vars, ".asc"))
@@ -96,7 +106,6 @@ zip_batch <- function(spec, manifest, outRoot) {
     dir.create(dirname(zip), recursive = TRUE, showWarnings = FALSE)
     unlink(zip)
     pipeline_write_zip(zip, staging)
-    unlink(staging, recursive = TRUE)
 
     expected <- .archiveExpected(pipeline_zip_rows(spec, subset, basename(zip)), spec$type)
     problems <- .archiveCheck(.zipListing(zip), expected)
