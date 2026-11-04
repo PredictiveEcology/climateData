@@ -4,14 +4,19 @@
 ## outputs on the share are complete for every folder the zip should hold. For each one:
 ##   1. rebuild the whole zip from the raw outputs (raw is the source of truth);
 ##   2. check the rebuilt zip; skip it if it is not complete;
-##   3. copy the current Drive bytes to a dated backup folder on the share
-##      (Drive keeps old versions of binary files for only 30 days);
+##   3. check that the Drive file still holds what the audit saw (skip it if it changed), and
+##      copy those bytes to a dated backup folder on the share (Drive keeps old versions of
+##      binary files for only 30 days);
 ##   4. replace the Drive file's content in place, keeping its file ID, then the local zip;
 ##   5. update `archived` and `uploaded` in that zip's index rows (working copy).
 ##
-## With `dryRun <- TRUE` (the default) only steps 1-2 run, in the audit's own folder, and
-## nothing on Drive, in the index, or in the published data on the share changes.
-## Each run appends one row per zip to <auditDir>/repairs.csv.
+## With `dryRun <- TRUE` (the default) only steps 1-3's checks run, and nothing on Drive, in
+## the index, or in the published data on the share changes. Each zip's row is appended to
+## <auditDir>/repairs.csv as soon as it is done, so a run that stops keeps its record; an
+## error's status says whether the Drive file had already been replaced.
+##
+## Users who already downloaded a replaced zip keep their old copy: reproducible::preProcess()
+## does not yet download an archive again when its content on Drive changes.
 
 source("data-raw/01-ClimateNA_setup.R")
 
@@ -31,6 +36,8 @@ stopifnot(
   "`reviewedZips` not found" = file.exists(reviewedZips)
 )
 
+## absolute, because the rebuild runs inside the raw tile directory
+reviewedZips <- normalizePath(reviewedZips, mustWork = TRUE)
 auditDir <- dirname(reviewedZips)
 rebuiltDir <- file.path(auditDir, "rebuilt")
 backupDir <- file.path(ClimateNAdata, "_replaced", format(Sys.Date()))
@@ -48,8 +55,10 @@ db <- sqlite_connect_db(wrkngDBfile)
 
 md5 <- function(f) if (file.exists(f)) unname(tools::md5sum(f)) else NA_character_
 
-repairOne <- function(z) {
-  out <- data.frame(
+## `progress` lets the caller record how far a zip got if repairOne() stops with an error
+repairOne <- function(z, progress) {
+  progress$driveReplaced <- FALSE
+  progress$out <- out <- data.frame(
     gid = z$gid,
     zipfile = z$zipfile,
     old_md5 = z$md5_drive,
@@ -65,6 +74,9 @@ repairOne <- function(z) {
     paste0("SELECT * FROM ", z$type, " WHERE gid = ?"),
     params = list(z$gid)
   )
+  if (nrow(rows) == 0) {
+    stop("no ", z$type, " index rows for Drive ID ", z$gid, call. = FALSE)
+  }
   expected <- .archiveExpected(rows, z$type)
   folders <- unique(dirname(expected))
   tileDir <- file.path(ClimateNAdata, dirname(z$zipfile), z$tileid)
@@ -79,6 +91,7 @@ repairOne <- function(z) {
   withr::with_dir(tileDir, archive::archive_write_files(newZip, files = files))
   out$new_md5 <- md5(newZip)
   out$n_files <- nrow(.zipListing(newZip))
+  progress$out <- out
 
   ## 2. check the rebuilt zip
   if (!.archiveComplete(.archiveCheck(.zipListing(newZip), expected))) {
@@ -86,7 +99,12 @@ repairOne <- function(z) {
     return(out)
   }
 
-  ## 3. back up the bytes now on Drive
+  ## 3. the Drive file must still hold what the audit saw; then back up those bytes
+  current <- googledrive::drive_get(googledrive::as_id(z$gid))$drive_resource[[1]]$md5Checksum
+  if (!identical(current, z$md5_drive)) {
+    out$status <- "drive_changed"
+    return(out)
+  }
   localZip <- file.path(ClimateNAdata, z$zipfile)
   downloaded <- file.path(auditDir, "downloads", basename(z$zipfile))
   backupSource <- if (identical(md5(localZip), z$md5_drive)) {
@@ -110,6 +128,7 @@ repairOne <- function(z) {
 
   ## 4. replace on Drive (same file ID), then the local zip
   res <- googledrive::drive_update(googledrive::as_id(z$gid), media = newZip)
+  progress$driveReplaced <- TRUE
   if (!identical(res$drive_resource[[1]]$md5Checksum, out$new_md5)) {
     out$status <- "upload_md5_mismatch"
     return(out)
@@ -129,21 +148,63 @@ repairOne <- function(z) {
   out
 }
 
-repairs <- lapply(seq_len(nrow(zips)), function(i) {
-  r <- repairOne(zips[i, ])
-  message(r$status, ": ", r$zipfile)
-  r
-}) |>
-  dplyr::bind_rows()
-
-DBI::dbExecute(db, "PRAGMA wal_checkpoint(TRUNCATE)")
-DBI::dbDisconnect(db)
-
-## append, so the record of earlier runs (e.g. a single-zip trial) is kept
+## one row per zip, appended as soon as it is done (earlier runs' rows are kept)
 repairsFile <- file.path(auditDir, "repairs.csv")
-if (file.exists(repairsFile)) {
-  repairs <- rbind(utils::read.csv(repairsFile, colClasses = c(gid = "character")), repairs)
+appendRepair <- function(r) {
+  isNew <- !file.exists(repairsFile)
+  utils::write.table(
+    r,
+    repairsFile,
+    sep = ",",
+    qmethod = "double",
+    row.names = FALSE,
+    col.names = isNew,
+    append = !isNew
+  )
 }
-utils::write.csv(repairs, repairsFile, row.names = FALSE)
-message("Repairs written to ", repairsFile)
-print(table(repairs$status))
+
+runRepairs <- function() {
+  on.exit(
+    {
+      DBI::dbExecute(db, "PRAGMA wal_checkpoint(TRUNCATE)")
+      DBI::dbDisconnect(db)
+    },
+    add = TRUE
+  )
+  vapply(
+    seq_len(nrow(zips)),
+    function(i) {
+      progress <- new.env()
+      r <- tryCatch(repairOne(zips[i, ], progress), error = function(e) {
+        r <- progress$out
+        if (is.null(r)) {
+          r <- data.frame(
+            gid = zips$gid[i],
+            zipfile = zips$zipfile[i],
+            old_md5 = zips$md5_drive[i],
+            new_md5 = NA_character_,
+            n_files = NA_integer_,
+            backup = NA_character_,
+            status = NA_character_,
+            time = as.numeric(Sys.time())
+          )
+        }
+        r$status <- paste0(
+          "error",
+          if (isTRUE(progress$driveReplaced)) " after the Drive file was replaced",
+          ": ",
+          conditionMessage(e)
+        )
+        r
+      })
+      appendRepair(r)
+      message(r$status, ": ", r$zipfile)
+      r$status
+    },
+    character(1)
+  )
+}
+
+statuses <- runRepairs()
+message("Repairs appended to ", repairsFile)
+print(table(sub(":.*$", "", statuses)))

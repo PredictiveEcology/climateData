@@ -64,7 +64,16 @@ zips <- lapply(auditTypes, function(type) {
   z
 }) |>
   dplyr::bind_rows()
-stopifnot(!anyDuplicated(zips$gid)) ## one zip per Drive ID; .archiveExpected() names any conflict
+## one zip per Drive ID: rows sharing a gid must agree on zipfile, tile, msy, gcm and ssp
+dupGids <- unique(zips$gid[duplicated(zips$gid)])
+if (length(dupGids) > 0) {
+  stop(
+    "Index rows sharing a Drive ID disagree on the zip they describe (zipfile, tileid, ",
+    "msy, gcm or ssp). Drive IDs: ",
+    paste(dupGids, collapse = ", "),
+    call. = FALSE
+  )
+}
 
 message("Auditing ", nrow(zips), " zips in ", auditDir)
 
@@ -254,8 +263,9 @@ raw <- parallel::mclapply(
 ) |>
   stopOnWorkerErrors("Checking the raw outputs")
 ## complete zips made before ClimateNA v7.60 need regenerating for the rsds names
+## zips not checked (missing on Drive, or the download failed) get no repair class
 zips$repair <- ifelse(
-  zips$complete %in% FALSE,
+  !zips$complete %in% TRUE,
   NA_character_,
   ifelse(zips$legacy_folders %in% 0L, "none", "regenerate_v760")
 )
