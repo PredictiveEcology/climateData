@@ -47,22 +47,40 @@ pipeline_zip_rows <- function(spec, subset, zipfile) {
   rows
 }
 
+## Write `dir`'s files into `zip` so that the zip is byte-identical whenever the files are (names,
+## contents and modification times): names in C-locale order, no directory entries (-D), and no
+## extra attributes such as access times or owners (-X). An unchanged zip then keeps its MD5
+## when it is rebuilt, and the next release can reuse its Drive file. Needs the `zip` program.
+pipeline_write_zip <- function(zip, dir) {
+  zip <- normalizePath(zip, mustWork = FALSE)
+  owd <- setwd(dir)
+  on.exit(setwd(owd))
+  files <- sort(list.files(".", recursive = TRUE), method = "radix")
+  rc <- system2("zip", c("-X", "-D", "-q", "-9", zip, "-@"), input = files)
+  if (!identical(as.integer(rc), 0L)) {
+    stop("zip exited with status ", rc, " for ", zip)
+  }
+  zip
+}
+
 ## Each subset zip holds each period's folder under the subset's own name (Year_2020M, ...), as
 ## a ClimateNA /M, /S or /Y run would have written it and as the package's reader expects. Files
-## are staged by hard link (copied when linking isn't possible) and every zip is checked.
+## are staged by hard link under outRoot (the raw outputs' filesystem), so they keep their
+## modification times, and every zip is checked.
 ## No zips when the batch failed (manifest NULL under error = "null"): its folders may hold a
 ## killed run's truncated files, which the zip check (file names only) would not catch.
-zip_batch <- function(spec, manifest, outRoot, pkgDir) {
+zip_batch <- function(spec, manifest, outRoot) {
   if (length(manifest) == 0) {
     return(character(0))
   }
-  pipeline_load(pkgDir)
+  pipeline_load()
   tileDir <- pipeline_tile_dir(outRoot, spec)
   normals <- spec$type %in% c("historical_normals", "future_normals")
   out <- character(0)
   for (subset in pipeline_subsets(spec$type)) {
     vars <- if (normals) .allowedClimateVars_nrm else get(paste0(".allowedClimateVars_", subset))
-    staging <- tempfile("zip-")
+    staging <- file.path(outRoot, "staging", paste(spec$id, subset, sep = "-"))
+    unlink(staging, recursive = TRUE) # left by a killed run
     for (p in spec$periods) {
       src <- file.path(tileDir, .periodFolder(spec$type, p, spec$msy, spec$gcm, spec$ssp))
       dst <- file.path(staging, .periodFolder(spec$type, p, subset, spec$gcm, spec$ssp))
@@ -71,13 +89,13 @@ zip_batch <- function(spec, manifest, outRoot, pkgDir) {
       to <- file.path(dst, paste0(vars, ".asc"))
       linked <- suppressWarnings(file.link(from, to))
       if (!all(linked)) {
-        file.copy(from[!linked], to[!linked])
+        file.copy(from[!linked], to[!linked], copy.date = TRUE)
       }
     }
     zip <- pipeline_zip_path(outRoot, spec, subset)
     dir.create(dirname(zip), recursive = TRUE, showWarnings = FALSE)
     unlink(zip)
-    archive::archive_write_dir(zip, staging)
+    pipeline_write_zip(zip, staging)
     unlink(staging, recursive = TRUE)
 
     expected <- .archiveExpected(pipeline_zip_rows(spec, subset, basename(zip)), spec$type)

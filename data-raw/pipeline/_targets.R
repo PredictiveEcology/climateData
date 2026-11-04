@@ -18,7 +18,6 @@ cfg <- yaml::read_yaml(
 )
 
 ## scalar settings as plain globals: a target that uses one depends on that value only
-pkg_dir_path <- local$pkg_dir
 climatena_dir_path <- local$climatena_dir
 dem_dir_path <- local$dem_dir
 out_root_path <- local$out_root
@@ -28,17 +27,26 @@ tile_subset <- local$tiles
 dry_run <- local$dry_run
 run_timeout <- local$run_timeout %||% 3600 # seconds per ClimateNA run
 ## the previous release's index, whose identical zips are reused rather than uploaded again
-previous_index_path <- local$previous_index %||%
-  file.path(local$pkg_dir, "inst", "extdata", "ClimateNA_tiles.sqlite")
+## (relative, so it is the same path in any checkout)
+previous_index_path <- local$previous_index %||% "inst/extdata/ClimateNA_tiles.sqlite"
+drive_email <- local$drive_email # the Google account whose cached token uploads use
+if (!is.null(drive_email)) {
+  options(gargle_oauth_email = drive_email)
+}
 
-devtools::load_all(pkg_dir_path, quiet = TRUE) # the main process uses the checkout too
+devtools::load_all(".", quiet = TRUE) # the main process uses the checkout too
 
 tar_option_set(
   ## nothing attached on workers: the default (the main process's attached packages) would
   ## include the load_all()ed climateData, which isn't installed; pipeline_load() loads it
   packages = character(0),
-  controller = local$controller,
-  deployment = "main", # small targets stay on the main process; ClimateNA runs go to workers
+  ## ClimateNA runs go to local$controller; uploads to a few local workers on this node, where
+  ## the Drive token is
+  controller = crew::crew_controller_group(
+    local$controller,
+    crew::crew_controller_local(name = "uploads", workers = local$upload_workers %||% 8L)
+  ),
+  deployment = "main", # small targets stay on the main process
   error = "null",
   storage = "worker",
   retrieval = "worker"
@@ -59,7 +67,6 @@ mapped <- tar_map(
     compat,
     compat_check(
       type,
-      pkg_dir,
       climatena_exe,
       climatena_version,
       min_version,
@@ -84,7 +91,6 @@ mapped <- tar_map(
       compat
       run_batch(
         specs,
-        pkg_dir,
         climatena_exe,
         climatena_version,
         image,
@@ -106,18 +112,25 @@ mapped <- tar_map(
   ## the batch's MSY, M, Y and S zips (Y for normals), each checked
   tar_target(
     zips,
-    zip_batch(specs, batch, out_root, pkg_dir),
+    zip_batch(specs, batch, out_root),
     pattern = map(specs, batch),
     format = "file",
     deployment = "worker"
   ),
 
   ## each zip as an earlier release's identical file, or a new file in the release's Drive folder
-  ## (main process, where the token is)
+  tar_target(
+    previous_rows,
+    pipeline_previous_rows(previous_archives, specs),
+    pattern = map(specs),
+    iteration = "list"
+  ),
   tar_target(
     uploads,
-    upload_zips(zips, specs, release_id, drive_parent, dry_run, previous_archives),
-    pattern = map(zips, specs)
+    upload_zips(zips, specs, release_folders, dry_run, previous_rows, drive_email),
+    pattern = map(zips, specs, previous_rows),
+    deployment = "worker",
+    resources = tar_resources(crew = tar_resources_crew(controller = "uploads"))
   )
 )
 
@@ -130,7 +143,6 @@ list(
   tar_target(dem_resolution, cfg[["dem_resolution"]]),
   tar_target(image, cfg[["image"]]),
   tar_target(drive_parent, cfg[["drive_parent"]]),
-  tar_target(pkg_dir, pkg_dir_path),
   tar_target(climatena_dir, climatena_dir_path),
   tar_target(dem_dir, dem_dir_path),
   tar_target(out_root, out_root_path),
@@ -140,8 +152,12 @@ list(
 
   mapped,
 
-  ## all types together, for the index
+  ## all types together, for the Drive folders and the index
   tar_combine(specs_all, mapped[["specs"]], command = c(!!!.x), iteration = "list"),
+  tar_target(
+    release_folders,
+    pipeline_release_folders(specs_all, release_id, drive_parent, dry_run)
+  ),
   tar_combine(uploads_all, mapped[["uploads"]], command = rbind(!!!.x)),
   tar_combine(manifests, mapped[["batch"]], command = c(!!!.x)),
 

@@ -3,8 +3,10 @@
 ## when the zip is identical. This is the only Drive-specific code: another store (e.g. S3) would
 ## be an upload_<store>.R with the same signature and result.
 ##
-## Runs on the main process (where the maintainer's OAuth token is): set
-## options(gargle_oauth_email = ...) in _local.R so googledrive finds the cached token.
+## Uploads run on the main node (where the maintainer's OAuth token is cached), in parallel on the
+## "uploads" crew controller; `drive_email` in _local.R tells googledrive which token to use. The
+## release's folders are created first, on the main process, so parallel uploads never race to
+## create the same folder.
 
 ## Drive folder ids looked up or created in this session, keyed by path below the parent.
 pipeline_drive_folders <- new.env(parent = emptyenv())
@@ -33,6 +35,31 @@ pipeline_drive_folder <- function(parentId, segments) {
     id <- pipeline_drive_folders[[key]]
   }
   id
+}
+
+## The release's Drive folder for every zip directory it can produce (e.g. "historical/MSY"),
+## created where missing; NA in a dry run. Named by the directory below the release folder.
+pipeline_release_folders <- function(specs, releaseId, driveParent, dryRun) {
+  dirs <- unique(unlist(lapply(specs, function(spec) {
+    vapply(pipeline_subsets(spec$type), \(s) dirname(pipeline_zip_relpath(spec, s)), character(1))
+  })))
+  ids <- if (isTRUE(dryRun)) {
+    rep(NA_character_, length(dirs))
+  } else {
+    vapply(
+      dirs,
+      \(d) pipeline_drive_folder(driveParent, c(releaseId, strsplit(d, "/")[[1]])),
+      character(1)
+    )
+  }
+  stats::setNames(ids, dirs)
+}
+
+## The previous release's archives rows for one batch's zips, so each upload branch carries only
+## its own few rows.
+pipeline_previous_rows <- function(previous, spec) {
+  rel <- vapply(pipeline_subsets(spec$type), \(s) pipeline_zip_relpath(spec, s), character(1))
+  previous[previous$zipfile %in% rel, , drop = FALSE]
 }
 
 ## Drive's createdTime (RFC 3339, UTC) as epoch seconds.
@@ -84,9 +111,13 @@ pipeline_reusable_file <- function(previous, rel, md5) {
 ##   - "found": the release folder already has a file of that name and MD5 (an interrupted run);
 ##   - "uploaded" as a new file. A same-named file with another MD5 is left alone, with a warning.
 ## With dryRun nothing on Drive is read or written: `source` is "reused" (gid from `previous`, not
-## checked) or "dry run" (gid NA). Returns one row per zip: subset, gid, md5, zipfile (path below
-## the release folder), uploaded (Drive's createdTime, epoch seconds; NA in a dry run) and source.
-upload_zips <- function(zips, spec, releaseId, driveParent, dryRun, previous) {
+## checked) or "dry run" (gid NA). `folders` is pipeline_release_folders(). Returns one row per
+## zip: subset, gid, md5, zipfile (path below the release folder), uploaded (Drive's createdTime,
+## epoch seconds; NA in a dry run) and source.
+upload_zips <- function(zips, spec, folders, dryRun, previous, driveEmail = NULL) {
+  if (!is.null(driveEmail)) {
+    options(gargle_oauth_email = driveEmail) # a worker process doesn't see _local.R's options
+  }
   rows <- lapply(zips, function(zip) {
     subset <- basename(dirname(zip))
     rel <- pipeline_zip_relpath(spec, subset)
@@ -110,7 +141,10 @@ upload_zips <- function(zips, spec, releaseId, driveParent, dryRun, previous) {
     file <- pipeline_reusable_file(previous, rel, out$md5)
     out$source <- "reused"
     if (is.null(file)) {
-      folder <- pipeline_drive_folder(driveParent, c(releaseId, strsplit(dirname(rel), "/")[[1]]))
+      folder <- folders[[dirname(rel)]]
+      if (is.null(folder) || is.na(folder)) {
+        stop("no release folder for ", dirname(rel))
+      }
       there <- googledrive::drive_ls(
         googledrive::as_id(folder),
         q = sprintf("name = '%s'", basename(zip))

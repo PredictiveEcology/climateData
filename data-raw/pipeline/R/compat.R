@@ -16,7 +16,6 @@ pipeline_folder_arg <- function(type, folder) {
 ## type in release.yml is the maintainer's decision.
 compat_check <- function(
   type,
-  pkgDir,
   climatenaExe,
   climatenaVersion,
   minVersion,
@@ -28,7 +27,7 @@ compat_check <- function(
   gid,
   timeout = 3600
 ) {
-  pipeline_load(pkgDir)
+  pipeline_load()
   stamps <- list.files(
     file.path(outRoot, "raw", type),
     pattern = "[.]stamp$",

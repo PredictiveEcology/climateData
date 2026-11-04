@@ -1,15 +1,9 @@
 ## Machine-specific settings for the ClimateNA pipeline. Copy to _local.R (gitignored) and edit.
-
-## Drive account for uploads (dry_run = FALSE): googledrive uses its cached OAuth token for this
-## address. Uploads run on the main process, so the token must be cached on this machine.
-# options(gargle_oauth_email = "you@example.org")
+## Run the pipeline from the package root: every process loads the package from there.
 
 local <- list(
   ## the release settings; NULL for the committed data-raw/pipeline/release.yml
   release_file = NULL,
-
-  ## the package checkout (workers load it with devtools::load_all())
-  pkg_dir = normalizePath("."),
 
   ## an unpacked ClimateNA release, mounted read-only into the containers
   climatena_dir = "/path/to/ClimateNA_v7.70",
@@ -17,8 +11,10 @@ local <- list(
   ## DEM tiles (can_dem_<tile>.asc, Windows line endings) at the release's resolution
   dem_dir = "/path/to/ClimateNA_data/dem",
 
-  ## everything this release writes: raw/, zips/, _targets/ and the index
-  out_root = "/path/to/releases/cna-v7.70-3arcmin",
+  ## everything the pipeline writes: raw/, zips/, _targets/, logs, the index and the report.
+  ## Keep it from one release to the next (one per DEM resolution), so unchanged outputs and
+  ## zips are reused.
+  out_root = "/path/to/ClimateNA_data/pipeline/3arcmin",
 
   ## user the containers run as (must match the image's build args)
   uid = 1000L,
@@ -30,6 +26,13 @@ local <- list(
   ## TRUE: build everything but upload nothing to Drive
   dry_run = TRUE,
 
+  ## the Google account for uploads: its OAuth token must be cached on this machine
+  ## (googledrive::drive_auth() once, interactively)
+  drive_email = NULL, # e.g. "you@example.org"
+
+  ## how many uploads at once, on this machine
+  upload_workers = 8L,
+
   ## the previous release's index: zips identical to its (same path and MD5) reuse its Drive
   ## files instead of being uploaded again. NULL for the package's shipped index.
   previous_index = NULL,
@@ -39,6 +42,9 @@ local <- list(
 
   ## how many ClimateNA runs at once: one worker per core on one machine...
   controller = crew::crew_controller_local(workers = 4)
-  ## ...or across nodes (FOR-CAST/crew.ssh):
-  ## controller = crew.ssh::crew_controller_ssh(nodes = c(node1 = 60L, node2 = 90L), ...)
+  ## ...or across nodes (FOR-CAST/crew.ssh), with the checkout at the same path on each:
+  ## controller = crew.ssh::crew_controller_ssh(
+  ##   nodes = c(node1 = 60L, node2 = 90L),
+  ##   projdir = "/path/to/climateData"
+  ## )
 )

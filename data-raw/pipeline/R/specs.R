@@ -1,10 +1,13 @@
 ## Release settings -> batch specs, and loading the package checkout in worker processes.
 
 ## Workers are separate R processes and climateData may not be installed: load the checkout
-## once per process, so the package's internal pipeline functions are available.
-pipeline_load <- function(pkgDir) {
+## once per process, so the package's internal pipeline functions are available. Workers start
+## in the package root (local workers inherit the main process's directory; crew.ssh workers cd
+## to `projdir`), so the checkout's path is never a target dependency: moving the checkout
+## rebuilds nothing.
+pipeline_load <- function() {
   if (!"climateData" %in% loadedNamespaces()) {
-    devtools::load_all(pkgDir, quiet = TRUE)
+    devtools::load_all(".", quiet = TRUE)
   }
   invisible(TRUE)
 }

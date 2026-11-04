@@ -42,7 +42,6 @@ pipeline_run_climatena <- function(args, name, log, timeout) {
 ## deleted output folder is found and rerun; finished periods cost only a listing.
 run_batch <- function(
   spec,
-  pkgDir,
   climatenaExe,
   climatenaVersion,
   image,
@@ -54,7 +53,7 @@ run_batch <- function(
   gid,
   timeout = 3600
 ) {
-  pipeline_load(pkgDir)
+  pipeline_load()
   tileDir <- pipeline_tile_dir(outRoot, spec)
   dir.create(tileDir, recursive = TRUE, showWarnings = FALSE)
   logDir <- file.path(outRoot, "logs")

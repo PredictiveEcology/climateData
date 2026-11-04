@@ -34,7 +34,8 @@ targets records what has been built, so a rerun does only what is missing, faile
 ## What you need
 
 - A Linux compute node with Docker, where your account can run `docker` without `sudo`.
-- R with targets, tarchetypes, crew, yaml, devtools, googledrive, archive, digest, DBI and RSQLite, and a checkout of this package (the pipeline loads it with `devtools::load_all()`).
+- R with targets, tarchetypes, crew, yaml, devtools, googledrive, digest, DBI and RSQLite, and a checkout of this package. Run the pipeline from the package root: every R process loads the package from there with `devtools::load_all()`.
+- The `zip` program, which writes the archives so that a rebuilt zip of unchanged outputs is byte-identical (and so keeps matching the previous release's file).
 - ClimateNA, unpacked onto a shared directory (see below).
 - The DEM tiles, `can_dem_<tile>.asc`, with Windows line endings (`makeClimateDEM()`, `rewrite_asc()`).
 - Write access to the Drive folder that holds the archives, for real uploads.
@@ -66,7 +67,7 @@ Download each ClimateNA release from [climatena.ca](https://climatena.ca/) and u
 The pipeline reads two files:
 
 - `data-raw/pipeline/release.yml` (committed) defines the release: `release_id`, the ClimateNA executable and version, the DEM resolution, the archive types, the years, GCMs, SSPs and normals periods, the minimum ClimateNA version to keep per type (`min_version`), the image, and the Drive folder (`drive_parent`).
-- `data-raw/pipeline/_local.R` (gitignored; copy `_local.R.example`) holds what depends on the machine: paths (package checkout, ClimateNA directory, DEM tiles, output root), the container user, an optional tile subset, `dry_run`, `run_timeout`, `previous_index`, the Drive account, and the `crew` controller.
+- `data-raw/pipeline/_local.R` (gitignored; copy `_local.R.example`) holds what depends on the machine: paths (ClimateNA directory, DEM tiles, output root), the container user, an optional tile subset, `dry_run`, `run_timeout`, `previous_index`, the Drive account (`drive_email`), `upload_workers`, and the `crew` controller. The checkout's own path is in neither file and no target depends on it, so running from a different checkout rebuilds nothing.
 
 `out_root` in `_local.R` holds everything a release writes: raw ClimateNA outputs (`raw/`), zips (`zips/`), the targets store (`_targets/`), logs, the index and the report. **Keep the same `out_root` from one release to the next**: the next release then reuses the raw outputs and zips that haven't changed, and their Drive files.
 
@@ -91,7 +92,7 @@ controller = crew.ssh::crew_controller_ssh(
 
 With several nodes, the package checkout, ClimateNA, the DEM tiles and `out_root` must be at the same paths on every node (a shared filesystem), and every node needs Docker and the image.
 
-Uploads and the index always run in the main R process, where the Drive token is.
+Uploads always run on the main node, where the Drive token is: in parallel on a separate set of local workers (`upload_workers`, 8 by default), after the main process has created the release's Drive folders. The index is built in the main process.
 
 ## Running the pipeline
 
@@ -158,7 +159,7 @@ Add it to `gcms` or `ssps` in `release.yml`, and to the lists in `available()` (
 
 ## Uploading
 
-Set `dry_run = FALSE` in `_local.R` for the real run. Uploads use your Google account's OAuth token: authenticate once, interactively, on the main node with `googledrive::drive_auth()`, and set `options(gargle_oauth_email = "you@example.org")` in `_local.R` so the pipeline finds the cached token.
+Set `dry_run = FALSE` in `_local.R` for the real run. Uploads use your Google account's OAuth token: authenticate once, interactively, on the main node with `googledrive::drive_auth()`, and set `drive_email = "you@example.org"` in `_local.R` so the pipeline finds the cached token.
 
 Each zip is, in order of preference:
 
