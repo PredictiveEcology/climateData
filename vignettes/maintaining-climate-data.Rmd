@@ -200,4 +200,16 @@ The copied index becomes the next release's `previous_index`.
 
 ## Auditing a release
 
-`data-raw/04-audit_archives.R` checks the published archives independently of the pipeline. For every zip in an index, it checks that the file on Drive holds every year or period folder the index claims, with every variable file present and non-empty, downloading the Drive copy when the local zip differs from it. It writes its findings (`zips.csv`, `report.csv`, `summary.md`) to an `_audit/<date>/` folder and changes nothing. Audit a release's index before copying it into the package.
+`data-raw/04-audit_archives.R` checks the published archives independently of the pipeline. For every zip in an index, it checks that the file on Drive holds every year or period folder the index claims, with every variable file present and non-empty, downloading the Drive copy when the local zip differs from it. It writes its findings (`zips.csv`, `report.csv`, `summary.md`) and changes nothing. Audit a release's index before copying it into the package. From the package root, on the main node:
+
+```r
+googledrive::drive_auth(email = "you@example.org")
+auditIndex <- "/path/to/out_root/ClimateNA_tiles.sqlite"
+auditZipRoot <- "/path/to/out_root/zips"
+auditDriveFolders <- list(release = "<Drive ID of the release folder>")
+auditDir <- file.path("/path/to/out_root/_audit", format(Sys.Date()))
+auditTypes <- c("historical", "historical_normals", "future", "future_normals")
+source("data-raw/04-audit_archives.R")
+```
+
+Zips that the release reused from an earlier release are outside its folder; the script looks those up by their Drive IDs. Every zip should come out complete; any that doesn't is classed `rerun_pipeline`.

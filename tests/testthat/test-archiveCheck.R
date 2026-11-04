@@ -146,6 +146,23 @@ test_that(".archiveIndexGaps finds years the index lacks", {
   expect_equal(g$tileid, 39L)
 })
 
+test_that(".archiveIndexGaps finds future normals scenarios the index lacks", {
+  av <- available("future_normals")
+  full <- expand.grid(
+    tileid = 39L,
+    msy = "Y",
+    gcm = av$gcms,
+    ssp = av$ssps,
+    period = av$periods,
+    stringsAsFactors = FALSE
+  )
+  idx <- full[!(full$gcm == av$gcms[1] & full$ssp == av$ssps[1]), ]
+  g <- .archiveIndexGaps(idx, "future_normals")
+  expect_equal(nrow(g), length(av$periods))
+  expect_equal(unique(g$gcm), av$gcms[1])
+  expect_equal(unique(g$ssp), av$ssps[1])
+})
+
 test_that(".driveProblems classifies missing, trashed and renamed files", {
   zips <- data.frame(
     gid = c("a", "b", "c", "d"),

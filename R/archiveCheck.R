@@ -139,7 +139,7 @@
   av <- available(type)
   when <- if (is.null(av$years)) "period" else "year"
   grid <- list(tileid = unique(index$tileid), msy = unique(index$msy))
-  if (type == "future") {
+  if (type %in% c("future", "future_normals")) {
     grid <- c(grid, list(gcm = av$gcms, ssp = av$ssps))
   }
   grid[[when]] <- if (when == "year") av$years else av$periods
