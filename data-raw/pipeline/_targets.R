@@ -30,6 +30,9 @@ dry_run <- local$dry_run
 devtools::load_all(pkg_dir_path, quiet = TRUE) # the main process uses the checkout too
 
 tar_option_set(
+  ## nothing attached on workers: the default (the main process's attached packages) would
+  ## include the load_all()ed climateData, which isn't installed; pipeline_load() loads it
+  packages = character(0),
   controller = local$controller,
   deployment = "main", # small targets stay on the main process; ClimateNA runs go to workers
   error = "null",
@@ -58,6 +61,57 @@ list(
     values = data.frame(type = unlist(cfg$types)),
     names = type,
     tar_target(specs, pipeline_specs(type, tiles, cfg), iteration = "list"),
-    tar_target(min_version, cfg[["min_version"]][[type]])
+    tar_target(min_version, cfg[["min_version"]][[type]]),
+
+    ## does this ClimateNA release reproduce the stored outputs? (stops if not)
+    tar_target(
+      compat,
+      compat_check(
+        type,
+        pkg_dir,
+        climatena_exe,
+        climatena_version,
+        image,
+        climatena_dir,
+        dem_dir,
+        out_root,
+        container_uid,
+        container_gid
+      ),
+      deployment = "worker"
+    ),
+
+    ## one branch per batch (a tile's decade, or a tile's normals): run, check, stamp
+    tar_target(
+      batch,
+      {
+        compat
+        run_batch(
+          specs,
+          pkg_dir,
+          climatena_exe,
+          climatena_version,
+          image,
+          climatena_dir,
+          dem_dir,
+          out_root,
+          min_version,
+          container_uid,
+          container_gid
+        )
+      },
+      pattern = map(specs),
+      format = "file",
+      deployment = "worker"
+    ),
+
+    ## the batch's MSY, M, Y and S zips (Y for normals), each checked
+    tar_target(
+      zips,
+      zip_batch(specs, batch, out_root, pkg_dir),
+      pattern = map(specs, batch),
+      format = "file",
+      deployment = "worker"
+    )
   )
 )
