@@ -1,5 +1,9 @@
 ## Machine-specific settings for the ClimateNA pipeline. Copy to _local.R (gitignored) and edit.
 
+## Drive account for uploads (dry_run = FALSE): googledrive uses its cached OAuth token for this
+## address. Uploads run on the main process, so the token must be cached on this machine.
+# options(gargle_oauth_email = "you@example.org")
+
 local <- list(
   ## the release settings; NULL for the committed data-raw/pipeline/release.yml
   release_file = NULL,

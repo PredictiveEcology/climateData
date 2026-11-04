@@ -7,6 +7,12 @@ pipeline_subsets <- function(type) {
 ## Zip path, using the existing names: historical 39_MSY_2020.zip, future
 ## 39_CanESM5_245_MSY_2020.zip, normals 39_normals_Y.zip / 39_CanESM5_245_normals_Y.zip.
 pipeline_zip_path <- function(outRoot, spec, subset) {
+  file.path(outRoot, "zips", pipeline_zip_relpath(spec, subset))
+}
+
+## The zip's path below <outRoot>/zips (and below the release's Drive folder), e.g.
+## historical/MSY/39_MSY_2020.zip; this is the index's `zipfile`.
+pipeline_zip_relpath <- function(spec, subset) {
   scen <- if (is.na(spec$gcm)) character(0) else paste0(spec$gcm, "_ssp", spec$ssp)
   normals <- spec$type %in% c("historical_normals", "future_normals")
   name <- paste(
@@ -19,7 +25,7 @@ pipeline_zip_path <- function(outRoot, spec, subset) {
     ),
     collapse = "_"
   )
-  do.call(file.path, as.list(c(outRoot, "zips", spec$type, scen, subset, paste0(name, ".zip"))))
+  do.call(file.path, as.list(c(spec$type, scen, subset, paste0(name, ".zip"))))
 }
 
 ## Index-style rows for one zip, for .archiveExpected().

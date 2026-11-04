@@ -41,6 +41,73 @@ tar_option_set(
 )
 tar_source("data-raw/pipeline/R")
 
+## one set of targets per archive type
+mapped <- tar_map(
+  values = data.frame(type = unlist(cfg$types)),
+  names = type,
+  unlist = FALSE,
+  tar_target(specs, pipeline_specs(type, tiles, cfg), iteration = "list"),
+  tar_target(min_version, cfg[["min_version"]][[type]]),
+
+  ## does this ClimateNA release reproduce the stored outputs? (stops if not)
+  tar_target(
+    compat,
+    compat_check(
+      type,
+      pkg_dir,
+      climatena_exe,
+      climatena_version,
+      image,
+      climatena_dir,
+      dem_dir,
+      out_root,
+      container_uid,
+      container_gid
+    ),
+    deployment = "worker"
+  ),
+
+  ## one branch per batch (a tile's decade, or a tile's normals): run, check, stamp
+  tar_target(
+    batch,
+    {
+      compat
+      run_batch(
+        specs,
+        pkg_dir,
+        climatena_exe,
+        climatena_version,
+        image,
+        climatena_dir,
+        dem_dir,
+        out_root,
+        min_version,
+        container_uid,
+        container_gid
+      )
+    },
+    pattern = map(specs),
+    format = "file",
+    deployment = "worker"
+  ),
+
+  ## the batch's MSY, M, Y and S zips (Y for normals), each checked
+  tar_target(
+    zips,
+    zip_batch(specs, batch, out_root, pkg_dir),
+    pattern = map(specs, batch),
+    format = "file",
+    deployment = "worker"
+  ),
+
+  ## each zip as a new file in the release's Drive folder (main process, where the token is)
+  tar_target(
+    uploads,
+    upload_zips(zips, specs, release_id, drive_parent, dry_run),
+    pattern = map(zips, specs)
+  )
+)
+
 list(
   ## one target per setting
   ## ([[ ]] rather than $, so no field name reads as a dependency on the target of the same name)
@@ -56,62 +123,33 @@ list(
   tar_target(out_root, out_root_path),
   tar_target(tiles, pipeline_tiles(dem_dir, tile_subset)),
 
-  ## one set of targets per archive type
-  tar_map(
-    values = data.frame(type = unlist(cfg$types)),
-    names = type,
-    tar_target(specs, pipeline_specs(type, tiles, cfg), iteration = "list"),
-    tar_target(min_version, cfg[["min_version"]][[type]]),
+  mapped,
 
-    ## does this ClimateNA release reproduce the stored outputs? (stops if not)
-    tar_target(
-      compat,
-      compat_check(
-        type,
-        pkg_dir,
-        climatena_exe,
-        climatena_version,
-        image,
-        climatena_dir,
-        dem_dir,
-        out_root,
-        container_uid,
-        container_gid
-      ),
-      deployment = "worker"
+  ## all types together, for the index
+  tar_combine(specs_all, mapped[["specs"]], command = c(!!!.x), iteration = "list"),
+  tar_combine(uploads_all, mapped[["uploads"]], command = rbind(!!!.x)),
+  tar_combine(manifests, mapped[["batch"]], command = c(!!!.x)),
+
+  ## the release's ClimateNA_tiles.sqlite
+  tar_target(
+    index,
+    build_index(
+      uploads_all,
+      specs_all,
+      manifests,
+      out_root,
+      release_id,
+      climatena_version,
+      dem_resolution
     ),
+    format = "file"
+  ),
 
-    ## one branch per batch (a tile's decade, or a tile's normals): run, check, stamp
-    tar_target(
-      batch,
-      {
-        compat
-        run_batch(
-          specs,
-          pkg_dir,
-          climatena_exe,
-          climatena_version,
-          image,
-          climatena_dir,
-          dem_dir,
-          out_root,
-          min_version,
-          container_uid,
-          container_gid
-        )
-      },
-      pattern = map(specs),
-      format = "file",
-      deployment = "worker"
-    ),
-
-    ## the batch's MSY, M, Y and S zips (Y for normals), each checked
-    tar_target(
-      zips,
-      zip_batch(specs, batch, out_root, pkg_dir),
-      pattern = map(specs, batch),
-      format = "file",
-      deployment = "worker"
-    )
+  ## errors, warnings and missing zips, refreshed on every run (empty when all is well)
+  tar_target(
+    report,
+    build_report(index, specs_all, uploads_all, out_root),
+    format = "file",
+    cue = tar_cue(mode = "always")
   )
 )
