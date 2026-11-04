@@ -50,7 +50,8 @@ mapped <- tar_map(
   tar_target(specs, pipeline_specs(type, tiles, cfg), iteration = "list"),
   tar_target(min_version, cfg[["min_version"]][[type]]),
 
-  ## does this ClimateNA release reproduce the stored outputs? (stops if not)
+  ## does this ClimateNA release reproduce the stored outputs it would keep? If not, the whole
+  ## pipeline stops (error = "stop") before any batch of this type runs
   tar_target(
     compat,
     compat_check(
@@ -58,6 +59,7 @@ mapped <- tar_map(
       pkg_dir,
       climatena_exe,
       climatena_version,
+      min_version,
       image,
       climatena_dir,
       dem_dir,
@@ -66,7 +68,8 @@ mapped <- tar_map(
       container_gid,
       timeout = run_timeout
     ),
-    deployment = "worker"
+    deployment = "worker",
+    error = "stop"
   ),
 
   ## one branch per batch (a tile's decade, or a tile's normals): run, check, stamp.
