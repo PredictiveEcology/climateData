@@ -87,6 +87,25 @@ test_that(".zipListing and .dirListing return relative paths and sizes", {
   expect_gt(d$size, 0)
 })
 
+## Archives made before ClimateNA v7.60 name radiation Rad*/MAR instead of rsds*. Their data
+## are complete, but they need regenerating; that is reported apart from missing data.
+test_that(".archiveExpectedByVersion uses pre-v7.60 radiation names where a folder has them", {
+  expected <- .archiveExpected(rowsH(2022:2023), "historical")
+  old2022 <- sub("rsds[.]asc$", "MAR.asc", grep("Year_2022Y/", expected, value = TRUE))
+  listing <- data.frame(path = c(old2022, grep("Year_2023Y/", expected, value = TRUE)), size = 100)
+  e <- .archiveExpectedByVersion(listing, expected)
+  expect_equal(e$legacyFolders, "Year_2022Y")
+  expect_equal(nrow(.archiveCheck(listing, e$expected)), 0L)
+
+  expectedM <- .archiveExpected(rowsH(2022, msy = "M"), "historical")
+  oldM <- sub("rsds(\\d{2})[.]asc$", "Rad\\1.asc", expectedM)
+  listingM <- data.frame(path = setdiff(oldM, "Year_2022M/Rad12.asc"), size = 100)
+  eM <- .archiveExpectedByVersion(listingM, expectedM)
+  p <- .archiveCheck(listingM, eM$expected)
+  expect_equal(p$problem, "missing_file")
+  expect_equal(p$item, "Year_2022M/Rad12.asc")
+})
+
 ## Published as 9_CanESM5_370_MSY_2100.zip: 22 bytes, an end-of-archive record and nothing
 ## else. utils::unzip() cannot open it, which stopped the first full audit.
 test_that(".zipListing reads an empty zip as an empty listing", {

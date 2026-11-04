@@ -1,5 +1,11 @@
 # climateData (development version)
 
+- Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
+  `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
+  ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. Only the historical
+  2023 and 2024 data were made with v7.60, so radiation can't be requested for other years or for future
+  scenarios until those archives are regenerated. The old radiation layers held values only for 1948-2010.
+
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
   (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
   before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept

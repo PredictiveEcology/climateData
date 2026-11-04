@@ -49,6 +49,32 @@
   outer(folders, paste0(vars, ".asc"), paste, sep = "/") |> t() |> as.vector()
 }
 
+## Radiation names used before ClimateNA v7.60 (April 2025), keyed by the current rsds names.
+.legacyRadiationNames <- c(
+  stats::setNames(sprintf("Rad%02d", 1:12), sprintf("rsds%02d", 1:12)),
+  stats::setNames(
+    paste0("Rad_", c("at", "sm", "sp", "wt")),
+    paste0("rsds_", c("at", "sm", "sp", "wt"))
+  ),
+  rsds = "MAR"
+)
+
+## Expected member paths, using the pre-v7.60 radiation names in folders of `listing` that
+## hold any of them. Such folders are complete data but need regenerating with v7.60, so
+## they are returned separately (`legacyFolders`) instead of being reported as missing files.
+.archiveExpectedByVersion <- function(listing, expected) {
+  vars <- sub("[.]asc$", "", basename(listing$path))
+  legacyFolders <- unique(dirname(listing$path[vars %in% .legacyRadiationNames]))
+
+  ev <- sub("[.]asc$", "", basename(expected))
+  swap <- dirname(expected) %in% legacyFolders & ev %in% names(.legacyRadiationNames)
+  expected[swap] <- file.path(
+    dirname(expected[swap]),
+    paste0(.legacyRadiationNames[ev[swap]], ".asc")
+  )
+  list(expected = expected, legacyFolders = legacyFolders)
+}
+
 ## File listing of a zip, without directory entries.
 .zipListing <- function(zipfile) {
   ## utils::unzip() cannot open a zip with no entries (only the 22-byte end-of-archive record)

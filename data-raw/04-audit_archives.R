@@ -200,20 +200,30 @@ for (i in toDownload) {
   }
 }
 
-problems <- lapply(seq_len(nrow(zips)), function(i) {
+## Expected names are those ClimateNA v7.60+ writes. Folders still holding the pre-v7.60
+## radiation names (Rad*, MAR) are checked against those names, so missing data stays
+## visible; they are counted in `legacy_folders`, and their zips need regenerating.
+checkListing <- function(listing, expected) {
+  e <- .archiveExpectedByVersion(listing, expected)
+  list(problems = .archiveCheck(listing, e$expected), legacy = length(e$legacyFolders))
+}
+
+checks <- lapply(seq_len(nrow(zips)), function(i) {
   if (zips$source[i] == "none") {
-    return(data.frame(problem = character(0), item = character(0)))
+    return(list(problems = data.frame(problem = character(0), item = character(0)), legacy = NA))
   }
-  .archiveCheck(listings[[i]], expected[[i]])
+  checkListing(listings[[i]], expected[[i]])
 })
+problems <- lapply(checks, `[[`, "problems")
 zips$n_expected <- lengths(expected)
 zips$n_files <- vapply(listings, \(l) if (is.null(l)) NA_integer_ else nrow(l), integer(1))
+zips$legacy_folders <- vapply(checks, \(x) as.integer(x$legacy), integer(1))
 zips$complete <- ifelse(zips$source == "none", NA, vapply(problems, .archiveComplete, logical(1)))
 zips$local_complete <- vapply(
   seq_len(nrow(zips)),
   function(i) {
     l <- local[[i]]$listing
-    if (is.null(l)) NA else .archiveComplete(.archiveCheck(l, expected[[i]]))
+    if (is.null(l)) NA else .archiveComplete(checkListing(l, expected[[i]])$problems)
   },
   logical(1)
 )
@@ -238,12 +248,17 @@ raw <- parallel::mclapply(
   incomplete,
   function(i) {
     folders <- unique(dirname(expected[[i]]))
-    .archiveCheck(.dirListing(tileDirOf(i), folders), expected[[i]])
+    checkListing(.dirListing(tileDirOf(i), folders), expected[[i]])$problems
   },
   mc.cores = nCores
 ) |>
   stopOnWorkerErrors("Checking the raw outputs")
-zips$repair <- ifelse(zips$complete %in% FALSE, NA_character_, "none")
+## complete zips made before ClimateNA v7.60 need regenerating for the rsds names
+zips$repair <- ifelse(
+  zips$complete %in% FALSE,
+  NA_character_,
+  ifelse(zips$legacy_folders %in% 0L, "none", "regenerate_v760")
+)
 zips$repair[incomplete] <- ifelse(
   vapply(raw, .archiveComplete, logical(1)),
   "repairable",
@@ -333,6 +348,7 @@ zipsOut <- zips[c(
   "md5_local",
   "source",
   "complete",
+  "legacy_folders",
   "repair",
   "local_complete",
   "checked"
@@ -351,6 +367,11 @@ summaryLines <- c(
   paste0("- Checked from a Drive download: ", sum(zips$source == "drive")),
   paste0("- Not checked (missing on Drive or download failed): ", sum(zips$source == "none")),
   paste0("- Complete: ", sum(zips$complete %in% TRUE)),
+  paste0("  - up to date (ClimateNA v7.60+ names): ", sum(zips$repair %in% "none")),
+  paste0(
+    "  - to regenerate with ClimateNA v7.60+ (radiation named Rad*/MAR): ",
+    sum(zips$repair %in% "regenerate_v760")
+  ),
   paste0("- Incomplete: ", sum(zips$complete %in% FALSE)),
   paste0("  - repairable from raw outputs: ", sum(zips$repair %in% "repairable")),
   paste0("  - needing ClimateNA reruns: ", sum(zips$repair %in% "needs_climatena")),
