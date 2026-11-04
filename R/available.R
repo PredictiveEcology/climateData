@@ -114,7 +114,7 @@ available <- function(type) {
   ## fmt: skip
   switch(type,
     historical = list(
-      years = 1901L:2024L
+      years = 1901L:2025L
     ),
     historical_normals = list(
       periods = c(

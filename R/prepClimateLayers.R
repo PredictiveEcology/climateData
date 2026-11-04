@@ -544,13 +544,18 @@ prepClimateLayers <- function(
   return(climData)
 }
 
-## Which archives to download, from the needed "<type>_<M|S|Y|N>" types. Seasonal variables exist
-## only in the MSY ("all") archives, and an MSY archive holds every file of the M and Y archives
-## (checked: 180 monthly and 25 yearly files per year, historical and future). So once MSY is needed,
-## M and Y come from it too; downloading them separately is redundant, and some M archives on the
-## server are incomplete (e.g. tile 46's future 2080s lacks 2085), which stopped runs.
+## Which archives to download, from the needed "<type>_<M|S|Y|N>" types. An MSY ("all") archive
+## holds every file of the M, S and Y archives (checked: 180 monthly, 60 seasonal and 25 yearly
+## files per year). A seasonal-only request uses the S archive (published from v3.0.0 data
+## releases); seasonal plus monthly or yearly uses MSY, and once MSY is needed, M and Y come from
+## it too -- downloading them separately is redundant, and some older M archives on the server are
+## incomplete (e.g. tile 46's future 2080s lacks 2085), which stopped runs.
 .consolidateClimateTypes <- function(types) {
-  types <- sub("_S$", "_MSY", types)
+  for (tp in c("historical", "future")) {
+    if (paste0(tp, "_S") %in% types && any(paste0(tp, c("_M", "_Y")) %in% types)) {
+      types[types == paste0(tp, "_S")] <- paste0(tp, "_MSY")
+    }
+  }
   for (tp in c("historical", "future")) {
     if (paste0(tp, "_MSY") %in% types) {
       types <- sub(paste0("^", tp, "_(M|Y)$"), paste0(tp, "_MSY"), types)

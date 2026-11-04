@@ -1,5 +1,9 @@
 # climateData (development version)
 
+- Historical data now run to 2025 (ClimateNA v7.70).
+- `prepClimateLayers()` downloads the new seasonal (S) archives when only seasonal variables are
+  needed, instead of the full all-variables (MSY) archive. Seasonal plus monthly or yearly
+  variables still come from the MSY archive.
 - Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
   `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
   ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. Only the historical

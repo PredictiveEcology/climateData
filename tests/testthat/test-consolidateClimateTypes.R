@@ -23,7 +23,21 @@ test_that("without a seasonal variable, M and Y keep their own archives", {
   )
   expect_setequal(
     .consolidateClimateTypes(c("historical_N", "historical_S")),
-    c("historical_N", "historical_MSY")
+    c("historical_N", "historical_S")
+  )
+})
+
+## v3.0.0 data releases publish S archives; a seasonal-only request no longer needs the whole
+## MSY archive. S plus M or Y still uses MSY (above).
+test_that("seasonal-only requests use the S archive", {
+  expect_setequal(.consolidateClimateTypes("future_S"), "future_S")
+  expect_setequal(
+    .consolidateClimateTypes(c("historical_S", "future_M")),
+    c("historical_S", "future_M")
+  )
+  expect_setequal(
+    .consolidateClimateTypes(c("historical_N", "historical_S")),
+    c("historical_N", "historical_S")
   )
 })
 

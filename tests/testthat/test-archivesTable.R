@@ -49,3 +49,13 @@ test_that("shipped index: one archives row per published zip", {
   expect_setequal(a$gid, gids)
   expect_match(a$md5, "^[0-9a-f]{32}$")
 })
+
+test_that("index tables declare a climatena_version column", {
+  skip_if_not_installed("withr")
+  f <- file.path(withr::local_tempdir(), "t.sqlite")
+  for (type in c("historical", "historical_normals", "future", "future_normals")) {
+    x <- ClimateNA_sql(f, type)
+    expect_contains(DBI::dbListFields(x$db, type), "climatena_version")
+    DBI::dbDisconnect(x$db)
+  }
+})

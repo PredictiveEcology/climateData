@@ -139,7 +139,8 @@ ClimateNA_sql <- function(dbfile, type) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     ),
     future_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
@@ -152,7 +153,8 @@ ClimateNA_sql <- function(dbfile, type) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     ),
     historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
@@ -163,7 +165,8 @@ ClimateNA_sql <- function(dbfile, type) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     ),
     future = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
@@ -176,7 +179,8 @@ ClimateNA_sql <- function(dbfile, type) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     )
   )
 
