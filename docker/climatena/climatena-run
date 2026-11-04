@@ -1,10 +1,17 @@
 #!/bin/sh
 ## Run one ClimateNA job under Wine.
 ## usage: climatena-run <exe> <msy> <period file> <dem .asc> <output dir>
-##   e.g. climatena-run ClimateNA_v7.60.exe MSY Year_2023.ann /data/dem/can_dem_39.asc /data/out/39
+##   e.g. climatena-run ClimateNA_v7.70.exe MSY Year_2025.ann /data/dem/can_dem_39.asc /data/out
 ## Paths are container paths; ClimateNA gets them as Wine Z: paths. ClimateNA must run
 ## from its own directory (/opt/climatena).
 set -eu
+
+## Wine refuses a prefix owned by another user: the container must run as the image's user.
+owner=$(stat -c %u "$WINEPREFIX")
+if [ "$(id -u)" != "$owner" ]; then
+  echo "climatena-run: run with --user <uid>:<gid> matching the image's build args (prefix owned by uid $owner)" >&2
+  exit 64
+fi
 
 exe="$1"
 msy="$2"
