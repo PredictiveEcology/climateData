@@ -221,6 +221,7 @@ prepClimateLayers <- function(
   ## seasonal vars: XXX_zz
   ## normal vars: will need to be prefixed with 'normal_'
   needVars <- purrr::transpose(climateVarsList)[["vars"]] |> unlist() |> unname() |> unique()
+  .stopIfLegacyRadiation(needVars)
   types <- whichTypes(needVars)
   MSYN <- whichMSYN(needVars)
   unique_types_msy <- paste0(types, "_", MSYN) |>

@@ -31,6 +31,8 @@ test_that(".archiveExpected names historical, future and normals members", {
 
 test_that(".archiveExpected stops when one zip's index rows disagree", {
   rows <- rbind(rowsH(2013), rowsH(2014, zip = "historical/yearly/39_Y_2020.zip"))
+  rows$gid <- "1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345"
+  expect_error(.archiveExpected(rows, "historical"), rows$gid[1], fixed = TRUE)
   expect_snapshot(.archiveExpected(rows, "historical"), error = TRUE)
 })
 

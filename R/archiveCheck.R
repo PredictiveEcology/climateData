@@ -15,7 +15,9 @@
   multi <- keys[vapply(rows[keys], \(x) length(unique(x)) > 1, logical(1))]
   if (length(multi) > 0) {
     stop(
-      "Index rows for one archive disagree on ",
+      "Index rows for one archive",
+      if (!is.null(rows$gid)) paste0(" (Drive ID ", paste(unique(rows$gid), collapse = ", "), ")"),
+      " disagree on ",
       paste(multi, collapse = ", "),
       ": ",
       paste(unique(rows$zipfile), collapse = ", "),
