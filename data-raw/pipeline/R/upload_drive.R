@@ -37,12 +37,13 @@ pipeline_drive_folder <- function(parentId, segments) {
   id
 }
 
-## The release's Drive folder for every zip directory it can produce (e.g. "historical/MSY"),
-## created where missing; NA in a dry run. Named by the directory below the release folder.
-pipeline_release_folders <- function(specs, releaseId, driveParent, dryRun) {
-  dirs <- unique(unlist(lapply(specs, function(spec) {
-    vapply(pipeline_subsets(spec$type), \(s) dirname(pipeline_zip_relpath(spec, s)), character(1))
-  })))
+## Create the release's Drive folder for every zip directory it can produce (e.g.
+## "historical/MSY"), and write their ids (NA in a dry run), named by the directory below the
+## release folder, to <outRoot>/drive_folders.rds. Returns only the map's path, the release and
+## the dry-run flag, so adding folders (a new GCM or SSP) changes nothing the existing upload
+## branches depend on.
+pipeline_release_folders <- function(specs, releaseId, driveParent, dryRun, outRoot) {
+  dirs <- unique(dirname(unlist(lapply(specs, pipeline_zip_relpaths))))
   ids <- if (isTRUE(dryRun)) {
     rep(NA_character_, length(dirs))
   } else {
@@ -52,14 +53,45 @@ pipeline_release_folders <- function(specs, releaseId, driveParent, dryRun) {
       character(1)
     )
   }
-  stats::setNames(ids, dirs)
+  path <- file.path(outRoot, "drive_folders.rds")
+  saveRDS(stats::setNames(ids, dirs), path)
+  list(path = path, release_id = releaseId, dry_run = dryRun)
 }
 
-## The previous release's archives rows for one batch's zips, so each upload branch carries only
-## its own few rows.
-pipeline_previous_rows <- function(previous, spec) {
-  rel <- vapply(pipeline_subsets(spec$type), \(s) pipeline_zip_relpath(spec, s), character(1))
-  previous[previous$zipfile %in% rel, , drop = FALSE]
+## Every zip path below the release folder that a batch can produce.
+pipeline_zip_relpaths <- function(spec) {
+  vapply(pipeline_subsets(spec$type), \(s) pipeline_zip_relpath(spec, s), character(1))
+}
+
+## The previous release's archives rows that this release could reuse, written once to a small
+## lookup database (indexed, rollback-journal mode, so upload workers can open it read-only and
+## query only their own zips). Returns the path and a hash of the rows: uploads then depend on
+## what the rows are, not on the database file's bytes.
+pipeline_previous_lookup <- function(index, specs, outRoot) {
+  prev <- pipeline_previous_archives(index)
+  prev <- prev[prev$zipfile %in% unlist(lapply(specs, pipeline_zip_relpaths)), , drop = FALSE]
+  prev <- prev[order(prev$zipfile), , drop = FALSE]
+  path <- file.path(outRoot, "previous_archives.sqlite")
+  tmp <- paste0(path, ".tmp")
+  unlink(tmp)
+  db <- DBI::dbConnect(RSQLite::SQLite(), tmp)
+  DBI::dbExecute(db, "CREATE TABLE prev (zipfile TEXT, gid TEXT, md5 TEXT)")
+  DBI::dbAppendTable(db, "prev", prev[c("zipfile", "gid", "md5")])
+  DBI::dbExecute(db, "CREATE INDEX prev_zipfile ON prev (zipfile)")
+  DBI::dbDisconnect(db)
+  file.rename(tmp, path)
+  list(path = path, hash = digest::digest(prev, algo = "xxhash64"))
+}
+
+## The previous release's rows for one batch's zips, from pipeline_previous_lookup().
+pipeline_previous_rows <- function(lookup, spec) {
+  db <- DBI::dbConnect(RSQLite::SQLite(), lookup$path, flags = RSQLite::SQLITE_RO)
+  on.exit(DBI::dbDisconnect(db))
+  DBI::dbGetQuery(
+    db,
+    "SELECT gid, zipfile, md5 FROM prev WHERE zipfile = ?",
+    params = list(unname(pipeline_zip_relpaths(spec)))
+  )
 }
 
 ## Drive's createdTime (RFC 3339, UTC) as epoch seconds.
@@ -107,17 +139,19 @@ pipeline_reusable_file <- function(previous, rel, md5) {
 }
 
 ## Upload one batch's zips. Each zip is, in order of preference:
-##   - "reused": an earlier release (`previous`, from its index) has the identical zip on Drive;
+##   - "reused": an earlier release (`lookup`, from pipeline_previous_lookup()) has the identical
+##     zip on Drive;
 ##   - "found": the release folder already has a file of that name and MD5 (an interrupted run);
 ##   - "uploaded" as a new file. A same-named file with another MD5 is left alone, with a warning.
-## With dryRun nothing on Drive is read or written: `source` is "reused" (gid from `previous`, not
+## With dryRun nothing on Drive is read or written: `source` is "reused" (gid from `lookup`, not
 ## checked) or "dry run" (gid NA). `folders` is pipeline_release_folders(). Returns one row per
 ## zip: subset, gid, md5, zipfile (path below the release folder), uploaded (Drive's createdTime,
 ## epoch seconds; NA in a dry run) and source.
-upload_zips <- function(zips, spec, folders, dryRun, previous, driveEmail = NULL) {
+upload_zips <- function(zips, spec, folders, dryRun, lookup, driveEmail = NULL) {
   if (!is.null(driveEmail)) {
     options(gargle_oauth_email = driveEmail) # a worker process doesn't see _local.R's options
   }
+  previous <- if (length(zips) > 0) pipeline_previous_rows(lookup, spec)
   rows <- lapply(zips, function(zip) {
     subset <- basename(dirname(zip))
     rel <- pipeline_zip_relpath(spec, subset)
@@ -141,8 +175,8 @@ upload_zips <- function(zips, spec, folders, dryRun, previous, driveEmail = NULL
     file <- pipeline_reusable_file(previous, rel, out$md5)
     out$source <- "reused"
     if (is.null(file)) {
-      folder <- folders[[dirname(rel)]]
-      if (is.null(folder) || is.na(folder)) {
+      folder <- unname(readRDS(folders$path)[dirname(rel)])
+      if (length(folder) != 1 || is.na(folder)) {
         stop("no release folder for ", dirname(rel))
       }
       there <- googledrive::drive_ls(

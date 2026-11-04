@@ -125,15 +125,9 @@ mapped <- tar_map(
 
   ## each zip as an earlier release's identical file, or a new file in the release's Drive folder
   tar_target(
-    previous_rows,
-    pipeline_previous_rows(previous_archives, specs),
-    pattern = map(specs),
-    iteration = "list"
-  ),
-  tar_target(
     uploads,
-    upload_zips(zips, specs, release_folders, dry_run, previous_rows, drive_email),
-    pattern = map(zips, specs, previous_rows),
+    upload_zips(zips, specs, release_folders, dry_run, previous_lookup, drive_email),
+    pattern = map(zips, specs),
     deployment = "worker",
     resources = tar_resources(crew = tar_resources_crew(controller = "uploads"))
   )
@@ -153,7 +147,6 @@ list(
   tar_target(out_root, out_root_path),
   tar_target(tiles, pipeline_tiles(dem_dir, tile_subset)),
   tar_target(previous_index, previous_index_path, format = "file"),
-  tar_target(previous_archives, pipeline_previous_archives(previous_index)),
 
   mapped,
 
@@ -161,8 +154,9 @@ list(
   tar_combine(specs_all, mapped[["specs"]], command = c(!!!.x), iteration = "list"),
   tar_target(
     release_folders,
-    pipeline_release_folders(specs_all, release_id, drive_parent, dry_run)
+    pipeline_release_folders(specs_all, release_id, drive_parent, dry_run, out_root)
   ),
+  tar_target(previous_lookup, pipeline_previous_lookup(previous_index, specs_all, out_root)),
   tar_combine(uploads_all, mapped[["uploads"]], command = rbind(!!!.x)),
   tar_combine(manifests, mapped[["batch"]], command = c(!!!.x)),
 
