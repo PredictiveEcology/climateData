@@ -80,6 +80,41 @@ test_that("prepClimateLayers downloads only the MSY archive for monthly plus sea
   expect_identical(unique(requested), "future_MSY")
 })
 
+## prepClimateLayers() used to stop with "future normals not yet implemented".
+test_that("prepClimateLayers asks for future normals archives instead of stopping", {
+  skip_if_not_installed("withr")
+  d <- withr::local_tempdir("test_futureNormals_")
+  requested <- list()
+  testthat::local_mocked_bindings(
+    getClimateURLs = function(type, tile, years = NULL, msy = NULL, gcm = NULL, ssp = NULL) {
+      requested[[length(requested) + 1]] <<- list(type = type, gcm = gcm, ssp = as.character(ssp))
+      character(0)
+    },
+    getClimateTiles = function(...) NULL,
+    .stopIfMissingClimateDirs = function(allDirs) invisible(allDirs),
+    buildClimateMosaicsNormals = function(...) stop("stop after downloads")
+  )
+  vars <- list(
+    future_MAT_normal = list(
+      vars = "future_MAT_normal",
+      fun = quote(calcAsIs),
+      .dots = list(future_period = "2011_2040")
+    )
+  )
+  expect_error(
+    prepClimateLayers(
+      vars,
+      srcdir = d,
+      dstdir = file.path(d, "out"),
+      tile = 39,
+      gcm = "CanESM5",
+      ssp = 245
+    ),
+    "stop after downloads"
+  )
+  expect_identical(requested[[1]], list(type = "future_normals", gcm = "CanESM5", ssp = "245"))
+})
+
 test_that("monthly variables load from an MSY folder", {
   skip_if_not_installed("withr")
   src <- withr::local_tempdir("future")

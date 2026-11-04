@@ -295,7 +295,6 @@ prepClimateLayers <- function(
       ) |>
         sort()
     } else if (type_msyn == "future_N") {
-      stop("future normals not yet implemented") ## TODO: get data, implement and verify
       type <- "future_normals"
       climatePath_type <- file.path(climatePath, "future", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y", gcm = gcm, ssp = ssp)
@@ -305,13 +304,13 @@ prepClimateLayers <- function(
         climatePath = climatePath_type,
         needVars = needVars
       )
+      ## every tile x period, with the folder name ClimateNA writes (e.g. CanESM5_ssp245_2011-2040Y)
       allDirs <- file.path(
         climatePath_type,
-        rep(tile, length(future_period)),
-        paste0(gcm, "_ssp", ssp),
-        paste0("Normal_", future_period, "Y")
+        rep(tile, each = length(future_period)),
+        rep(.periodFolder("future_normals", future_period, "Y", gcm, ssp), times = length(tile))
       ) |>
-        sort() ## TODO: verify paths
+        sort()
     } else {
       stop("unknown climate variable type: ", type_msyn)
     }

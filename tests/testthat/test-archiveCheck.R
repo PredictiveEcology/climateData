@@ -123,6 +123,22 @@ test_that(".zipListing reads an empty zip as an empty listing", {
   expect_equal(p$item, "Year_2100Y")
 })
 
+test_that(".archiveExpected names future normals folders as ClimateNA writes them", {
+  e <- .archiveExpected(
+    data.frame(
+      zipfile = "z",
+      tileid = 39L,
+      msy = "Y",
+      gcm = "CanESM5",
+      ssp = "245",
+      period = c("2011_2040", "2041_2070")
+    ),
+    "future_normals"
+  )
+  expect_length(e, 50)
+  expect_contains(e, "CanESM5_ssp245_2011-2040Y/rsds.asc")
+})
+
 test_that(".archiveIndexGaps finds years the index lacks", {
   idx <- rowsH(setdiff(available("historical")$years, 2013L))
   g <- .archiveIndexGaps(idx, "historical")

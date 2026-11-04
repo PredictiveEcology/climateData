@@ -9,7 +9,7 @@
 
 ## Member paths ("<folder>/<VAR>.asc") that the zip holding these index rows should contain.
 .archiveExpected <- function(rows, type) {
-  stopifnot(type %in% c("historical", "historical_normals", "future"))
+  stopifnot(type %in% c("historical", "historical_normals", "future", "future_normals"))
 
   keys <- intersect(c("zipfile", "tileid", "msy", "gcm", "ssp"), names(rows))
   multi <- keys[vapply(rows[keys], \(x) length(unique(x)) > 1, logical(1))]
@@ -26,16 +26,10 @@
   }
 
   msy <- rows$msy[1]
-  folders <- switch(
-    type,
-    historical = paste0("Year_", rows$year, msy),
-    historical_normals = paste0("Normal_", rows$period, msy),
-    future = paste0(rows$gcm[1], "_ssp", rows$ssp[1], "@", rows$year, msy)
-  ) |>
-    unique() |>
-    sort()
+  period <- if (type %in% c("historical", "future")) rows$year else rows$period
+  folders <- .periodFolder(type, period, msy, rows$gcm[1], rows$ssp[1]) |> unique() |> sort()
 
-  vars <- if (type == "historical_normals") {
+  vars <- if (type %in% c("historical_normals", "future_normals")) {
     .allowedClimateVars_nrm
   } else {
     switch(

@@ -1,6 +1,8 @@
 # climateData (development version)
 
 - Historical data now run to 2025 (ClimateNA v7.70).
+- Future climate normals (2011-2040, 2041-2070, 2071-2100) can be requested, e.g. `future_MAT_normal`
+  with `future_period`. `prepClimateLayers()` used to stop with "future normals not yet implemented".
 - `prepClimateLayers()` downloads the new seasonal (S) archives when only seasonal variables are
   needed, instead of the full all-variables (MSY) archive. Seasonal plus monthly or yearly
   variables still come from the MSY archive.

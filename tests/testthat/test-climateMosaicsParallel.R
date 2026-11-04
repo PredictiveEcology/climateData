@@ -123,3 +123,39 @@ test_that("climateMosaicsParallel sets every variable to NA where all 12 monthly
   )
   expect_equal(as.vector(terra::values(terra::rast(out))), c(NA, 10, 10, 10))
 })
+
+## Several scenarios' future normals are extracted into one tile folder, named as ClimateNA
+## writes them (CanESM5_ssp245_2011-2040Y). Each must be mosaicked on its own, to its own file.
+test_that("future normals mosaic only the requested scenario, with distinct names", {
+  skip_if_not_installed("withr")
+  src <- withr::local_tempdir("normals")
+  dst <- withr::local_tempdir("mosaics")
+  r <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2, crs = "EPSG:4326")
+  for (s in c("245", "370")) {
+    d <- file.path(src, 39, paste0("CanESM5_ssp", s, "_2011-2040Y"))
+    dir.create(d, recursive = TRUE)
+    terra::values(r) <- as.numeric(s)
+    terra::writeRaster(r, file.path(d, "MAT.asc"), overwrite = TRUE)
+  }
+  o245 <- climateMosaicsNormalsParallel(
+    "2011_2040",
+    "MAT_normal",
+    39,
+    src,
+    dst,
+    gcm = "CanESM5",
+    ssp = "245"
+  )
+  o370 <- climateMosaicsNormalsParallel(
+    "2011_2040",
+    "MAT_normal",
+    39,
+    src,
+    dst,
+    gcm = "CanESM5",
+    ssp = "370"
+  )
+  expect_false(identical(o245, o370))
+  expect_equal(unique(terra::values(terra::rast(o245), mat = FALSE)), 245)
+  expect_equal(unique(terra::values(terra::rast(o370), mat = FALSE)), 370)
+})
