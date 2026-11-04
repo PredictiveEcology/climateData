@@ -7,7 +7,15 @@
 \usage{
 climateMosaicsParallel(y, climVars, tile, srcdir, dstdir)
 
-climateMosaicsNormalsParallel(p, climVars, tile, srcdir, dstdir)
+climateMosaicsNormalsParallel(
+  p,
+  climVars,
+  tile,
+  srcdir,
+  dstdir,
+  gcm = NULL,
+  ssp = NULL
+)
 }
 \arguments{
 \item{y}{integer specifying a single data year.}

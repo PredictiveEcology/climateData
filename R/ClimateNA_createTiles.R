@@ -251,6 +251,34 @@ checksums_sql <- function(dbfile, type) {
   return(list(db = db, df = df))
 }
 
+## The data release behind an index: one row, written by the pipeline (data-raw/pipeline/) and
+## read by climateDataRelease(). Written with explicit SQL types.
+.releaseCreate <- function(db) {
+  DBI::dbExecute(
+    db,
+    "CREATE TABLE IF NOT EXISTS release (
+      release_id        TEXT NOT NULL,  -- e.g. cna-v7.70-3arcmin
+      climatena_version TEXT NOT NULL,  -- ClimateNA release that produced the data
+      dem_resolution    TEXT NOT NULL,  -- e.g. 3arcmin, 1arcmin
+      created           REAL NOT NULL   -- epoch seconds
+    )"
+  )
+  invisible(db)
+}
+
+.releaseWrite <- function(db, df) {
+  DBI::dbExecute(db, "DELETE FROM release")
+  DBI::dbExecute(
+    db,
+    "INSERT INTO release (release_id, climatena_version, dem_resolution, created) VALUES (?, ?, ?, ?)",
+    params = unname(as.list(df[
+      1,
+      c("release_id", "climatena_version", "dem_resolution", "created")
+    ]))
+  )
+  invisible(db)
+}
+
 ## One fingerprint per published zip (see data-raw/06-archive_fingerprints.R).
 ## Written with explicit SQL types: dplyr::rows_*() would remap them.
 .archivesColumns <- c("gid", "type", "zipfile", "md5", "n_files", "size", "verified")

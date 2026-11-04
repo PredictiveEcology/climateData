@@ -1,5 +1,8 @@
 # climateData (development version)
 
+- New `climateDataRelease()` identifies the climate data release behind the installed package
+  (e.g. `"cna-v7.70-3arcmin"`). Code that caches `prepClimateLayers()` results can add it to the
+  cache key, so a new data release isn't served from an old cache.
 - Historical data now run to 2025 (ClimateNA v7.70).
 - Future climate normals (2011-2040, 2041-2070, 2071-2100) can be requested, e.g. `future_MAT_normal`
   with `future_period`. `prepClimateLayers()` used to stop with "future normals not yet implemented".
