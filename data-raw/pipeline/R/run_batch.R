@@ -38,7 +38,8 @@ pipeline_run_climatena <- function(args, name, log, timeout) {
 
 ## Run every period of a batch that isn't already done, check each output, stamp it, and write
 ## the batch's manifest. Stops (so the target errors and is retried next time) naming any
-## periods that failed.
+## periods that failed. The target runs on every tar_make() (cue "always"), so a damaged or
+## deleted output folder is found and rerun; finished periods cost only a listing.
 run_batch <- function(
   spec,
   pkgDir,
@@ -108,11 +109,15 @@ run_batch <- function(
     )
   }
 
+  ## the stamp fields make any regenerated period change the manifest, so its zips are recut
   folders <- .periodFolder(spec$type, spec$periods, spec$msy, spec$gcm, spec$ssp)
+  stamps <- lapply(folders, \(f) .readStamp(tileDir, f))
   manifest <- data.frame(
     folder = folders,
     n_files = vapply(folders, \(f) length(list.files(file.path(tileDir, f))), integer(1)),
-    climatena_version = vapply(folders, \(f) .readStamp(tileDir, f)$climatena_version, character(1))
+    climatena_version = vapply(stamps, `[[`, character(1), "climatena_version"),
+    dem_hash = vapply(stamps, `[[`, character(1), "dem_hash"),
+    time = vapply(stamps, `[[`, character(1), "time")
   )
   out <- file.path(outRoot, "raw", paste0(spec$id, ".tsv"))
   utils::write.table(manifest, out, sep = "\t", quote = FALSE, row.names = FALSE)

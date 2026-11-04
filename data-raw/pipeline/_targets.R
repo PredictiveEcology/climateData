@@ -26,6 +26,7 @@ container_uid <- local$uid
 container_gid <- local$gid
 tile_subset <- local$tiles
 dry_run <- local$dry_run
+run_timeout <- local$run_timeout %||% 3600 # seconds per ClimateNA run
 
 devtools::load_all(pkg_dir_path, quiet = TRUE) # the main process uses the checkout too
 
@@ -62,12 +63,15 @@ mapped <- tar_map(
       dem_dir,
       out_root,
       container_uid,
-      container_gid
+      container_gid,
+      timeout = run_timeout
     ),
     deployment = "worker"
   ),
 
-  ## one branch per batch (a tile's decade, or a tile's normals): run, check, stamp
+  ## one branch per batch (a tile's decade, or a tile's normals): run, check, stamp.
+  ## Runs on every tar_make() to re-check the outputs on disk; a period already done costs a
+  ## file listing, and an unchanged manifest leaves the zips alone.
   tar_target(
     batch,
     {
@@ -83,12 +87,14 @@ mapped <- tar_map(
         out_root,
         min_version,
         container_uid,
-        container_gid
+        container_gid,
+        timeout = run_timeout
       )
     },
     pattern = map(specs),
     format = "file",
-    deployment = "worker"
+    deployment = "worker",
+    cue = tar_cue(mode = "always")
   ),
 
   ## the batch's MSY, M, Y and S zips (Y for normals), each checked

@@ -9,8 +9,7 @@ pipeline_index_rows <- function(spec, uploads, manifestById, outRoot) {
   }
   m <- utils::read.delim(manifest, colClasses = "character")
   folders <- .periodFolder(spec$type, spec$periods, spec$msy, spec$gcm, spec$ssp)
-  tileDir <- pipeline_tile_dir(outRoot, spec)
-  created <- vapply(folders, \(f) as.numeric(.readStamp(tileDir, f)$time), numeric(1))
+  created <- as.numeric(m$time[match(folders, m$folder)])
   version <- m$climatena_version[match(folders, m$folder)]
   normals <- spec$type %in% c("historical_normals", "future_normals")
 

@@ -30,6 +30,9 @@ local <- list(
   ## TRUE: build everything but upload nothing to Drive
   dry_run = TRUE,
 
+  ## seconds before a ClimateNA run is stopped and its period counted as failed
+  run_timeout = 3600,
+
   ## how many ClimateNA runs at once: one worker per core on one machine...
   controller = crew::crew_controller_local(workers = 4)
   ## ...or across nodes (FOR-CAST/crew.ssh):
