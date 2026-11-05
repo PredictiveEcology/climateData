@@ -120,6 +120,6 @@ discovery. `available()` exposes the allowed years, periods, GCMs, and SSPs.
   Many of the long-running behaviors (downloads, reprojection, masking) are delegated here.
 - `SpaDES.tools` comes from the `development` branch (see `Remotes:` in DESCRIPTION); the
   r-universe build picks this up automatically, but plain `install.packages()` will not.
-- `googledrive` + `httr2` are Suggests but are required at runtime for `getClimateTiles()` and
-  `makeClimateDEM()`; functions that need them call `requireNamespace(..., quietly = TRUE)` and
-  error out if missing.
+- `googledrive` and `httr2` are Imports because `getClimateTiles()` and `makeClimateDEM()` need
+  them to download, and reproducible has both only in Suggests. httr2 is never called directly;
+  `R/imports.R` imports `httr2::request` so that R CMD check accepts it in Imports.

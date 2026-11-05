@@ -166,11 +166,6 @@ getClimateURLs <- function(
 #' @importFrom reproducible preProcess
 #' @importFrom utils packageVersion
 getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
-  stopifnot(
-    requireNamespace("googledrive", quietly = TRUE),
-    requireNamespace("httr2", quietly = TRUE)
-  )
-
   # needVars <- get("needVars", whereInStack("needVars"))
   if (is.null(needVars)) {
     needVars <- ""

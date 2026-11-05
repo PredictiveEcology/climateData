@@ -32,11 +32,6 @@ makeClimateDEM <- function(
   destinationPath,
   filename2
 ) {
-  stopifnot(
-    requireNamespace("googledrive", quietly = TRUE),
-    requireNamespace("httr2", quietly = TRUE)
-  )
-
   if (!is(studyArea, "SpatVector")) {
     studyArea <- vect(studyArea)
   }
