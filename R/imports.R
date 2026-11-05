@@ -16,3 +16,8 @@ getRemoteMetadata <- utils::getFromNamespace("getRemoteMetadata", "reproducible"
 
 #' @rdname imports
 googledriveIDtoHumanURL <- utils::getFromNamespace("googledriveIDtoHumanURL", "reproducible")
+
+## reproducible downloads the climate tiles with httr2 but has it only in Suggests, so
+## climateData imports it to make sure it is installed (see getClimateTiles()).
+#' @importFrom httr2 request
+NULL

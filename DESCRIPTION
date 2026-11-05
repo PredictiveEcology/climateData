@@ -1,6 +1,6 @@
 Package: climateData
 Title: Utilities For Working With North American Climate Data
-Version: 2.2.3.9009
+Version: 2.2.3.9010
 Date: 2026-04-15
 Authors@R: c(
     person("Alex M", "Chubaty", email = "achubaty@for-cast.ca",
@@ -26,7 +26,9 @@ Imports:
     fs,
     future.apply,
     glue,
+    googledrive,
     hms,
+    httr2,
     methods,
     parallel,
     parallelly,
@@ -43,9 +45,6 @@ Suggests:
     archive,
     digest,
     geodata,
-    googledrive,
-    hms,
-    httr2,
     knitr,
     progressr,
     rmarkdown,

@@ -37,6 +37,8 @@
   requests the monthly inputs (`PPT01`-`PPT12`, `Tmax04`-`Tmax10`) with `spinupYears` (default 5) extra years first.
 - `dbplyr` moves from Suggests to Imports. `dplyr::tbl()` on the tile database needs it at run time, so without it
   `getClimateTable()`, `ClimateNA_sql()` and everything that looks up tiles failed (R CMD check without Suggests).
+- `googledrive` and `httr2` move from Suggests to Imports. `getClimateTiles()`, and so `prepClimateLayers()`, and
+  `makeClimateDEM()` stopped without them. reproducible, which downloads the tiles, has both only in Suggests.
 - `climateMosaicsParallel()` and `climateMosaicsNormalsParallel()` match the year (or period) in the
   directory's own name. They matched it anywhere in the full path, so under a folder such as
   `.../1990-2020/...` the 1990 and 2020 mosaics were built from every year's files and came out as
