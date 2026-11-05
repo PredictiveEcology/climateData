@@ -2,7 +2,7 @@
 
 ## Solar radiation is named as in ClimateNA v7.60 (April 2025), which replaced its RAD
 ## variables (Rad01-Rad12, Rad_at/sm/sp/wt, MAR) with rsds (rsds01-rsds12, rsds_at/sm/sp/wt,
-## rsds). Archives made with earlier versions still hold the old names until regenerated.
+## rsds). Every archive in the cna-v7.70-3arcmin data release was made with v7.70.
 
 # dir("~/data/climate/ClimateNA_data/historical/normals/yearly/16/Normal_1991_2020Y") |>
 #   tools::file_path_sans_ext() |>
