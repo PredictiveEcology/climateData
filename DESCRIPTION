@@ -54,7 +54,8 @@ Suggests:
     testthat (>= 3.0.0),
     withr
 VignetteBuilder:
-    knitr
+    knitr,
+    rmarkdown
 Remotes:
     PredictiveEcology/reproducible@development,
     PredictiveEcology/SpaDES.tools@development
