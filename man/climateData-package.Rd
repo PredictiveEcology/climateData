@@ -11,6 +11,7 @@ Utilities for working with North American climate data from 'ClimateNA' \url{htt
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://predictiveecology.github.io/climateData/}
   \item \url{https://github.com/PredictiveEcology/climateData}
   \item Report bugs at \url{https://github.com/PredictiveEcology/climateData/issues}
 }
