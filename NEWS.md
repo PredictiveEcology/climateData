@@ -1,10 +1,20 @@
 # climateData (development version)
 
+- New `climateDataRelease()` identifies the climate data release behind the installed package
+  (e.g. `"cna-v7.70-3arcmin"`). Code that caches `prepClimateLayers()` results can add it to the
+  cache key, so a new data release isn't served from an old cache.
+- Historical data now run to 2025 (ClimateNA v7.70).
+- Future climate normals (2011-2040, 2041-2070, 2071-2100) can be requested, e.g. `future_MAT_normal`
+  with `future_period`. `prepClimateLayers()` used to stop with "future normals not yet implemented".
+- `prepClimateLayers()` downloads and extracts archives to a subfolder of `srcdir` named for the
+  data release (e.g. `<srcdir>/cna-v7.70-3arcmin/historical/39/`). A new release's archives keep
+  the earlier file names: in a `srcdir` that already held them, the download was skipped and the
+  old data were used. Folders from earlier releases are not read and can be deleted.
 - Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
   `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
-  ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. Only the historical
-  2023 and 2024 data were made with v7.60, so radiation can't be requested for other years or for future
-  scenarios until those archives are regenerated. The old radiation layers held values only for 1948-2010.
+  ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. All archives were
+  rebuilt with ClimateNA v7.70 (data release `cna-v7.70-3arcmin`), so radiation now has values for every
+  historical year and future scenario. The old radiation layers held values only for 1948-2010.
 
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
   (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached

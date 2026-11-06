@@ -472,13 +472,29 @@ buildClimateMosaics <- function(
 #'
 #' @keywords internal
 #' @rdname climateMosaicsParallel
-climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
+climateMosaicsNormalsParallel <- function(
+  p,
+  climVars,
+  tile,
+  srcdir,
+  dstdir,
+  gcm = NULL,
+  ssp = NULL
+) {
+  ## future normals: several scenarios share a tile folder, so select this scenario's period
+  ## folder exactly (named as ClimateNA writes it, e.g. CanESM5_ssp245_2011-2040Y)
+  periodRegexp <- if (is.null(gcm)) {
+    paste0("[^/\\\\]*", p, "[^/\\\\]*$")
+  } else {
+    paste0("(/|\\\\)", .periodFolder("future_normals", p, "Y", gcm, ssp), "$")
+  }
+  scenario <- if (is.null(gcm)) NULL else paste0(gcm, "_ssp", ssp)
   lapply(climVars, function(v) {
     nv <- strsplit(v, "_normal")[[1]]
     srcfiles <- srcdir |>
       ## anchor at the path separator: "6$" alone also matches tile directories 16, 26, ...
       fs::dir_ls(regexp = paste0("(/|\\\\)", tile, "$", collapse = "|"), type = "directory") |>
-      fs::dir_ls(regexp = paste0("[^/\\\\]*", p, "[^/\\\\]*$"), type = "directory") |>
+      fs::dir_ls(regexp = periodRegexp, type = "directory") |>
       fs::dir_ls(regexp = paste0("(/|\\\\)", nv, "[.]asc$"), type = "file")
 
     stopifnot(length(srcfiles) > 0)
@@ -486,7 +502,10 @@ climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
     ## vrts must be a single layer, so need to do e.g. monthly climVars by each month
     lapply(unique(basename(srcfiles)), function(mv) {
       mv <- tools::file_path_sans_ext(mv)
-      fname <- paste(mv, basename(basename(srcdir)), p, "t", paste(tile, collapse = "-"), sep = "_")
+      fname <- paste(
+        c(mv, basename(srcdir), scenario, p, "t", paste(tile, collapse = "-")),
+        collapse = "_"
+      )
       dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
       dsttif <- file.path(dstdir, paste0(fname, ".tif"))
 
@@ -554,7 +573,9 @@ buildClimateMosaicsNormals <- function(
       climVars = climVars,
       tile = tile,
       srcdir = srcdir,
-      dstdir = dstdir
+      dstdir = dstdir,
+      gcm = gcm,
+      ssp = ssp
     )
   } else if (getOption("climateData.parallel.backend") == "future") {
     tifs <- future.apply::future_lapply(
@@ -563,7 +584,9 @@ buildClimateMosaicsNormals <- function(
       climVars = climVars,
       tile = tile,
       srcdir = srcdir,
-      dstdir = dstdir
+      dstdir = dstdir,
+      gcm = gcm,
+      ssp = ssp
     )
   } else {
     stopForInvalidBackend()

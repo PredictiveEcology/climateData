@@ -16,7 +16,25 @@
 ## Nothing is changed on Google Drive, in the index, or on the share outside `auditDir`.
 ## Repairs are made by 05-repair_archives.R, from a reviewed zips.csv.
 
-source("data-raw/01-ClimateNA_setup.R")
+## To audit a release built by the pipeline (data-raw/pipeline/), set these before sourcing this
+## script, after authenticating googledrive, from the package root:
+##   auditIndex <- "<out_root>/ClimateNA_tiles.sqlite"  # the release's index
+##   auditZipRoot <- "<out_root>/zips"                  # its local zips, by the index's zipfile
+##   auditDriveFolders <- list(release = "<Drive ID of the release folder>")
+##   auditDir <- "<out_root>/_audit/<date>"
+##   auditTypes <- c("historical", "historical_normals", "future", "future_normals")
+## The raw-output check (repair classes) applies only to the pre-pipeline share layout; for a
+## release, an incomplete zip is classed "rerun_pipeline".
+releaseAudit <- exists("auditIndex")
+if (releaseAudit) {
+  stopifnot(exists("auditZipRoot"), exists("auditDriveFolders"), exists("auditDir"))
+  devtools::load_all(".", quiet = TRUE)
+} else {
+  source("data-raw/01-ClimateNA_setup.R")
+  auditIndex <- wrkngDBfile
+  auditZipRoot <- ClimateNAdata
+  auditDir <- file.path(ClimateNAdata, "_audit", format(Sys.Date()))
+}
 
 ## set these before sourcing this script to audit a subset
 if (!exists("auditTypes")) {
@@ -26,8 +44,6 @@ if (!exists("auditTiles")) {
   auditTiles <- NULL ## NULL means all tiles; otherwise an integer vector of tile IDs
 }
 nCores <- 16L ## parallel workers for reading local zips and raw folders on the share
-
-auditDir <- file.path(ClimateNAdata, "_audit", format(Sys.Date()))
 downloadDir <- file.path(auditDir, "downloads")
 dir.create(downloadDir, recursive = TRUE, showWarnings = FALSE)
 checked <- as.numeric(Sys.time())
@@ -42,10 +58,13 @@ driveFolders <- list(
   historical_normals = c(Y = "1FStzgwcLMz4gky2UJtt9z5U8MWR1A94k"),
   future = c(all = "1DH_JF6ZluYsZUpHGRXpXI8Q-DOUOE9AY") ## one subfolder per GCM x SSP
 )
+if (!releaseAudit) {
+  auditDriveFolders <- driveFolders[auditTypes]
+}
 
 # index ---------------------------------------------------------------------------------------
 
-db <- DBI::dbConnect(RSQLite::SQLite(), wrkngDBfile, flags = RSQLite::SQLITE_RO)
+db <- DBI::dbConnect(RSQLite::SQLite(), auditIndex, flags = RSQLite::SQLITE_RO)
 index <- lapply(auditTypes, function(type) {
   x <- DBI::dbReadTable(db, type)
   if (!is.null(auditTiles)) {
@@ -112,7 +131,7 @@ driveMeta <- function(d) {
   )
 }
 
-meta <- unlist(driveFolders[auditTypes], use.names = FALSE) |>
+meta <- unlist(auditDriveFolders, use.names = FALSE) |>
   lapply(\(f) googledrive::drive_ls(googledrive::as_id(f), recursive = TRUE)) |>
   dplyr::bind_rows() |>
   driveMeta()
@@ -169,7 +188,7 @@ readListing <- function(f) {
 
 message("Reading local zips")
 local <- parallel::mclapply(
-  file.path(ClimateNAdata, zips$zipfile),
+  file.path(auditZipRoot, zips$zipfile),
   function(f) {
     if (!file.exists(f)) {
       return(list(md5 = NA_character_, listing = NULL, error = NA_character_))
@@ -252,16 +271,21 @@ folderTime <- function(folder, msy) {
 }
 
 incomplete <- which(zips$complete %in% FALSE)
-message("Checking raw outputs for ", length(incomplete), " incomplete zips")
-raw <- parallel::mclapply(
-  incomplete,
-  function(i) {
-    folders <- unique(dirname(expected[[i]]))
-    checkListing(.dirListing(tileDirOf(i), folders), expected[[i]])$problems
-  },
-  mc.cores = nCores
-) |>
-  stopOnWorkerErrors("Checking the raw outputs")
+## a release's raw outputs are the pipeline's, in its own layout: it reruns anything missing
+raw <- if (releaseAudit) {
+  list()
+} else {
+  message("Checking raw outputs for ", length(incomplete), " incomplete zips")
+  parallel::mclapply(
+    incomplete,
+    function(i) {
+      folders <- unique(dirname(expected[[i]]))
+      checkListing(.dirListing(tileDirOf(i), folders), expected[[i]])$problems
+    },
+    mc.cores = nCores
+  ) |>
+    stopOnWorkerErrors("Checking the raw outputs")
+}
 ## complete zips made before ClimateNA v7.60 need regenerating for the rsds names
 ## zips not checked (missing on Drive, or the download failed) get no repair class
 zips$repair <- ifelse(
@@ -269,13 +293,13 @@ zips$repair <- ifelse(
   NA_character_,
   ifelse(zips$legacy_folders %in% 0L, "none", "regenerate_v760")
 )
-zips$repair[incomplete] <- ifelse(
-  vapply(raw, .archiveComplete, logical(1)),
-  "repairable",
-  "needs_climatena"
-)
+zips$repair[incomplete] <- if (releaseAudit) {
+  rep("rerun_pipeline", length(incomplete))
+} else {
+  ifelse(vapply(raw, .archiveComplete, logical(1)), "repairable", "needs_climatena")
+}
 
-reruns <- lapply(seq_along(incomplete), function(k) {
+reruns <- lapply(seq_along(raw), function(k) {
   i <- incomplete[k]
   p <- raw[[k]]
   p <- p[p$problem %in% .archiveFailing, , drop = FALSE]
@@ -385,6 +409,7 @@ summaryLines <- c(
   paste0("- Incomplete: ", sum(zips$complete %in% FALSE)),
   paste0("  - repairable from raw outputs: ", sum(zips$repair %in% "repairable")),
   paste0("  - needing ClimateNA reruns: ", sum(zips$repair %in% "needs_climatena")),
+  paste0("  - needing a pipeline rerun (a release): ", sum(zips$repair %in% "rerun_pipeline")),
   paste0("- Raw folders to rerun in ClimateNA: ", nrow(reruns)),
   paste0("- Total size on Drive: ", round(sum(zips$size, na.rm = TRUE) / 1024^3, 1), " GiB"),
   "",

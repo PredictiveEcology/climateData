@@ -1,0 +1,20 @@
+## Thin caller -- the pkgdown build and the gh-pages deploy live in PredictiveEcology/actions.
+
+name: pkgdown
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pkgdown:
+    uses: PredictiveEcology/actions/.github/workflows/pkgdown.yaml@main
+    ## No `secrets:` block: the shared workflow uses only the automatic GITHUB_TOKEN.

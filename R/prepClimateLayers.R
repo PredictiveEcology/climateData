@@ -87,6 +87,11 @@ extractTimes <- function(climateVarsList, type) {
 
 #' Prepare rasters for derived and 'as-is' climate variables
 #'
+#' Archives are downloaded and extracted to a subfolder of `srcdir` named for the data release
+#' (`climateDataRelease()$release_id`, e.g. `cna-v7.70-3arcmin`). A new release's archives keep
+#' the earlier names, so they would otherwise not replace files already in `srcdir`. Folders
+#' from earlier releases are not used again and can be deleted.
+#'
 #' @template climVarsList
 #'
 #' @template ClimateNA_srcdstdir
@@ -199,7 +204,9 @@ prepClimateLayers <- function(
       (is.null(tile) && !is.null(studyArea) && !is.null(rasterToMatch)) ## pass sA/RTM but not tile
   )
 
-  climatePath <- srcdir
+  ## one folder per data release: a new release's zips keep the old names, and reproducible skips
+  ## the download when a zip of that name and its files are already in the folder
+  climatePath <- file.path(srcdir, climateDataRelease()$release_id)
   climatePathOut <- dstdir
 
   ## need full study area perimeter w/o subpolygons
@@ -295,7 +302,6 @@ prepClimateLayers <- function(
       ) |>
         sort()
     } else if (type_msyn == "future_N") {
-      stop("future normals not yet implemented") ## TODO: get data, implement and verify
       type <- "future_normals"
       climatePath_type <- file.path(climatePath, "future", "normals")
       urls <- getClimateURLs(type = type, tile = tile, msy = "Y", gcm = gcm, ssp = ssp)
@@ -305,13 +311,13 @@ prepClimateLayers <- function(
         climatePath = climatePath_type,
         needVars = needVars
       )
+      ## every tile x period, with the folder name ClimateNA writes (e.g. CanESM5_ssp245_2011-2040Y)
       allDirs <- file.path(
         climatePath_type,
-        rep(tile, length(future_period)),
-        paste0(gcm, "_ssp", ssp),
-        paste0("Normal_", future_period, "Y")
+        rep(tile, each = length(future_period)),
+        rep(.periodFolder("future_normals", future_period, "Y", gcm, ssp), times = length(tile))
       ) |>
-        sort() ## TODO: verify paths
+        sort()
     } else {
       stop("unknown climate variable type: ", type_msyn)
     }
@@ -544,11 +550,13 @@ prepClimateLayers <- function(
   return(climData)
 }
 
-## Which archives to download, from the needed "<type>_<M|S|Y|N>" types. Seasonal variables exist
-## only in the MSY ("all") archives, and an MSY archive holds every file of the M and Y archives
-## (checked: 180 monthly and 25 yearly files per year, historical and future). So once MSY is needed,
-## M and Y come from it too; downloading them separately is redundant, and some M archives on the
-## server are incomplete (e.g. tile 46's future 2080s lacks 2085), which stopped runs.
+## Which archives to download, from the needed "<type>_<M|S|Y|N>" types. An MSY ("all") archive
+## holds every file of the M, S and Y archives (checked: 180 monthly, 60 seasonal and 25 yearly
+## files per year). Seasonal variables come from MSY, not from the S archives that v3.0.0 data
+## releases also publish: maskInvalidPPT() needs PPT01-PPT12 in the same folder, and S folders
+## have none. Once MSY is needed, M and Y come from it too -- downloading them separately is
+## redundant, and some older M archives on the server are incomplete (e.g. tile 46's future 2080s
+## lacks 2085), which stopped runs.
 .consolidateClimateTypes <- function(types) {
   types <- sub("_S$", "_MSY", types)
   for (tp in c("historical", "future")) {
