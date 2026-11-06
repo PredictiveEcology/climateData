@@ -127,8 +127,7 @@ Instead of a study area and a raster to match, you can pass `tile =` with one or
 ## Downloads and caching
 
 - **What gets downloaded:** the archives are grouped by tile and decade. climateData downloads only the archives it needs for your variables and years:
-  - only seasonal variables use the seasonal archive;
   - only monthly or only annual variables use their own archives;
-  - a mix that includes seasonal variables uses the archive with all variables.
-- **Downloads are kept:** downloaded archives stay in `srcdir`, so later calls reuse them.
+  - any request with seasonal variables uses the archive with all variables.
+- **Downloads are kept:** downloaded archives stay in a subfolder of `srcdir` named for the data release (e.g. `climate/inputs/cna-v7.70-3arcmin/`), so later calls reuse them. A new data release downloads into a new subfolder; older ones can be deleted.
 - **Results are cached:** with the reproducible package. If you cache results yourself (as `canClimateData` does), add `climateDataRelease()$release_id` to your cache key, so a new data release replaces your old results.

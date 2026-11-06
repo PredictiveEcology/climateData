@@ -6,9 +6,10 @@
 - Historical data now run to 2025 (ClimateNA v7.70).
 - Future climate normals (2011-2040, 2041-2070, 2071-2100) can be requested, e.g. `future_MAT_normal`
   with `future_period`. `prepClimateLayers()` used to stop with "future normals not yet implemented".
-- `prepClimateLayers()` downloads the new seasonal (S) archives when only seasonal variables are
-  needed, instead of the full all-variables (MSY) archive. Seasonal plus monthly or yearly
-  variables still come from the MSY archive.
+- `prepClimateLayers()` downloads and extracts archives to a subfolder of `srcdir` named for the
+  data release (e.g. `<srcdir>/cna-v7.70-3arcmin/historical/39/`). A new release's archives keep
+  the earlier file names: in a `srcdir` that already held them, the download was skipped and the
+  old data were used. Folders from earlier releases are not read and can be deleted.
 - Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
   `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
   ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. All archives were

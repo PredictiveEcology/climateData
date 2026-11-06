@@ -46,3 +46,37 @@ test_that(".releaseWrite keeps a single row", {
   .releaseWrite(db, row)
   expect_identical(DBI::dbGetQuery(db, "SELECT release_id FROM release")$release_id, "b")
 })
+
+## A new release's zips keep the old names. In a srcdir filled from the old index, reproducible
+## found 39_Y_2020.zip and its extracted files present, skipped the new download, and the old
+## data (MAR, no rsds) were used (checked 2026-11-05).
+test_that("prepClimateLayers downloads and mosaics in a folder named for the data release", {
+  skip_if_not_installed("withr")
+  d <- withr::local_tempdir("test_releaseSrcdir_")
+  got <- character(0)
+  testthat::local_mocked_bindings(
+    getClimateURLs = function(...) character(0),
+    getClimateTiles = function(tile, climateURLs, climatePath, needVars = NULL) {
+      got <<- c(got, download = climatePath)
+      NULL
+    },
+    .stopIfMissingClimateDirs = function(allDirs) invisible(allDirs),
+    buildClimateMosaics = function(...) {
+      got <<- c(got, mosaic = list(...)$srcdir)
+      stop("stop after mosaics")
+    }
+  )
+  vars <- list(
+    MAT = list(
+      vars = "historical_MAT",
+      fun = quote(calcAsIs),
+      .dots = list(historical_years = 2020)
+    )
+  )
+  expect_error(
+    prepClimateLayers(vars, srcdir = d, dstdir = file.path(d, "out"), tile = 39),
+    "stop after mosaics"
+  )
+  want <- file.path(d, climateDataRelease()$release_id, "historical")
+  expect_identical(unname(got), c(want, want))
+})
