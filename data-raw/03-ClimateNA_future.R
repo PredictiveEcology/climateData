@@ -2,6 +2,12 @@
 ## 2. Download and process historical, projected, and normals data for each tile using ClimateNA;
 ## 3. Archive and upload each set of tiles for use with canClimateData.
 
+stop(
+  "Superseded by the targets pipeline in data-raw/pipeline/ (vignette 'maintaining-climate-data'). ",
+  "This script ends by copying its working index over the shipped release index.",
+  call. = FALSE
+)
+
 # setup ---------------------------------------------------------------------------------------
 
 source("data-raw/01-ClimateNA_setup.R")

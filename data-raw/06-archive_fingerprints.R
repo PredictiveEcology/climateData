@@ -7,6 +7,12 @@
 ## (`addlDBfile`) is left alone: it holds the per-file checksum tables (millions of rows),
 ## which the package copy does not.
 
+stop(
+  "Superseded by the targets pipeline in data-raw/pipeline/, whose index has the archives ",
+  "table. This script copies the pre-pipeline working index over the shipped release index.",
+  call. = FALSE
+)
+
 source("data-raw/01-ClimateNA_setup.R")
 
 if (!exists("finalZips")) {
