@@ -12,13 +12,10 @@ pipeline_load <- function() {
   invisible(TRUE)
 }
 
-## Tiles with a DEM tile, optionally limited to a subset (for testing).
+## Tiles with a DEM tile, optionally limited to a subset (for testing); stops if there are none,
+## or if a subset tile has no DEM.
 pipeline_tiles <- function(demDir, subset = NULL) {
-  tiles <- .demTiles(demDir)
-  if (!is.null(subset)) {
-    tiles <- intersect(tiles, as.integer(subset))
-  }
-  tiles
+  .demTiles(demDir, subset)
 }
 
 ## The batch specs for one archive type, from the release settings.

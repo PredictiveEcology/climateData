@@ -37,13 +37,16 @@
 }
 
 ## A period is done when its stored zip passes the archive check and its stamp shows a ClimateNA
-## version at or above `minVersion` and the same DEM. Anything else is rerun.
+## version at or above `minVersion` and the same DEM. Anything else is rerun, including a stamp
+## or zip that can't be read (cut short by a crash, or damaged): an error here would fail the
+## batch on every run instead.
 .periodDone <- function(tileDir, folder, expected, minVersion, demHash) {
-  stamp <- .readStamp(tileDir, folder)
+  stamp <- tryCatch(.readStamp(tileDir, folder), error = function(e) NULL)
   if (is.null(stamp)) {
     return(FALSE)
   }
-  if (numeric_version(stamp$climatena_version) < numeric_version(minVersion)) {
+  version <- numeric_version(stamp$climatena_version %||% "", strict = FALSE)
+  if (is.na(version) || version < numeric_version(minVersion)) {
     return(FALSE)
   }
   if (!identical(stamp$dem_hash, demHash)) {
@@ -53,7 +56,10 @@
   if (!file.exists(zip)) {
     return(FALSE)
   }
-  listing <- .zipListing(zip)
+  listing <- tryCatch(.zipListing(zip), error = function(e) NULL)
+  if (is.null(listing)) {
+    return(FALSE)
+  }
   e <- .archiveExpectedByVersion(listing, expected)$expected
   .archiveComplete(.archiveCheck(listing, e))
 }

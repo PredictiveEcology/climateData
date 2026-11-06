@@ -81,8 +81,22 @@
   specs
 }
 
-## Tile IDs that have a DEM tile (can_dem_<id>.asc) in `demDir`.
-.demTiles <- function(demDir) {
+## Tile IDs that have a DEM tile (can_dem_<id>.asc) in `demDir`, or the requested `tiles`, all
+## of which must have one. Stops rather than return no tiles: no batches would give an empty
+## index and an empty report, which reads as a clean release.
+.demTiles <- function(demDir, tiles = NULL) {
   f <- list.files(demDir, pattern = "^can_dem_[0-9]+[.]asc$")
-  sort(as.integer(sub("^can_dem_([0-9]+)[.]asc$", "\\1", f)))
+  have <- sort(as.integer(sub("^can_dem_([0-9]+)[.]asc$", "\\1", f)))
+  if (length(have) == 0) {
+    stop("No DEM tiles (can_dem_<tile>.asc) in ", demDir, call. = FALSE)
+  }
+  if (is.null(tiles)) {
+    return(have)
+  }
+  tiles <- as.integer(tiles)
+  missing <- setdiff(tiles, have)
+  if (length(missing) > 0) {
+    stop("No DEM tile in ", demDir, " for tile(s) ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  sort(tiles)
 }

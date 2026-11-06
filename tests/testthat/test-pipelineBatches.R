@@ -78,4 +78,15 @@ test_that(".demTiles lists only tiles with a DEM file", {
   d <- withr::local_tempdir()
   file.create(file.path(d, c("can_dem_1.asc", "can_dem_39.asc", "notes.txt")))
   expect_identical(.demTiles(d), c(1L, 39L))
+  expect_identical(.demTiles(d, tiles = 39), 39L)
+})
+
+## A wrong dem_dir, or a requested tile without a DEM, gave no batches: an empty index and an
+## empty report, which reads as a clean release.
+test_that(".demTiles stops when there are no DEM tiles or a requested tile has none", {
+  skip_if_not_installed("withr")
+  d <- withr::local_tempdir()
+  expect_error(.demTiles(d), "No DEM tiles")
+  file.create(file.path(d, c("can_dem_1.asc", "can_dem_39.asc")))
+  expect_error(.demTiles(d, tiles = c(39, 43)), "43")
 })

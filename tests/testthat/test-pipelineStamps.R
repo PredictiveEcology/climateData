@@ -38,3 +38,21 @@ test_that(".periodDone needs a complete period zip and a matching stamp", {
   expect_identical(.readStamp(tileDir, folder)$image, "img@sha256:1")
   expect_identical(basename(.periodZip(tileDir, folder)), "Year_2025Y.zip") # sibling of the stamp
 })
+
+## An error here fails the batch on every run, so a damaged period would never be regenerated.
+test_that(".periodDone sends a damaged zip or a cut-short stamp back to be rerun", {
+  skip_if_not_installed("withr")
+  tileDir <- withr::local_tempdir()
+  folder <- "Year_2025Y"
+  expected <- file.path(folder, paste0(.allowedClimateVars_Y, ".asc"))
+  .writeStamp(tileDir, folder, "7.70", "abc", "img")
+  writeBin(as.raw(c(0x50, 0x4b, 0x03, 0x04, 1:40)), .periodZip(tileDir, folder)) # not a zip
+  expect_identical(.periodDone(tileDir, folder, expected, "7.70", "abc"), FALSE)
+
+  file.create(.stampPath(tileDir, folder)) # empty stamp
+  expect_identical(.periodDone(tileDir, folder, expected, "7.70", "abc"), FALSE)
+  writeLines("climatena_vers", .stampPath(tileDir, folder)) # cut mid-line
+  expect_identical(.periodDone(tileDir, folder, expected, "7.70", "abc"), FALSE)
+  writeLines("climatena_version: 7.", .stampPath(tileDir, folder)) # not a version
+  expect_identical(.periodDone(tileDir, folder, expected, "7.70", "abc"), FALSE)
+})

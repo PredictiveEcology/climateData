@@ -65,8 +65,9 @@ pipeline_zip_relpaths <- function(spec) {
 
 ## The previous release's archives rows that this release could reuse, written once to a small
 ## lookup database (indexed, rollback-journal mode, so upload workers can open it read-only and
-## query only their own zips). Returns the path and a hash of the rows: uploads then depend on
-## what the rows are, not on the database file's bytes.
+## query only their own zips). Returns only the path, so its value never changes: the rows change
+## whenever a scenario is added (they are cut to specs_all), and a value that followed them would
+## rerun every upload branch. An upload that already ran needs no new lookup.
 pipeline_previous_lookup <- function(index, specs, outRoot) {
   prev <- pipeline_previous_archives(index)
   prev <- prev[prev$zipfile %in% unlist(lapply(specs, pipeline_zip_relpaths)), , drop = FALSE]
@@ -80,7 +81,7 @@ pipeline_previous_lookup <- function(index, specs, outRoot) {
   DBI::dbExecute(db, "CREATE INDEX prev_zipfile ON prev (zipfile)")
   DBI::dbDisconnect(db)
   file.rename(tmp, path)
-  list(path = path, hash = digest::digest(prev, algo = "xxhash64"))
+  list(path = path)
 }
 
 ## The previous release's rows for one batch's zips, from pipeline_previous_lookup().
