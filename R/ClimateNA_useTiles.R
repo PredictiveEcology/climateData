@@ -56,7 +56,7 @@ getClimateTable <- function(
     stopifnot(!is.null(years))
   }
 
-  dbdf <- ClimateNA_sql(ClimateNA_tiles_sqlite(), type)
+  dbdf <- ClimateNA_sql(ClimateNA_tiles_sqlite(), type, readonly = TRUE)
   climate_db <- dbdf[["db"]]
   climate_df <- dbdf[["df"]]
   on.exit(DBI::dbDisconnect(climate_db), add = TRUE)
@@ -166,11 +166,6 @@ getClimateURLs <- function(
 #' @importFrom reproducible preProcess
 #' @importFrom utils packageVersion
 getClimateTiles <- function(tile, climateURLs, climatePath, needVars = NULL) {
-  stopifnot(
-    requireNamespace("googledrive", quietly = TRUE),
-    requireNamespace("httr2", quietly = TRUE)
-  )
-
   # needVars <- get("needVars", whereInStack("needVars"))
   if (is.null(needVars)) {
     needVars <- ""

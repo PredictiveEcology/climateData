@@ -3,6 +3,16 @@
 - `prepClimateLayers()` now writes multi-layer climate stacks band-interleaved in 256 x 256 tiles (`INTERLEAVE=BAND`, `TILED=YES`) through `postProcessTo(writeTo = , gdal = )`, instead of pixel-interleaved 1-row strips, so reading one year's layer no longer decompresses every layer in the file (about 8.8 s down to 0.14 s for a 90-layer stack). Values are unchanged. This needs a `reproducible` in which `writeTo()` honours `gdal` (older versions ignore it and write the old layout). The creation options are part of the cache key, so existing stacks are rebuilt the next time `prepClimateLayers()` runs.
 - New exported `checkCalendarYears(start, end, module, hint, years)`: stops with a message saying what to set when a run's start is not a calendar year the climate data cover (1901 to 2100, from `available()`, or the range of `years` when given). For modules such as canClimateData and climateYear, to fail early on model-year times (0-10, as `setupProject()` gives without `times`).
 - `prepClimateLayers()` now writes multi-layer climate stacks band-interleaved in 256 x 256 tiles (`INTERLEAVE=BAND`, `TILED=YES`) through `postProcessTo(writeTo = , gdal = )`, instead of pixel-interleaved 1-row strips, so reading one year's layer no longer decompresses every layer in the file (about 8.8 s down to 0.14 s for a 90-layer stack). Values are unchanged. Needs reproducible >= 3.2.1.9057, in which `writeTo()` honours `gdal`. The options are an argument of the cached `postProcessTo()` call, so existing multi-layer stacks are rebuilt the next time `prepClimateLayers()` runs. New exported `climateStackGdalOptions()` returns them, for code that rewrites the stacks or caches `prepClimateLayers()` (e.g., canClimateData).
+- `latestHistoricalYear()` and the tile lookup in `ClimateNA_useTiles()` open the bundled tile index read-only
+  and set the SQLite busy timeout before any other statement. Before, many processes opening it together
+  (e.g. parallel hindcast jobs parsing fireSense modules on NFS) could fail with "database is locked".
+  `ClimateNA_sql()` gets a `readonly` argument; writing connections set WAL only when they create the file.
+
+- Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
+  `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
+  ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. Only the historical
+  2023 and 2024 data were made with v7.60, so radiation can't be requested for other years or for future
+  scenarios until those archives are regenerated. The old radiation layers held values only for 1948-2010.
 
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
   (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
@@ -26,6 +36,8 @@
   requests the monthly inputs (`PPT01`-`PPT12`, `Tmax04`-`Tmax10`) with `spinupYears` (default 5) extra years first.
 - `dbplyr` moves from Suggests to Imports. `dplyr::tbl()` on the tile database needs it at run time, so without it
   `getClimateTable()`, `ClimateNA_sql()` and everything that looks up tiles failed (R CMD check without Suggests).
+- `googledrive` and `httr2` move from Suggests to Imports. `getClimateTiles()`, and so `prepClimateLayers()`, and
+  `makeClimateDEM()` stopped without them. reproducible, which downloads the tiles, has both only in Suggests.
 - `climateMosaicsParallel()` and `climateMosaicsNormalsParallel()` match the year (or period) in the
   directory's own name. They matched it anywhere in the full path, so under a folder such as
   `.../1990-2020/...` the 1990 and 2020 mosaics were built from every year's files and came out as

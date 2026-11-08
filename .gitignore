@@ -31,3 +31,6 @@ tmp/
 *.knit.md
 
 .claude/
+
+## scratch: drafts, plans, handoffs
+_tmp/

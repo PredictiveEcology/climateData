@@ -58,6 +58,7 @@ importFrom(dplyr,
 )
 importFrom(fs,dir_ls)
 importFrom(future.apply,future_lapply)
+importFrom(httr2,request)
 importFrom(parallel,
   parLapply,
   stopCluster

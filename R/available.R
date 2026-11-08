@@ -1,16 +1,21 @@
 .allowedClimateTypes <- c("historical", "historical_normals", "future", "future_normals")
 
+## Solar radiation is named as in ClimateNA v7.60 (April 2025), which replaced its RAD
+## variables (Rad01-Rad12, Rad_at/sm/sp/wt, MAR) with rsds (rsds01-rsds12, rsds_at/sm/sp/wt,
+## rsds). Archives made with earlier versions still hold the old names until regenerated.
+
 # dir("~/data/climate/ClimateNA_data/historical/normals/yearly/16/Normal_1991_2020Y") |>
 #   tools::file_path_sans_ext() |>
 #   dput()
+## (with MAR replaced by rsds, as in the v7.60 yearly outputs)
 ## fmt: skip
 .allowedClimateVars_nrm <- c(
   "AHM", "bFFP", "CMD", "CMI", "DD_0", "DD_18", "DD1040", "DD18",
-  "DD5", "eFFP", "EMT", "Eref", "EXT", "FFP", "MAP", "MAR", "MAT",
-  "MCMT", "MSP", "MWMT", "NFFD", "PAS", "RH", "SHM", "TD"
+  "DD5", "eFFP", "EMT", "Eref", "EXT", "FFP", "MAP", "MAT", "MCMT",
+  "MSP", "MWMT", "NFFD", "PAS", "RH", "rsds", "SHM", "TD"
 )
 
-# dir("~/data/climate/ClimateNA_data/historical/monthly/16/Year_2000M") |>
+# dir("~/data/climate/ClimateNA_data/historical/monthly/16/Year_2023M") |>
 #   tools::file_path_sans_ext() |>
 #   dput()
 ## fmt: skip
@@ -33,10 +38,10 @@
   "PAS04", "PAS05", "PAS06", "PAS07", "PAS08", "PAS09", "PAS10",
   "PAS11", "PAS12", "PPT01", "PPT02", "PPT03", "PPT04", "PPT05",
   "PPT06", "PPT07", "PPT08", "PPT09", "PPT10", "PPT11", "PPT12",
-  "Rad01", "Rad02", "Rad03", "Rad04", "Rad05", "Rad06", "Rad07",
-  "Rad08", "Rad09", "Rad10", "Rad11", "Rad12", "RH01", "RH02",
-  "RH03", "RH04", "RH05", "RH06", "RH07", "RH08", "RH09", "RH10",
-  "RH11", "RH12", "Tave01", "Tave02", "Tave03", "Tave04", "Tave05",
+  "RH01", "RH02", "RH03", "RH04", "RH05", "RH06", "RH07", "RH08",
+  "RH09", "RH10", "RH11", "RH12", "rsds01", "rsds02", "rsds03",
+  "rsds04", "rsds05", "rsds06", "rsds07", "rsds08", "rsds09", "rsds10",
+  "rsds11", "rsds12", "Tave01", "Tave02", "Tave03", "Tave04", "Tave05",
   "Tave06", "Tave07", "Tave08", "Tave09", "Tave10", "Tave11", "Tave12",
   "Tmax01", "Tmax02", "Tmax03", "Tmax04", "Tmax05", "Tmax06", "Tmax07",
   "Tmax08", "Tmax09", "Tmax10", "Tmax11", "Tmax12", "Tmin01", "Tmin02",
@@ -44,7 +49,7 @@
   "Tmin10", "Tmin11", "Tmin12"
 )
 
-# dir("~/data/climate/ClimateNA_data/historical/all/16/Year_2000MSY") |>
+# dir("~/data/climate/ClimateNA_data/historical/all/16/Year_2023MSY") |>
 #   tools::file_path_sans_ext() |>
 #   grep("_(at|sm|sp|wt)$", x = _, value = TRUE) |>
 #   dput()
@@ -56,20 +61,20 @@
   "DD18_sp", "DD18_wt", "DD5_at", "DD5_sm", "DD5_sp", "DD5_wt",
   "Eref_at", "Eref_sm", "Eref_sp", "Eref_wt", "NFFD_at", "NFFD_sm",
   "NFFD_sp", "NFFD_wt", "PAS_at", "PAS_sm", "PAS_sp", "PAS_wt",
-  "PPT_at", "PPT_sm", "PPT_sp", "PPT_wt", "Rad_at", "Rad_sm", "Rad_sp",
-  "Rad_wt", "RH_at", "RH_sm", "RH_sp", "RH_wt", "Tave_at", "Tave_sm",
+  "PPT_at", "PPT_sm", "PPT_sp", "PPT_wt", "RH_at", "RH_sm", "RH_sp",
+  "RH_wt", "rsds_at", "rsds_sm", "rsds_sp", "rsds_wt", "Tave_at", "Tave_sm",
   "Tave_sp", "Tave_wt", "Tmax_at", "Tmax_sm", "Tmax_sp", "Tmax_wt",
   "Tmin_at", "Tmin_sm", "Tmin_sp", "Tmin_wt"
 )
 
-# dir("~/data/climate/ClimateNA_data/historical/yearly/16/Year_2000Y") |>
+# dir("~/data/climate/ClimateNA_data/historical/yearly/16/Year_2023Y") |>
 #   tools::file_path_sans_ext() |>
 #   dput()
 ## fmt: skip
 .allowedClimateVars_Y <- c(
   "AHM", "bFFP", "CMD", "CMI", "DD_0", "DD_18", "DD1040", "DD18",
-  "DD5", "eFFP", "EMT", "Eref", "EXT", "FFP", "MAP", "MAR", "MAT",
-  "MCMT", "MSP", "MWMT", "NFFD", "PAS", "RH", "SHM", "TD"
+  "DD5", "eFFP", "EMT", "Eref", "EXT", "FFP", "MAP", "MAT", "MCMT",
+  "MSP", "MWMT", "NFFD", "PAS", "RH", "rsds", "SHM", "TD"
 )
 
 .allowedClimateVars_MSY <- c(.allowedClimateVars_M, .allowedClimateVars_S, .allowedClimateVars_Y)
