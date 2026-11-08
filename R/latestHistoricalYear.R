@@ -18,7 +18,7 @@
 #' @examples
 #' latestHistoricalYear()
 latestHistoricalYear <- function(tile = NULL, msy = "MSY") {
-  dbdf <- ClimateNA_sql(ClimateNA_tiles_sqlite(), "historical")
+  dbdf <- ClimateNA_sql(ClimateNA_tiles_sqlite(), "historical", readonly = TRUE)
   on.exit(DBI::dbDisconnect(dbdf[["db"]]), add = TRUE)
 
   climate_df <- dplyr::filter(dbdf[["df"]], msy %in% !!msy) |>

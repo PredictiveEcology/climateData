@@ -56,7 +56,7 @@ getClimateTable <- function(
     stopifnot(!is.null(years))
   }
 
-  dbdf <- ClimateNA_sql(ClimateNA_tiles_sqlite(), type)
+  dbdf <- ClimateNA_sql(ClimateNA_tiles_sqlite(), type, readonly = TRUE)
   climate_db <- dbdf[["db"]]
   climate_df <- dbdf[["df"]]
   on.exit(DBI::dbDisconnect(climate_db), add = TRUE)
