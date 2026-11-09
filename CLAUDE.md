@@ -91,8 +91,11 @@ serialization cheap. `stopForInvalidBackend()` centralizes the error path.
 
 The index at `inst/extdata/ClimateNA_tiles.sqlite` holds four main tables —
 `historical`, `historical_normals`, `future`, `future_normals`. `gid` is the Google Drive
-file ID; archives are grouped by decade, so many rows share a `gid`. The connection opens in
-WAL mode with a 60s busy timeout to allow concurrent writers from the `data-raw/` scripts.
+file ID; archives are grouped by decade, so many rows share a `gid`. `sqlite_connect_db()`
+sets a 60s busy timeout before anything else; lookups (`readonly = TRUE`) open the file
+read-only, and writing connections switch a file to WAL only when they create it. The shipped
+index is left in rollback-journal mode (`build_index()` in `data-raw/pipeline/R/index.R`), so
+read-only lookups work from a library folder the user cannot write to.
 
 Optional `checksums_<type>` tables are created by `checksums_sql()` when a maintainer runs the
 `data-raw/` checksum loops; they may or may not be present in a given copy of the bundled
