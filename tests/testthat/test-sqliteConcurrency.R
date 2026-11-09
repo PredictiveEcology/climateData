@@ -18,15 +18,21 @@ test_that("parallel latestHistoricalYear() calls on one database do not fail", {
 
   ## R CMD check caps forked workers at 2 (_R_CHECK_LIMIT_CORES_)
   nWorkers <- if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) 2L else 8L
-  res <- parallel::mclapply(seq_len(nWorkers), function(i) {
-    t0 <- Sys.time()
-    out <- character()
-    while (difftime(Sys.time(), t0, units = "secs") < 10) {
-      r <- tryCatch(identical(latestHistoricalYear(), expected), error = function(e) conditionMessage(e))
-      if (!isTRUE(r)) out <- c(out, as.character(r))
-    }
-    out
-  }, mc.cores = nWorkers)
+  res <- parallel::mclapply(
+    seq_len(nWorkers),
+    function(i) {
+      t0 <- Sys.time()
+      out <- character()
+      while (difftime(Sys.time(), t0, units = "secs") < 10) {
+        r <- tryCatch(identical(latestHistoricalYear(), expected), error = function(e) {
+          conditionMessage(e)
+        })
+        if (!isTRUE(r)) out <- c(out, as.character(r))
+      }
+      out
+    },
+    mc.cores = nWorkers
+  )
 
   errs <- unlist(res)
   expect_identical(unique(errs), character(0), info = paste(head(errs, 3), collapse = "; "))
