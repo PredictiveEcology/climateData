@@ -12,13 +12,9 @@
 #' @examples
 #' climateDataRelease()$release_id
 climateDataRelease <- function() {
-  ## read a copy: the index is in WAL mode, and even a read-only connection leaves -wal/-shm
-  ## files next to the file it opens
-  f <- tempfile(fileext = ".sqlite")
-  on.exit(unlink(paste0(f, c("", "-wal", "-shm"))), add = TRUE)
-  file.copy(ClimateNA_tiles_sqlite(), f)
-  db <- DBI::dbConnect(RSQLite::SQLite(), f, flags = RSQLite::SQLITE_RO)
-  on.exit(DBI::dbDisconnect(db), add = TRUE, after = FALSE)
+  ## read-only, in place: called on every run of code that caches, often by many processes at once
+  db <- sqlite_connect_db(ClimateNA_tiles_sqlite(), readonly = TRUE)
+  on.exit(DBI::dbDisconnect(db), add = TRUE)
 
   if (!DBI::dbExistsTable(db, "release")) {
     return(list(

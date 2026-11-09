@@ -30,6 +30,30 @@ test_that("climateDataRelease reports an index without a release table as pre-3.
   expect_identical(climateDataRelease()$release_id, "pre-3.0.0")
 })
 
+## canClimateData calls it on every run, in many processes at once: it must read the shipped
+## index where it is, read-only (no 40 MB copy), and leave the package folder as it was.
+test_that("climateDataRelease reads the shipped index in place, read-only", {
+  skip_if_not_installed("withr")
+  d <- withr::local_tempdir()
+  f <- file.path(d, "ClimateNA_tiles.sqlite")
+  file.copy(ClimateNA_tiles_sqlite(), f)
+  Sys.chmod(d, "0555")
+  withr::defer(Sys.chmod(d, "0755"))
+
+  realConnect <- sqlite_connect_db
+  opened <- list()
+  testthat::local_mocked_bindings(
+    ClimateNA_tiles_sqlite = function() f,
+    sqlite_connect_db = function(dbfile, readonly = FALSE) {
+      opened[[length(opened) + 1]] <<- list(dbfile = dbfile, readonly = readonly)
+      realConnect(dbfile, readonly = readonly)
+    }
+  )
+  expect_identical(climateDataRelease()$release_id, "cna-v7.70-3arcmin")
+  expect_identical(opened, list(list(dbfile = f, readonly = TRUE)))
+  expect_identical(list.files(d), "ClimateNA_tiles.sqlite")
+})
+
 test_that(".releaseWrite keeps a single row", {
   skip_if_not_installed("withr")
   db <- sqlite_connect_db(file.path(withr::local_tempdir(), "t.sqlite"))
