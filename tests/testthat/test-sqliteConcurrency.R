@@ -56,6 +56,24 @@ test_that("a read-only lookup neither writes nor creates tables", {
   expect_false(DBI::dbExistsTable(con, "future_normals"))
 })
 
+test_that("a lookup that fails closes its connection", {
+  f <- dbCopy()
+  on.exit(unlink(paste0(f, c("", "-wal", "-shm"))), add = TRUE)
+  con <- DBI::dbConnect(RSQLite::SQLite(), f)
+  DBI::dbExecute(con, "DROP TABLE future_normals")
+  DBI::dbDisconnect(con)
+
+  realConnect <- sqlite_connect_db
+  opened <- NULL
+  testthat::local_mocked_bindings(sqlite_connect_db = function(...) {
+    opened <<- realConnect(...)
+    opened
+  })
+  on.exit(if (!is.null(opened) && DBI::dbIsValid(opened)) DBI::dbDisconnect(opened), add = TRUE)
+  expect_error(ClimateNA_sql(f, "future_normals", readonly = TRUE))
+  expect_false(DBI::dbIsValid(opened))
+})
+
 test_that("a lookup waits for a lock held by another process instead of failing", {
   f <- dbCopy()
   on.exit(unlink(paste0(f, c("", "-wal", "-shm"))), add = TRUE)

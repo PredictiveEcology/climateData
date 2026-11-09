@@ -138,6 +138,10 @@ sqlite_connect_db <- function(dbfile, readonly = FALSE) {
 ## dbplyr is an Import: without it every tile lookup fails, as R CMD check without Suggests showed.
 ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
   db <- sqlite_connect_db(dbfile, readonly = readonly)
+  ## the caller owns the connection once it is returned; close it if anything below fails
+  ## (e.g. a read-only lookup of a table the file lacks)
+  returned <- FALSE
+  on.exit(if (!returned) DBI::dbDisconnect(db), add = TRUE)
 
   df_template <- switch(
     type,
@@ -203,6 +207,7 @@ ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
 
   df <- dplyr::tbl(db, tbl)
 
+  returned <- TRUE
   return(list(db = db, df = df))
 }
 
