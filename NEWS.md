@@ -14,6 +14,8 @@
   and set the SQLite busy timeout before any other statement. Before, many processes opening it together
   (e.g. parallel hindcast jobs parsing fireSense modules on NFS) could fail with "database is locked".
   `ClimateNA_sql()` gets a `readonly` argument; writing connections set WAL only when they create the file.
+  The bundled index is no longer in WAL mode, so these lookups also work from a library folder the user
+  cannot write to, and leave no `-wal`/`-shm` files in it.
 - Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
   `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
   ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. All archives were
