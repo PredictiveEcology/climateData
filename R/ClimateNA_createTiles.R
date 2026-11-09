@@ -78,8 +78,8 @@ ClimateNA_path <- function(dataPath, tile = NULL, type = NULL, msy = NULL, gcm =
 #' @keywords internal
 #' @importFrom DBI dbExecute
 #' @importFrom RSQLite dbConnect SQLite
-sqlite_connect_db <- function(dbfile) {
-  firstRun <- file.exists(dbfile)
+sqlite_connect_db <- function(dbfile, readonly = FALSE) {
+  newDb <- !file.exists(dbfile)
 
   ## `extended_types = TRUE` makes RSQLite return DATETIME columns as hms /
   ## POSIXct, which requires the `hms` package AT RUNTIME. RSQLite declares hms
@@ -95,13 +95,21 @@ sqlite_connect_db <- function(dbfile) {
   db <- RSQLite::dbConnect(
     drv = RSQLite::SQLite(),
     dbname = dbfile,
-    synchronous = "normal",
+    ## `synchronous = NULL`: dbConnect would otherwise run `PRAGMA synchronous` before any busy timeout
+    ## is set, which fails at once with "database is locked" when other processes have the file open.
+    synchronous = NULL,
+    flags = if (isTRUE(readonly)) RSQLite::SQLITE_RO else RSQLite::SQLITE_RWC,
     extended_types = TRUE ## for DATETIME -- see note above re: hms
   )
 
-  if (isTRUE(firstRun)) {
-    DBI::dbExecute(db, "PRAGMA journal_mode = WAL") ## using WAL allows concurrency
-    DBI::dbExecute(db, "PRAGMA busy_timeout = 60000") ## set busy timeout (ms); allows concurrency.
+  ## must come first: every statement below waits (ms) for a lock instead of failing at once
+  DBI::dbExecute(db, "PRAGMA busy_timeout = 60000")
+
+  if (!isTRUE(readonly)) {
+    DBI::dbExecute(db, "PRAGMA synchronous = normal")
+    if (isTRUE(newDb)) {
+      DBI::dbExecute(db, "PRAGMA journal_mode = WAL") ## using WAL allows concurrency
+    }
   }
 
   return(db)
@@ -112,6 +120,9 @@ sqlite_connect_db <- function(dbfile) {
 #' @template ClimateNA_dbfile
 #'
 #' @template ClimateNA_type
+#'
+#' @param readonly logical. If `TRUE`, open the database read-only (it is never written to, and a missing
+#'        table is not created). Use for lookups, so that many processes can read one database at once.
 #'
 #' @return named list containing:
 #'        - `db`, the database connection;
@@ -125,8 +136,8 @@ sqlite_connect_db <- function(dbfile) {
 #' @rdname ClimateNA_sql
 ## dplyr::tbl() on a DBI connection needs dbplyr at run time (dplyr's check_dbplyr() stops without it), so
 ## dbplyr is an Import: without it every tile lookup fails, as R CMD check without Suggests showed.
-ClimateNA_sql <- function(dbfile, type) {
-  db <- sqlite_connect_db(dbfile)
+ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
+  db <- sqlite_connect_db(dbfile, readonly = readonly)
 
   df_template <- switch(
     type,
@@ -186,7 +197,7 @@ ClimateNA_sql <- function(dbfile, type) {
 
   tbl <- type
 
-  if (!DBI::dbExistsTable(db, tbl)) {
+  if (!isTRUE(readonly) && !DBI::dbExistsTable(db, tbl)) {
     DBI::dbCreateTable(db, tbl, df_template)
   }
 

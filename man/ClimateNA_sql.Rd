@@ -5,7 +5,7 @@
 \alias{checksums_sql}
 \title{Connect to ClimateNA tile and checksums database}
 \usage{
-ClimateNA_sql(dbfile, type)
+ClimateNA_sql(dbfile, type, readonly = FALSE)
 
 checksums_sql(dbfile, type)
 }
@@ -14,6 +14,9 @@ checksums_sql(dbfile, type)
 
 \item{type}{character. denotes the table in the sqlite database to access.
 one of 'historical', 'future', 'historical_normals', or 'future_normals'.}
+
+\item{readonly}{logical. If \code{TRUE}, open the database read-only (it is never written to, and a missing
+table is not created). Use for lookups, so that many processes can read one database at once.}
 }
 \value{
 named list containing:

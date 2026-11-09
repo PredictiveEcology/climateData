@@ -10,18 +10,20 @@
   data release (e.g. `<srcdir>/cna-v7.70-3arcmin/historical/39/`). A new release's archives keep
   the earlier file names: in a `srcdir` that already held them, the download was skipped and the
   old data were used. Folders from earlier releases are not read and can be deleted.
+- `latestHistoricalYear()` and the tile lookup in `ClimateNA_useTiles()` open the bundled tile index read-only
+  and set the SQLite busy timeout before any other statement. Before, many processes opening it together
+  (e.g. parallel hindcast jobs parsing fireSense modules on NFS) could fail with "database is locked".
+  `ClimateNA_sql()` gets a `readonly` argument; writing connections set WAL only when they create the file.
 - Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
   `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
   ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. All archives were
   rebuilt with ClimateNA v7.70 (data release `cna-v7.70-3arcmin`), so radiation now has values for every
   historical year and future scenario. The old radiation layers held values only for 1948-2010.
-
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
   (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
   before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept
   coming back from the cache. Every existing entry is rebuilt once. Mosaics themselves were always rebuilt
   (`overwrite = TRUE`); only the final cached `postProcessTo()` step was stale.
-
 - `climateMosaicsParallel()` sets every variable to NA, for that year, in cells where all 12 monthly `PPT` values are
   exactly 0. ClimateNA tiles 6 and 7 have such cells south of the Canada/US border (45.8-49 N), where the DEM is
   not valid and temperatures are nonsense (Tmax up to 42.7 C); they gave absurd `cumMDC` and `CMD`.
