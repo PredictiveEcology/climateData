@@ -18,6 +18,30 @@ pipeline_tiles <- function(demDir, subset = NULL) {
   .demTiles(demDir, subset)
 }
 
+## Canada, whose cells keep ClimateNA's values where the DEM has none: GADM 4.1, level 0, at its
+## highest resolution, as data-raw/02-ClimateNA_tiles.R uses for the tiles. Downloaded once into
+## <out_root>/boundary/; returns the file.
+pipeline_canada <- function(outRoot) {
+  dir <- file.path(outRoot, "boundary")
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  geodata::gadm("CAN", level = 0, path = dir, version = "4.1", resolution = 1)
+  f <- file.path(dir, "gadm", "gadm41_CAN_0_pk.rds")
+  if (!file.exists(f)) {
+    stop("geodata::gadm() did not write ", f)
+  }
+  f
+}
+
+## Each tile's cells to set to NODATA when its zips are cut (.maskCells()), named by tile.
+pipeline_tile_masks <- function(canadaFile, demDir, tiles) {
+  canada <- readRDS(canadaFile)
+  if (inherits(canada, "PackedSpatVector")) {
+    canada <- terra::unwrap(canada)
+  }
+  masks <- lapply(tiles, function(t) .maskCells(terra::rast(pipeline_dem_file(demDir, t)), canada))
+  stats::setNames(masks, as.character(tiles))
+}
+
 ## The batch specs for one archive type, from the release settings.
 pipeline_specs <- function(type, tiles, cfg) {
   span <- function(x) seq(as.integer(x[[1]]), as.integer(x[[2]]))

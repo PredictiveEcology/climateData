@@ -99,3 +99,19 @@
   }
   invisible(changed)
 }
+
+#' Blank cells in every ClimateNA ASCII grid below a folder, in place
+#'
+#' @param dir character. A folder, e.g. a batch's extracted period folders.
+#' @param mask list from [.maskCells()] for the folder's tile.
+#'
+#' @return integer: how many files changed.
+#'
+#' @keywords internal
+.maskAscDir <- function(dir, mask) {
+  if (is.null(mask)) {
+    stop("no mask for the tile of ", dir)
+  }
+  files <- list.files(dir, "[.]asc$", recursive = TRUE, full.names = TRUE)
+  sum(vapply(files, .maskAsc, logical(1), mask = mask))
+}

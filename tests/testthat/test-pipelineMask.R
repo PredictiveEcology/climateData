@@ -118,3 +118,29 @@ test_that(".maskAsc compares corner coordinates within a tolerance", {
   )
   expect_true(.maskAsc(f, list(grid = gridOf(4, 3, xll = -123 - 1 / 3), cells = 1L)))
 })
+
+## zip_batch() masks every grid of a batch's extracted periods before cutting the zips
+test_that(".maskAscDir masks every .asc below a folder and nothing else", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "Year_2020MSY"))
+  dir.create(file.path(d, "Year_2021MSY"))
+  a <- writeClimatenaAsc(file.path(d, "Year_2020MSY", "MAT.asc"), as.character(1:12), 4, 3)
+  b <- writeClimatenaAsc(file.path(d, "Year_2021MSY", "MAT.asc"), as.character(1:12), 4, 3)
+  other <- file.path(d, "Year_2021MSY", "notes.txt")
+  writeLines("1 2 3", other)
+  want <- writeClimatenaAsc(
+    withr::local_tempfile(fileext = ".asc"),
+    replace(as.character(1:12), 2, "-9999"),
+    4,
+    3
+  )
+
+  expect_identical(.maskAscDir(d, list(grid = gridOf(4, 3), cells = 2L)), 2L)
+  expect_identical(bytesOf(a), bytesOf(want))
+  expect_identical(bytesOf(b), bytesOf(want))
+  expect_identical(readLines(other), "1 2 3")
+})
+
+test_that(".maskAscDir stops when the tile has no mask", {
+  expect_error(.maskAscDir(withr::local_tempdir(), NULL), "no mask")
+})

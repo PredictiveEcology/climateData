@@ -2,6 +2,8 @@
 
 A [targets](https://docs.ropensci.org/targets/) pipeline that builds one data release of climateData's tile archives. It runs ClimateNA in the Docker image from `docker/climatena/`, checks every output, cuts the zips, uploads them to Google Drive and builds the tile index.
 
+ClimateNA writes values even where the DEM tile has no elevation, computed at the wrong elevation. When the zips are cut, those cells are set to NODATA unless their centre lies in Canada (GADM 4.1, level 0, holes filled, downloaded once to `<out_root>/boundary/`); the raw outputs keep ClimateNA's values (#40).
+
 - `release.yml`: the release (committed): ClimateNA version, years, scenarios, image, Drive folder.
 - `_local.R`: per machine (gitignored; copy `_local.R.example`): paths, the container user, the `crew` controller, dry run.
 - `_targets.R`, `R/`: the pipeline.

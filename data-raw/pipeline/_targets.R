@@ -117,7 +117,7 @@ mapped <- tar_map(
   ## the batch's MSY, M, Y and S zips (Y for normals), each checked
   tar_target(
     zips,
-    zip_batch(specs, batch, out_root),
+    zip_batch(specs, batch, out_root, tile_masks),
     pattern = map(specs, batch),
     format = "file",
     deployment = "worker"
@@ -147,6 +147,9 @@ list(
   tar_target(dem_dir, dem_dir_path),
   tar_target(out_root, out_root_path),
   tar_target(tiles, pipeline_tiles(dem_dir, tile_subset)),
+  ## the cells each tile's zips set to NODATA: no DEM elevation, centre outside Canada (#40)
+  tar_target(canada, pipeline_canada(out_root), format = "file"),
+  tar_target(tile_masks, pipeline_tile_masks(canada, dem_dir, tiles)),
   tar_target(previous_index, previous_index_path, format = "file"),
 
   mapped,

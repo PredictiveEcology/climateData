@@ -70,9 +70,11 @@ pipeline_write_zip <- function(zip, dir, files = NULL) {
 ## Each subset zip holds each period's folder under the subset's own name (Year_2020M, ...), as
 ## a ClimateNA /M, /S or /Y run would have written it and as the package's reader expects. The
 ## batch's stored period zips are extracted once into the node-local work directory, keeping the
-## files' times; each subset is staged there by hard link, zipped, and checked.
+## files' times; each subset is staged there by hard link, zipped, and checked. Before staging,
+## the tile's cells in `masks` (pipeline_tile_masks()) are set to NODATA in the extracted copy;
+## the stored period zips keep ClimateNA's output.
 ## No zips when the batch failed (manifest NULL under error = "null").
-zip_batch <- function(spec, manifest, outRoot) {
+zip_batch <- function(spec, manifest, outRoot, masks) {
   if (length(manifest) == 0) {
     return(character(0))
   }
@@ -87,6 +89,8 @@ zip_batch <- function(spec, manifest, outRoot) {
     folder <- .periodFolder(spec$type, p, spec$msy, spec$gcm, spec$ssp)
     utils::unzip(.periodZip(tileDir, folder), exdir = raw, setTimes = TRUE)
   }
+  ## cells ClimateNA computed without a DEM elevation, outside Canada (#40)
+  .maskAscDir(raw, masks[[as.character(spec$tile)]])
   out <- character(0)
   for (subset in pipeline_subsets(spec$type)) {
     vars <- if (normals) .allowedClimateVars_nrm else get(paste0(".allowedClimateVars_", subset))
