@@ -123,7 +123,8 @@ mapped <- tar_map(
     deployment = "worker"
   ),
 
-  ## each zip as an earlier release's identical file, or a new file in the release's Drive folder
+  ## each zip as an earlier release's identical file, or a file in the release's Drive folder
+  ## (replaced in place when the zip changed)
   tar_target(
     uploads,
     upload_zips(zips, specs, release_folders, dry_run, previous_lookup, drive_email),
