@@ -44,11 +44,12 @@ local <- list(
   ## seconds before a ClimateNA run is stopped and its period counted as failed
   run_timeout = 3600,
 
-  ## how many ClimateNA runs at once: one worker per core on one machine...
-  controller = crew::crew_controller_local(workers = 4)
-  ## ...or across nodes (FOR-CAST/crew.ssh), with the checkout at the same path on each:
-  ## controller = crew.ssh::crew_controller_ssh(
-  ##   nodes = c(node1 = 60L, node2 = 90L),
-  ##   projdir = "/path/to/climateData"
-  ## )
+  ## how many ClimateNA runs at once on this machine. The pipeline uses at most half of each
+  ## node's cores, so this is lowered (with a message) to half the cores less the upload
+  ## workers and the main process.
+  workers = 4L
+  ## ...or across nodes (FOR-CAST/crew.ssh), each capped at half its cores, with the checkout at
+  ## the same path on each:
+  ## ssh_nodes = c(node1 = 60L, node2 = 90L),
+  ## projdir = "/path/to/climateData"
 )

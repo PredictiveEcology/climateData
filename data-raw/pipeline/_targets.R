@@ -41,15 +41,42 @@ if (!is.null(drive_email)) {
 
 devtools::load_all(".", quiet = TRUE) # the main process uses the checkout too
 
+## The pipeline uses at most half of each node's cores (.cappedWorkers()). Each ClimateNA run is
+## limited to one CPU, so on this node: ClimateNA workers + upload workers + this process.
+if (!is.null(local$controller)) {
+  stop(
+    "_local.R: set `workers` (or `ssh_nodes`) instead of `controller`; ",
+    "the pipeline sizes its workers to at most half of each node's cores"
+  )
+}
+upload_workers <- .cappedWorkers(local$upload_workers %||% 8L, parallelly::availableCores(), 1L)
+climatena_controller <- if (is.null(local$ssh_nodes)) {
+  crew::crew_controller_local(
+    workers = .cappedWorkers(
+      local$workers %||% 4L,
+      parallelly::availableCores(),
+      upload_workers + 1L
+    )
+  )
+} else {
+  ## other nodes (FOR-CAST/crew.ssh) run ClimateNA only
+  nodes <- local$ssh_nodes
+  for (n in names(nodes)) {
+    cores <- as.integer(system2("ssh", c(n, "nproc"), stdout = TRUE))
+    nodes[[n]] <- .cappedWorkers(nodes[[n]], cores, 0L, where = n)
+  }
+  crew.ssh::crew_controller_ssh(nodes = nodes, projdir = local$projdir)
+}
+
 tar_option_set(
   ## nothing attached on workers: the default (the main process's attached packages) would
   ## include the load_all()ed climateData, which isn't installed; pipeline_load() loads it
   packages = character(0),
-  ## ClimateNA runs go to local$controller; uploads to a few local workers on this node, where
-  ## the Drive token is
+  ## ClimateNA runs go to climatena_controller; uploads to a few local workers on this node,
+  ## where the Drive token is
   controller = crew::crew_controller_group(
-    local$controller,
-    crew::crew_controller_local(name = "uploads", workers = local$upload_workers %||% 8L)
+    climatena_controller,
+    crew::crew_controller_local(name = "uploads", workers = upload_workers)
   ),
   deployment = "main", # small targets stay on the main process
   error = "null",
