@@ -1,11 +1,11 @@
 .allowedClimDotsNames <- c("historical_period", "historical_years", "future_period", "future_years")
 
 ## Internal functions that build the layers `prepClimateLayers()` caches. Their bodies are part of the
-## cache key, so a change to any of them (e.g. `maskInvalidPPT()`) rebuilds the cached layers.
+## cache key, so a change to any of them (e.g. `climateMosaicsParallel()`) rebuilds the cached
+## layers.
 .climateBuilders <- c(
   "climateMosaicsParallel",
   "climateMosaicsNormalsParallel",
-  "maskInvalidPPT",
   "climateStacksByYear",
   "climateStacksByPeriod",
   "calcStackLayersType",
@@ -552,13 +552,16 @@ prepClimateLayers <- function(
 
 ## Which archives to download, from the needed "<type>_<M|S|Y|N>" types. An MSY ("all") archive
 ## holds every file of the M, S and Y archives (checked: 180 monthly, 60 seasonal and 25 yearly
-## files per year). Seasonal variables come from MSY, not from the S archives that v3.0.0 data
-## releases also publish: maskInvalidPPT() needs PPT01-PPT12 in the same folder, and S folders
-## have none. Once MSY is needed, M and Y come from it too -- downloading them separately is
-## redundant, and some older M archives on the server are incomplete (e.g. tile 46's future 2080s
-## lacks 2085), which stopped runs.
+## files per year). Seasonal variables alone come from the S archives that v3.0.0 data releases
+## publish; with monthly or yearly ones, from MSY. Once MSY is needed, M and Y come from it too --
+## downloading them separately is redundant, and some older M archives on the server are
+## incomplete (e.g. tile 46's future 2080s lacks 2085), which stopped runs.
 .consolidateClimateTypes <- function(types) {
-  types <- sub("_S$", "_MSY", types)
+  for (tp in c("historical", "future")) {
+    if (paste0(tp, "_S") %in% types && any(paste0(tp, c("_M", "_Y")) %in% types)) {
+      types[types == paste0(tp, "_S")] <- paste0(tp, "_MSY")
+    }
+  }
   for (tp in c("historical", "future")) {
     if (paste0(tp, "_MSY") %in% types) {
       types <- sub(paste0("^", tp, "_(M|Y)$"), paste0(tp, "_MSY"), types)

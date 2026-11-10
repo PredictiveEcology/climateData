@@ -22,13 +22,19 @@
   rebuilt with ClimateNA v7.70 (data release `cna-v7.70-3arcmin`), so radiation now has values for every
   historical year and future scenario. The old radiation layers held values only for 1948-2010.
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
-  (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
-  before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept
-  coming back from the cache. Every existing entry is rebuilt once. Mosaics themselves were always rebuilt
+  (`climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached before a change to
+  them, or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix, kept coming back from
+  the cache. Every existing entry is rebuilt once. Mosaics themselves were always rebuilt
   (`overwrite = TRUE`); only the final cached `postProcessTo()` step was stale.
-- `climateMosaicsParallel()` sets every variable to NA, for that year, in cells where all 12 monthly `PPT` values are
-  exactly 0. ClimateNA tiles 6 and 7 have such cells south of the Canada/US border (45.8-49 N), where the DEM is
-  not valid and temperatures are nonsense (Tmax up to 42.7 C); they gave absurd `cumMDC` and `CMD`.
+- Cells outside Canada that have no DEM elevation are NA (#40). The DEM tiles cover Canada and a 3 arcmin
+  margin, but ClimateNA still wrote values beyond it, computed at the wrong elevation: next to the border,
+  US cells were a median 4.5 C warmer than the Canadian cells beside them (tile 6, 1991-2020 normals), and
+  tiles 6 and 7 had cells with no precipitation at all and Tmax up to 42.7 C, which gave absurd `cumMDC`
+  and `CMD`. In data release `cna-v7.70-3arcmin` these cells are NA in every archive, normals included.
+  Canadian coast and lakeshore cells with no DEM value keep their values. This replaces a check on reading
+  (cells whose 12 monthly `PPT` were all 0), which found only the zero-precipitation cells, and only when
+  the monthly files were downloaded. Seasonal variables requested alone now come from the smaller S
+  archives.
 
 - When a seasonal variable is needed, monthly and yearly variables now come from the same MSY ("all")
   archive, which contains all their files. Before, they were also downloaded from their own M and Y archives

@@ -23,18 +23,19 @@ test_that("without a seasonal variable, M and Y keep their own archives", {
   )
 })
 
-## v3.0.0 data releases publish S archives, but their folders hold no PPT01-PPT12, so
-## maskInvalidPPT() could not mask tiles 6 and 7's invalid cells for seasonal-only requests.
-## Seasonal variables still come from the MSY archive.
-test_that("seasonal-only requests use the MSY archive, which holds the monthly PPT", {
-  expect_setequal(.consolidateClimateTypes("future_S"), "future_MSY")
+## v3.0.0 data releases publish S archives; a seasonal-only request no longer needs the whole
+## MSY archive. S plus M or Y still uses MSY (above). The cells ClimateNA computed without a DEM
+## elevation are blanked in every archive when it is built, so S needs no monthly PPT to mask
+## them (maskInvalidPPT() did, and is gone).
+test_that("seasonal-only requests use the S archive", {
+  expect_setequal(.consolidateClimateTypes("future_S"), "future_S")
   expect_setequal(
     .consolidateClimateTypes(c("historical_S", "future_M")),
-    c("historical_MSY", "future_M")
+    c("historical_S", "future_M")
   )
   expect_setequal(
     .consolidateClimateTypes(c("historical_N", "historical_S")),
-    c("historical_N", "historical_MSY")
+    c("historical_N", "historical_S")
   )
 })
 
