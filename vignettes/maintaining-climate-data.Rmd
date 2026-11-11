@@ -67,30 +67,30 @@ Download each ClimateNA release from [climatena.ca](https://climatena.ca/) and u
 The pipeline reads two files:
 
 - `data-raw/pipeline/release.yml` (committed) defines the release: `release_id`, the ClimateNA executable and version, the DEM resolution, the archive types, the years, GCMs, SSPs and normals periods, the minimum ClimateNA version to keep per type (`min_version`), the image, and the Drive folder (`drive_parent`).
-- `data-raw/pipeline/_local.R` (gitignored; copy `_local.R.example`) holds what depends on the machine: paths (ClimateNA directory, DEM tiles, output root, and a node-local `work_dir`), the container user, an optional tile subset, `dry_run`, `run_timeout`, `previous_index`, the Drive account (`drive_email`), `upload_workers`, and the `crew` controller. The checkout's own path is in neither file and no target depends on it, so running from a different checkout rebuilds nothing.
+- `data-raw/pipeline/_local.R` (gitignored; copy `_local.R.example`) holds what depends on the machine: paths (ClimateNA directory, DEM tiles, output root, and a node-local `work_dir`), the container user, an optional tile subset, `dry_run`, `replace_changed`, `run_timeout`, `previous_index`, the Drive account (`drive_email`), `upload_workers`, and how many ClimateNA runs go at once (`workers`, or `ssh_nodes` across machines). The checkout's own path is in neither file and no target depends on it, so running from a different checkout rebuilds nothing.
 
 ClimateNA writes each output into `work_dir` (by default each worker's temporary directory) on the node's own disk. The pipeline checks it there and stores it in `out_root` as a single zip per tile and year or period. ClimateNA writes very slowly straight to an NFS share, and copying hundreds of small files per run overloads the file server; one zip per run avoids both.
+
+The DEM tiles have no elevation for some cells (`nan`), and ClimateNA writes values there anyway, computed at the wrong elevation. When the zips are cut, those cells are set to NODATA unless their centre lies in Canada (GADM 4.1, level 0, holes filled, downloaded once to `<out_root>/boundary/`). The stored raw outputs keep ClimateNA's values, and a masked file keeps its modification time, so a zip rebuilt from the same outputs is byte-identical. The masking code is in the package (`R/pipelineMask.R`), which targets does not track: after changing it, rerun the zips with `targets::tar_invalidate(tidyselect::starts_with("zips_"))`.
 
 `out_root` in `_local.R` holds everything a release writes: raw ClimateNA outputs (`raw/`, one zip and one stamp per tile and year or period), the published zips (`zips/`), the targets store (`_targets/`), logs, the index and the report. **Keep the same `out_root` from one release to the next**: the next release then reuses the raw outputs and zips that haven't changed, and their Drive files.
 
 ## Where it runs
 
-The `controller` in `_local.R` decides where ClimateNA runs and how many runs go at once. Each run is a single-threaded container limited to 1 CPU and 1 GB.
-
-On one machine, use about one worker per core, leaving a few cores free:
+`workers` in `_local.R` sets how many ClimateNA runs go at once on the main node. Each run is a single-threaded container limited to 1 CPU and 1 GB. The pipeline uses at most half of each node's cores: on the main node, `workers` is lowered (with a message) to half the cores less the upload workers and the main process.
 
 ```r
-controller = crew::crew_controller_local(workers = 90)
+workers = 60L
 ```
 
-Across several machines, use [crew.ssh](https://github.com/FOR-CAST/crew.ssh):
+Across several machines, use [crew.ssh](https://github.com/FOR-CAST/crew.ssh) instead; each node's count is lowered to half its cores. Don't list the main node there: its uploads and main process are not counted.
 
 ```r
-controller = crew.ssh::crew_controller_ssh(
-  nodes = c(node1 = 60L, node2 = 90L), # host name = workers on that host
-  projdir = "/path/to/climateData" # the package checkout, at the same path on every node
-)
+ssh_nodes = c(node1 = 60L, node2 = 90L), # host name = workers on that host
+projdir = "/path/to/climateData" # the package checkout, at the same path on every node
 ```
+
+The older `controller` setting is no longer read: the pipeline stops and asks for `workers`.
 
 With several nodes, the package checkout, ClimateNA, the DEM tiles and `out_root` must be at the same paths on every node (a shared filesystem), and every node needs Docker and the image.
 
@@ -167,9 +167,10 @@ Each zip is, in order of preference:
 
 - **reused**: the previous release's index (`previous_index`; by default the index shipped in the package checkout) has the identical zip (same path and MD5), and its Drive file still exists;
 - **found**: the release folder already has the file, from an interrupted run;
+- **updated**: the release folder has a file of that name with another MD5, because the zip was rebuilt (as for the mask in #40). Only with `replace_changed = TRUE` in `_local.R`: the file's content is replaced in place and MD5-checked, and its Drive ID stays the same, so the index still points to it. Without it, the upload stops with an error naming the zip;
 - **uploaded** as a new file and MD5-checked.
 
-The pipeline never replaces or deletes a file on Drive, so the indexes of older package versions keep working.
+The pipeline never deletes a file on Drive, and it replaces one only in the release's own folder and only when you set `replace_changed`, so the indexes of older package versions keep working. Set it for the one run that needs it, then back to `FALSE`. Drive keeps a replaced file's previous content as an older revision for a while.
 
 ## The release folder on Drive
 
