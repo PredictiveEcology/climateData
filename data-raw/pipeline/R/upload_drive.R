@@ -153,6 +153,7 @@ pipeline_reusable_file <- function(previous, rel, md5) {
 ## zip: subset, gid, md5, zipfile (path below the release folder), uploaded (Drive's createdTime,
 ## epoch seconds; NA in a dry run) and source.
 upload_zips <- function(zips, spec, folders, dryRun, lookup, driveEmail = NULL) {
+  pipeline_load() # .uploadAction(); an upload worker starts without the package
   if (!is.null(driveEmail)) {
     options(gargle_oauth_email = driveEmail) # a worker process doesn't see _local.R's options
   }

@@ -31,3 +31,18 @@ test_that(".uploadAction stops when several same-named files differ and none is 
   expect_error(.uploadAction(there, "y"), "a, b")
   expect_error(.uploadAction(there, "y", gid = "c"), "a, b")
 })
+
+## upload_zips() runs on the "uploads" workers, which start without the package, and it calls
+## .uploadAction(): it must load the package first, as zip_batch() does. Without it, every
+## changed zip's upload failed with "could not find function '.uploadAction'".
+test_that("upload_zips loads the package on its worker", {
+  f <- test_path("..", "..", "data-raw", "pipeline", "R", "upload_drive.R")
+  skip_if_not(file.exists(f), "data-raw/pipeline not available")
+  e <- new.env()
+  sys.source(f, envir = e)
+  loaded <- FALSE
+  e$pipeline_load <- function() loaded <<- TRUE
+  out <- e$upload_zips(character(0), list(), list(), dryRun = FALSE, lookup = NULL)
+  expect_true(loaded)
+  expect_identical(nrow(out), 0L)
+})
