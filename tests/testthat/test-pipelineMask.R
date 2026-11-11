@@ -97,6 +97,16 @@ test_that(".maskAsc leaves the file untouched when there is nothing to mask", {
   expect_equal(as.numeric(file.mtime(f)), as.numeric(as.POSIXct("2020-01-01", tz = "UTC")))
 })
 
+## a zip is byte-identical only when its files' times are (pipeline_write_zip()), so a masked file
+## keeps its time: recutting a tile's zips then gives the same MD5s and nothing to upload
+test_that(".maskAsc keeps the file's modification time", {
+  f <- writeClimatenaAsc(withr::local_tempfile(fileext = ".asc"), as.character(1:12), 4, 3)
+  t0 <- as.POSIXct("2020-01-01 12:34:56", tz = "UTC")
+  Sys.setFileTime(f, t0)
+  expect_true(.maskAsc(f, list(grid = gridOf(4, 3), cells = 2L)))
+  expect_equal(as.numeric(file.mtime(f)), as.numeric(t0))
+})
+
 test_that(".maskAsc stops when the file's grid differs from the DEM's", {
   f <- writeClimatenaAsc(withr::local_tempfile(fileext = ".asc"), as.character(1:12), 4, 3)
   expect_error(.maskAsc(f, list(grid = gridOf(5, 3), cells = 1L)), basename(f), fixed = TRUE)

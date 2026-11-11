@@ -17,7 +17,8 @@
 \description{
 Sets the cells listed in \code{mask} to the file's \code{NODATA_value}. Only those values' text
 changes: every other byte (other values, spacing, line endings) is left as ClimateNA wrote
-it. A file with nothing to blank is not rewritten.
+it. A file with nothing to blank is not rewritten. A rewritten file keeps its modification
+time, so zips cut from it are byte-identical each time they are rebuilt.
 }
 \details{
 Cells are counted in the order the values appear after the header, as GDAL reads them, not

@@ -33,7 +33,8 @@
 #'
 #' Sets the cells listed in `mask` to the file's `NODATA_value`. Only those values' text
 #' changes: every other byte (other values, spacing, line endings) is left as ClimateNA wrote
-#' it. A file with nothing to blank is not rewritten.
+#' it. A file with nothing to blank is not rewritten. A rewritten file keeps its modification
+#' time, so zips cut from it are byte-identical each time they are rebuilt.
 #'
 #' Cells are counted in the order the values appear after the header, as GDAL reads them, not
 #' by line: ClimateNA wraps some files' rows across lines (e.g. 100 values, then 77) and
@@ -95,7 +96,9 @@
   out <- charToRaw(paste0(substr(text, 1, nl[6]), data))
   changed <- !identical(out, bytes)
   if (changed) {
+    mtime <- file.mtime(file)
     writeBin(out, file)
+    Sys.setFileTime(file, mtime)
   }
   invisible(changed)
 }
