@@ -4,7 +4,7 @@
 \alias{.uploadAction}
 \title{What to do with a zip on Drive}
 \usage{
-.uploadAction(there, md5, gid = NULL)
+.uploadAction(there, md5, gid = NULL, replace = FALSE)
 }
 \arguments{
 \item{there}{data.frame with columns \code{id} and \code{md5} (\code{NA} when Drive gives none).}
@@ -12,14 +12,18 @@
 \item{md5}{character. The zip's MD5.}
 
 \item{gid}{character or \code{NULL}. The zip's Drive ID in the index, if it has one.}
+
+\item{replace}{logical. Replace a differing same-named file in place?}
 }
 \value{
 list: \code{action} (\code{"found"}, \code{"update"} or \code{"upload"}) and \code{id} (\code{NA} for \code{"upload"}).
 }
 \description{
 Given the files of the same name already in the zip's release folder: reuse one with the same
-MD5 (\code{"found"}); else replace a differing one in place (\code{"update"}), so its Drive ID, which
-the index holds as \code{gid}, stays the same; else upload a new file (\code{"upload"}). When several
-same-named files differ, the one with ID \code{gid} is updated; if none has it, this stops.
+MD5 (\code{"found"}); else, if \code{replace}, replace a differing one in place (\code{"update"}), so its
+Drive ID, which the index holds as \code{gid}, stays the same; else upload a new file (\code{"upload"}).
+When several same-named files differ, the one with ID \code{gid} is updated; if none has it, this
+stops. Without \code{replace}, a differing same-named file stops the upload, so a shipped
+release's files change only when the maintainer asks (\code{replace_changed} in \verb{_local.R}).
 }
 \keyword{internal}

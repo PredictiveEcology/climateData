@@ -146,13 +146,22 @@ pipeline_reusable_file <- function(previous, rel, md5) {
 ##   - "found": the release folder already has a file of that name and MD5 (an interrupted run);
 ##   - "updated": the release folder has a file of that name with another MD5 (the zip was
 ##     rebuilt, e.g. with masked cells), replaced in place so its Drive ID stays the same
-##     (.uploadAction() decides which file when there are several);
+##     (.uploadAction() decides which file when there are several). Only with replaceChanged
+##     (replace_changed in _local.R); otherwise the upload stops, naming the zip;
 ##   - "uploaded" as a new file.
 ## With dryRun nothing on Drive is read or written: `source` is "reused" (gid from `lookup`, not
 ## checked) or "dry run" (gid NA). `folders` is pipeline_release_folders(). Returns one row per
 ## zip: subset, gid, md5, zipfile (path below the release folder), uploaded (Drive's createdTime,
 ## epoch seconds; NA in a dry run) and source.
-upload_zips <- function(zips, spec, folders, dryRun, lookup, driveEmail = NULL) {
+upload_zips <- function(
+  zips,
+  spec,
+  folders,
+  dryRun,
+  lookup,
+  driveEmail = NULL,
+  replaceChanged = FALSE
+) {
   pipeline_load() # .uploadAction(); an upload worker starts without the package
   if (!is.null(driveEmail)) {
     options(gargle_oauth_email = driveEmail) # a worker process doesn't see _local.R's options
@@ -193,10 +202,14 @@ upload_zips <- function(zips, spec, folders, dryRun, lookup, driveEmail = NULL) 
       ## a changed zip replaces its file in this release's folder in place, keeping the Drive ID
       ## the index holds; files outside this folder (earlier releases) are never touched
       gid <- previous$gid[previous$zipfile == rel]
-      act <- .uploadAction(
-        data.frame(id = as.character(there$id), md5 = md5s),
-        out$md5,
-        if (length(gid) > 0) gid[1]
+      act <- tryCatch(
+        .uploadAction(
+          data.frame(id = as.character(there$id), md5 = md5s),
+          out$md5,
+          if (length(gid) > 0) gid[1],
+          replace = replaceChanged
+        ),
+        error = \(e) stop(rel, ": ", conditionMessage(e), call. = FALSE)
       )
       if (act$action == "found") {
         file <- there[there$id == act$id, ]

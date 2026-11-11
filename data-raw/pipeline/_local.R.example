@@ -30,6 +30,11 @@ local <- list(
   ## TRUE: build everything but upload nothing to Drive
   dry_run = TRUE,
 
+  ## TRUE: when a rebuilt zip differs from the file of that name in the release's Drive folder,
+  ## replace that file in place (same Drive ID). FALSE: such an upload stops with an error, so a
+  ## shipped release's files change only when you ask.
+  replace_changed = FALSE,
+
   ## the Google account for uploads: its OAuth token must be cached on this machine
   ## (googledrive::drive_auth() once, interactively)
   drive_email = NULL, # e.g. "you@example.org"

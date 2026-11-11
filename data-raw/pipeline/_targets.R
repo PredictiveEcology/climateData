@@ -25,6 +25,8 @@ container_uid <- local$uid
 container_gid <- local$gid
 tile_subset <- local$tiles
 dry_run <- local$dry_run
+## replace a release folder's file in place when its rebuilt zip differs; otherwise that stops
+replace_changed <- isTRUE(local$replace_changed)
 run_timeout <- local$run_timeout %||% 3600 # seconds per ClimateNA run
 ## the previous release's index, whose identical zips are reused rather than uploaded again
 ## (relative, so it is the same path in any checkout)
@@ -151,10 +153,18 @@ mapped <- tar_map(
   ),
 
   ## each zip as an earlier release's identical file, or a file in the release's Drive folder
-  ## (replaced in place when the zip changed)
+  ## (replaced in place when the zip changed, with replace_changed; otherwise that stops)
   tar_target(
     uploads,
-    upload_zips(zips, specs, release_folders, dry_run, previous_lookup, drive_email),
+    upload_zips(
+      zips,
+      specs,
+      release_folders,
+      dry_run,
+      previous_lookup,
+      drive_email,
+      replace_changed
+    ),
     pattern = map(zips, specs),
     deployment = "worker",
     resources = tar_resources(crew = tar_resources_crew(controller = "uploads"))
