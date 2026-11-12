@@ -4,6 +4,8 @@ A [targets](https://docs.ropensci.org/targets/) pipeline that builds one data re
 
 ClimateNA writes values even where the DEM tile has no elevation, computed at the wrong elevation. When the zips are cut, those cells are set to NODATA unless their centre lies in Canada (GADM 4.1, level 0, holes filled, downloaded once to `<out_root>/boundary/`); the raw outputs keep ClimateNA's values (#40).
 
+ClimateNA also leaves some land cells (cells with a DEM elevation) empty: its future data miss some coastal cells, and a few cells get no values at all. Each such cell gets ClimateNA's point-mode output at the nearest land cell it covers (within `fill_max_km` in `release.yml`), run with the empty cell's own elevation. The cells and their sources are found once per release from one reference period per class (historical: the last historical year; future: the first scenario's first year); the point-mode outputs are stored beside the raw period zips (`<folder>.fill-<hash>.csv`) and written into the zips when they are cut. The index lists every filled cell (`filled_cells`).
+
 - `release.yml`: the release (committed): ClimateNA version, years, scenarios, image, Drive folder.
 - `_local.R`: per machine (gitignored; copy `_local.R.example`): paths, the container user, how many workers, dry run, and whether a changed zip may replace its file on Drive (`replace_changed`, off by default). The pipeline uses at most half of each node's cores: a larger worker count is lowered, with a message.
 - `_targets.R`, `R/`: the pipeline.

@@ -18,6 +18,10 @@ ssps: ["245", "370", "585"]
 historical_periods: ["1901_1930", "1911_1940", "1921_1950", "1931_1960", "1941_1970", "1951_1980", "1971_2000", "1981_2010", "1991_2020"]
 future_periods: ["2011_2040", "2041_2070", "2071_2100"]
 
+## a land cell ClimateNA leaves empty is filled from the nearest land cell it covers, if that is
+## within this many km
+fill_max_km: 50
+
 ## a stamped period is reused if its ClimateNA version is at least this; raising it for a type
 ## regenerates that type (do this when compat_<type> reports "changed")
 min_version:

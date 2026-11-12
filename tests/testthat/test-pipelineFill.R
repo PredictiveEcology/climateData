@@ -130,3 +130,186 @@ test_that(".chooseSources leaves a target without a working candidate unfilled",
   expect_identical(s$id, "a")
   expect_true(is.na(s$src_lon) && is.na(s$src_lat) && is.na(s$km))
 })
+
+## the pipeline side (data-raw/pipeline/R/fill.R), with ClimateNA replaced by a stub
+fillEnv <- function() {
+  d <- test_path("..", "..", "data-raw", "pipeline", "R")
+  skip_if_not(dir.exists(d), "data-raw/pipeline not available")
+  skip_if(Sys.which("zip") == "", "no zip program")
+  e <- new.env()
+  for (f in c("specs.R", "run_batch.R", "fill.R")) {
+    sys.source(file.path(d, f), envir = e)
+  }
+  e$pipeline_load <- function() invisible(TRUE)
+  e
+}
+
+## a 2 x 2 tile at x 0-2 (or 2-4), y 0-2; values row by row from the top left
+writeGrid <- function(file, values, xmin = 0) {
+  r <- terra::rast(nrows = 2, ncols = 2, xmin = xmin, xmax = xmin + 2, ymin = 0, ymax = 2)
+  terra::crs(r) <- "EPSG:4326"
+  terra::values(r) <- values
+  dir.create(dirname(file), recursive = TRUE, showWarnings = FALSE)
+  terra::writeRaster(r, file, NAflag = -9999, overwrite = TRUE)
+  unlink(paste0(file, ".aux.xml"))
+  file
+}
+
+## a stored raw period (<tileDir>/<folder>.zip holding <folder>/MAT.asc) and its stamp
+writePeriod <- function(tileDir, folder, mat, xmin = 0) {
+  stage <- withr::local_tempdir(.local_envir = parent.frame())
+  writeGrid(file.path(stage, folder, "MAT.asc"), mat, xmin)
+  dir.create(tileDir, recursive = TRUE, showWarnings = FALSE)
+  withr::with_dir(
+    stage,
+    utils::zip(
+      file.path(tileDir, paste0(folder, ".zip")),
+      file.path(folder, "MAT.asc"),
+      flags = "-q"
+    )
+  )
+  .writeStamp(tileDir, folder, "7.70", "dem", "image")
+}
+
+## stands in for ClimateNA's point mode: MAT = -1.5 at every point, and records each call
+stubRunner <- function(calls) {
+  function(points, msy, periodArg) {
+    calls$n <- c(calls$n, periodArg)
+    d <- tempfile("stub-")
+    dir.create(d)
+    out <- file.path(d, "out.csv")
+    writeLines(
+      c(
+        "id1,id2,Latitude,Longitude,Elevation,MAT",
+        paste(
+          points$tile,
+          points$cell,
+          points$src_lat,
+          points$src_lon,
+          points$elev,
+          "-1.5",
+          sep = ","
+        )
+      ),
+      out
+    )
+    out
+  }
+}
+
+test_that("pipeline_fill_reference picks the last historical year and the first scenario year", {
+  e <- fillEnv()
+  cfg <- list(
+    historical_years = list(1901, 2025),
+    future_years = list(2011, 2100),
+    gcms = list("CanESM5", "CNRM-ESM2-1"),
+    ssps = list("245", "370")
+  )
+  cfg$types <- list("historical", "future", "historical_normals", "future_normals")
+  cfg$historical_periods <- list("1901_1930", "1991_2020")
+  cfg$future_periods <- list("2011_2040", "2071_2100")
+  r <- e$pipeline_fill_reference(cfg)
+  expect_identical(r$historical$period, 2025L)
+  expect_identical(
+    r$future[c("gcm", "ssp", "period")],
+    list(gcm = "CanESM5", ssp = "245", period = 2011L)
+  )
+  expect_identical(c(r$historical$msy, r$future$msy), c("MSY", "MSY"))
+
+  ## only the release's types: a class without yearly archives uses its normals; a class with
+  ## neither has no reference (nothing to fill)
+  cfg$types <- list("historical_normals")
+  r <- e$pipeline_fill_reference(cfg)
+  expect_named(r, "historical")
+  expect_identical(
+    r$historical[c("type", "period", "msy")],
+    list(type = "historical_normals", period = "1991_2020", msy = "Y")
+  )
+})
+
+test_that("pipeline_fill_points finds land cells empty in the reference and gives each a source", {
+  e <- fillEnv()
+  out <- withr::local_tempdir()
+  demDir <- withr::local_tempdir()
+  ## tile 1 is all land; tile 2's top-left cell has no DEM (ocean) but a ClimateNA value
+  demFiles <- c(
+    "1" = writeGrid(file.path(demDir, "can_dem_1.asc"), c(10, 20, 30, 40)),
+    "2" = writeGrid(file.path(demDir, "can_dem_2.asc"), c(NA, 5, 6, 7), xmin = 2)
+  )
+  canada <- terra::vect("POLYGON ((-1 -1, 5 -1, 5 3, -1 3, -1 -1))", crs = "EPSG:4326")
+  masks <- lapply(demFiles, \(f) .maskCells(terra::rast(f), canada))
+  writePeriod(file.path(out, "raw", "historical", "1"), "Year_2025MSY", c(1, NA, 3, 4))
+  writePeriod(file.path(out, "raw", "historical", "2"), "Year_2025MSY", c(9, 5, 6, 7), xmin = 2)
+  ref <- list(
+    historical = list(type = "historical", period = 2025L, msy = "MSY", gcm = NA, ssp = NA)
+  )
+  calls <- new.env()
+
+  p <- e$pipeline_fill_points(
+    "m.tsv",
+    masks,
+    demFiles,
+    ref,
+    out,
+    maxKm = 200,
+    run = stubRunner(calls)
+  )
+  expect_identical(nrow(p), 1L)
+  expect_identical(p$class, "historical")
+  expect_identical(c(p$tile, p$cell), c(1L, 2L))
+  expect_identical(p$elev, "20")
+  ## nearest land cell with values: tile 1's cell 4 (1.5, 0.5), not tile 2's ocean cell (2.5, 1.5)
+  expect_equal(c(p$lon, p$lat, p$src_lon, p$src_lat), c(1.5, 1.5, 1.5, 0.5))
+  expect_identical(calls$n, "Year_2025.ann")
+})
+
+test_that("fill_batch runs each period once, reuses its CSV, and skips tiles without points", {
+  e <- fillEnv()
+  out <- withr::local_tempdir()
+  tileDir <- file.path(out, "raw", "historical", "1")
+  for (y in 2020:2021) {
+    writePeriod(tileDir, paste0("Year_", y, "MSY"), c(1, NA, 3, 4))
+  }
+  spec <- list(
+    id = "h1",
+    type = "historical",
+    tile = 1L,
+    gcm = NA,
+    ssp = NA,
+    msy = "MSY",
+    decade = 2020L,
+    periods = 2020:2021
+  )
+  pts <- data.frame(
+    class = "historical",
+    tile = 1L,
+    cell = 2L,
+    lon = 1.5,
+    lat = 1.5,
+    elev = "20",
+    src_lon = 1.5,
+    src_lat = 0.5,
+    km = 110
+  )
+  calls <- new.env()
+  run <- stubRunner(calls)
+
+  f <- e$fill_batch(spec, "m.tsv", pts, out, run)
+  expect_length(f, 2)
+  expect_true(all(file.exists(f)))
+  expect_match(basename(f), "^Year_202[01]MSY[.]fill-[0-9a-f]{8}[.]csv$")
+  expect_identical(calls$n, c("Year_2020.ann", "Year_2021.ann"))
+
+  expect_identical(e$fill_batch(spec, "m.tsv", pts, out, run), f)
+  expect_length(calls$n, 2) # reused
+
+  ## new sources: new files, and the old ones are removed
+  pts$src_lon <- 0.5
+  f2 <- e$fill_batch(spec, "m.tsv", pts, out, run)
+  expect_false(any(f2 %in% f))
+  expect_false(any(file.exists(f)))
+
+  spec2 <- modifyList(spec, list(id = "h2", tile = 2L))
+  expect_identical(e$fill_batch(spec2, "m.tsv", pts, out, run), character(0))
+  expect_identical(e$fill_batch(spec, character(0), pts, out, run), character(0)) # failed batch
+})

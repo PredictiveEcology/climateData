@@ -143,6 +143,29 @@ mapped <- tar_map(
     cue = tar_cue(mode = "always")
   ),
 
+  ## ClimateNA point-mode values for the batch's empty land cells (fill_points), one CSV per
+  ## period beside its raw zip; none for a tile with nothing to fill
+  tar_target(
+    fills,
+    fill_batch(
+      specs,
+      batch,
+      fill_points,
+      out_root,
+      pipeline_point_runner(
+        image,
+        climatena_exe,
+        climatena_dir,
+        container_uid,
+        container_gid,
+        run_timeout
+      )
+    ),
+    pattern = map(specs, batch),
+    format = "file",
+    deployment = "worker"
+  ),
+
   ## the batch's MSY, M, Y and S zips (Y for normals), each checked
   tar_target(
     zips,
@@ -196,6 +219,31 @@ list(
 
   ## all types together, for the Drive folders and the index
   tar_combine(specs_all, mapped[["specs"]], command = c(!!!.x), iteration = "list"),
+
+  ## land cells ClimateNA leaves empty, and the nearest land cell it covers for each (checked
+  ## with a point run), from each class's reference period in the raw outputs
+  tar_target(fill_reference, pipeline_fill_reference(cfg)),
+  tar_target(fill_max_km, cfg[["fill_max_km"]] %||% 50),
+  tar_target(
+    fill_points,
+    pipeline_fill_points(
+      manifests,
+      tile_masks,
+      dem_files,
+      fill_reference,
+      out_root,
+      fill_max_km,
+      pipeline_point_runner(
+        image,
+        climatena_exe,
+        climatena_dir,
+        container_uid,
+        container_gid,
+        run_timeout
+      )
+    ),
+    deployment = "worker"
+  ),
   tar_target(
     release_folders,
     pipeline_release_folders(specs_all, release_id, drive_parent, dry_run, out_root)
