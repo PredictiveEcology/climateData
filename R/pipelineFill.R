@@ -56,6 +56,62 @@
   out
 }
 
+#' Write a ClimateNA point-mode input file
+#'
+#' One row per point: `id1` the tile, `id2` the cell, `lat`/`long` the source location and
+#' `elev` the target cell's elevation, written as given (the DEM's text, unrounded). Lines end
+#' in CRLF, as ClimateNA's own examples do.
+#'
+#' @param file character. The CSV to write.
+#' @param df data.frame with `tile`, `cell`, `src_lat`, `src_lon` and `elev` (character).
+#'
+#' @return `file`, invisibly.
+#'
+#' @keywords internal
+.writePointCsv <- function(file, df) {
+  lines <- c(
+    "id1,id2,lat,long,elev",
+    paste(df$tile, df$cell, as.character(df$src_lat), as.character(df$src_lon), df$elev, sep = ",")
+  )
+  writeBin(charToRaw(paste0(lines, "\r\n", collapse = "")), file)
+  invisible(file)
+}
+
+#' Read the values ClimateNA's point mode wrote
+#'
+#' Rows are identified by their `id1` (tile) and `id2` (cell), never by position. A row with
+#' `-9999` in any of `vars` gave no values and is dropped, with a warning naming its cells.
+#'
+#' @param file character. The CSV ClimateNA wrote.
+#' @param vars character. The variables (columns) wanted.
+#'
+#' @return list: `tile` and `cells` (integer, one per kept row) and `values`, a character matrix
+#'   (rows as `cells`, columns `vars`) holding the values as ClimateNA wrote them.
+#'
+#' @keywords internal
+.pointValues <- function(file, vars) {
+  x <- utils::read.csv(file, colClasses = "character", check.names = FALSE)
+  missingVars <- setdiff(vars, names(x))
+  if (length(missingVars) > 0) {
+    stop(basename(file), ": no column for ", paste(missingVars, collapse = ", "))
+  }
+  v <- as.matrix(x[vars])
+  dimnames(v) <- list(NULL, vars)
+  empty <- rowSums(v == "-9999" | is.na(v)) > 0
+  if (any(empty)) {
+    warning(
+      basename(file),
+      ": no values for tile ",
+      paste0(x[[1]][empty], " cell ", x[[2]][empty], collapse = ", ")
+    )
+  }
+  list(
+    tile = as.integer(x[[1]][!empty]),
+    cells = as.integer(x[[2]][!empty]),
+    values = v[!empty, , drop = FALSE]
+  )
+}
+
 #' Choose each target's source: the nearest candidate ClimateNA gives values at
 #'
 #' Tries every target's nearest candidate in one `check`, then the next candidate for the

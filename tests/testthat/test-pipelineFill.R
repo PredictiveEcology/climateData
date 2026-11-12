@@ -39,6 +39,91 @@ test_that(".chooseSources moves to the next candidate when a point run is empty"
   expect_identical(tried, list(c("a", "b"), "a"))
 })
 
+## ClimateNA's point mode reads a CSV of points and writes one, under Wine in the same image;
+## the image's climatena-run wrapper would make the output path a folder, so sh runs wine itself
+test_that(".climatenaPointDockerArgs mounts the work dir and runs wine on the CSVs", {
+  a <- .climatenaPointDockerArgs(
+    name = "cna-fill-1",
+    image = "ghcr.io/predictiveecology/climatena-wine:latest",
+    climatenaDir = "/share/ClimateNA_v7.70",
+    workDir = "/scratch/work/fill-1",
+    exe = "ClimateNA_v7.70.exe",
+    msy = "MSY",
+    periodArg = "Year_2020.ann",
+    inCsv = "in.csv",
+    outCsv = "out.csv",
+    uid = 1000L,
+    gid = 1000L
+  )
+  expect_identical(a[1:4], c("run", "--rm", "--name", "cna-fill-1"))
+  expect_contains(a, c("--cpus", "1", "--memory", "1g", "--user", "1000:1000"))
+  expect_contains(a, c("/share/ClimateNA_v7.70:/opt/climatena:ro", "/scratch/work/fill-1:/data/w"))
+  i <- match("--entrypoint", a)
+  expect_identical(a[i + 1], "sh")
+  expect_identical(a[length(a) - 2], "ghcr.io/predictiveecology/climatena-wine:latest")
+  expect_identical(a[length(a) - 1], "-c")
+  script <- a[length(a)]
+  expect_match(
+    script,
+    'wine ClimateNA_v7.70.exe /MSY /Year_2020.ann "/Z:\\data\\w\\in.csv" "/Z:\\data\\w\\out.csv"',
+    fixed = TRUE
+  )
+  expect_match(script, "cd /opt/climatena", fixed = TRUE)
+  ## system2() passes arguments to the host shell as they are: the script must reach the
+  ## container whole, with $WINEPREFIX unexpanded
+  expect_identical(script, shQuote(script_text <- sub("^'(.*)'$", "\\1", script)))
+  expect_match(script_text, '"$WINEPREFIX"', fixed = TRUE)
+})
+
+test_that(".writePointCsv writes CRLF lines and the elevation text as given", {
+  f <- withr::local_tempfile(fileext = ".csv")
+  .writePointCsv(
+    f,
+    data.frame(
+      tile = c(53L, 53L),
+      cell = c(534L, 1591L),
+      src_lat = c(66.51, 66.47),
+      src_lon = c(-61.52, -61.525),
+      elev = c("32", "280.4286")
+    )
+  )
+  expect_identical(
+    rawToChar(readBin(f, "raw", file.size(f))),
+    "id1,id2,lat,long,elev\r\n53,534,66.51,-61.52,32\r\n53,1591,66.47,-61.525,280.4286\r\n"
+  )
+})
+
+pointCsv <- function(lines) {
+  f <- withr::local_tempfile(fileext = ".csv", .local_envir = parent.frame())
+  writeBin(
+    charToRaw(paste0(
+      c("id1,id2,Latitude,Longitude,Elevation,MAT,MAP", lines),
+      "\r\n",
+      collapse = ""
+    )),
+    f
+  )
+  f
+}
+
+test_that(".pointValues matches rows by cell, not position", {
+  f <- pointCsv(c("53,7,66.5,-61.5,32,-6.8,250", "63,3,66.4,-61.5,280,-7.9,260"))
+  v <- .pointValues(f, c("MAP", "MAT"))
+  expect_identical(v$tile, c(53L, 63L))
+  expect_identical(v$cells, c(7L, 3L))
+  expect_identical(
+    v$values,
+    matrix(c("250", "260", "-6.8", "-7.9"), 2, dimnames = list(NULL, c("MAP", "MAT")))
+  )
+})
+
+test_that(".pointValues drops -9999 rows with a warning", {
+  f <- pointCsv(c("53,7,66.5,-61.5,32,-6.8,250", "53,3,66.4,-61.5,280,-9999,-9999"))
+  expect_warning(v <- .pointValues(f, c("MAT", "MAP")), "no values.*cell 3")
+  expect_identical(v$cells, 7L)
+  expect_identical(unname(v$values[1, ]), c("-6.8", "250"))
+})
+
 test_that(".chooseSources leaves a target without a working candidate unfilled", {
   cand <- data.frame(id = "a", rank = 1L, src_lon = 1, src_lat = 60, km = 1)
   s <- .chooseSources(cand, function(df) character(0))
