@@ -166,11 +166,11 @@ mapped <- tar_map(
     deployment = "worker"
   ),
 
-  ## the batch's MSY, M, Y and S zips (Y for normals), each checked
+  ## the batch's MSY, M, Y and S zips (Y for normals), masked and filled, each checked
   tar_target(
     zips,
-    zip_batch(specs, batch, out_root, tile_masks),
-    pattern = map(specs, batch),
+    zip_batch(specs, batch, out_root, tile_masks, fills),
+    pattern = map(specs, batch, fills),
     format = "file",
     deployment = "worker"
   ),

@@ -71,10 +71,12 @@ pipeline_write_zip <- function(zip, dir, files = NULL) {
 ## a ClimateNA /M, /S or /Y run would have written it and as the package's reader expects. The
 ## batch's stored period zips are extracted once into the node-local work directory, keeping the
 ## files' times; each subset is staged there by hard link, zipped, and checked. Before staging,
-## the tile's cells in `masks` (pipeline_tile_masks()) are set to NODATA in the extracted copy;
-## the stored period zips keep ClimateNA's output.
+## the tile's cells in `masks` (pipeline_tile_masks()) are set to NODATA in the extracted copy,
+## and its land cells ClimateNA left empty get the values in the period's fill CSV (`fills`,
+## from fill_batch()); a land cell still empty is reported with a warning, and the zips are cut
+## anyway. The stored period zips keep ClimateNA's output.
 ## No zips when the batch failed (manifest NULL under error = "null").
-zip_batch <- function(spec, manifest, outRoot, masks) {
+zip_batch <- function(spec, manifest, outRoot, masks, fills = character(0)) {
   if (length(manifest) == 0) {
     return(character(0))
   }
@@ -90,7 +92,33 @@ zip_batch <- function(spec, manifest, outRoot, masks) {
     utils::unzip(.periodZip(tileDir, folder), exdir = raw, setTimes = TRUE)
   }
   ## cells ClimateNA computed without a DEM elevation, outside Canada (#40)
-  .maskAscDir(raw, masks[[as.character(spec$tile)]])
+  mask <- masks[[as.character(spec$tile)]]
+  .maskAscDir(raw, mask)
+  ## land cells ClimateNA left empty: its point-mode values at the nearest land cell it covers
+  for (p in spec$periods) {
+    folder <- .periodFolder(spec$type, p, spec$msy, spec$gcm, spec$ssp)
+    fill <- fills[startsWith(basename(fills), paste0(folder, ".fill-"))]
+    if (length(fill) > 0) {
+      .fillAscDir(file.path(raw, folder), fill[1], mask$grid)
+    }
+    empty <- .emptyLandCells(file.path(raw, folder), mask$land, mask$grid)
+    if (length(empty) > 0) {
+      warning(
+        "tile ",
+        spec$tile,
+        " ",
+        folder,
+        ": ",
+        length(empty),
+        if (length(empty) == 1) " land cell" else " land cells",
+        " still empty (",
+        paste(utils::head(empty, 10), collapse = ", "),
+        if (length(empty) > 10) ", ...",
+        ")",
+        call. = FALSE
+      )
+    }
+  }
   out <- character(0)
   for (subset in pipeline_subsets(spec$type)) {
     vars <- if (normals) .allowedClimateVars_nrm else get(paste0(".allowedClimateVars_", subset))

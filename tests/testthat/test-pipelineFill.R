@@ -313,3 +313,94 @@ test_that("fill_batch runs each period once, reuses its CSV, and skips tiles wit
   expect_identical(e$fill_batch(spec2, "m.tsv", pts, out, run), character(0))
   expect_identical(e$fill_batch(spec, character(0), pts, out, run), character(0)) # failed batch
 })
+
+## applying the fills when the zips are cut
+grid22 <- c(ncols = 2, nrows = 2, xllcorner = 0, yllcorner = 0, cellsize = 1)
+tokensOf <- function(f) {
+  a <- .ascRead(f, grid22)
+  substring(a$data, a$start, a$end - 1L)
+}
+fillCsv <- function(file, cell, mat, map) {
+  writeLines(
+    c(
+      "id1,id2,Latitude,Longitude,Elevation,MAT,MAP",
+      paste(1, cell, 0.5, 0.5, 20, mat, map, sep = ",")
+    ),
+    file
+  )
+  file
+}
+
+test_that(".fillAscDir fills every variable of a period folder from its CSV", {
+  d <- withr::local_tempdir()
+  writeGrid(file.path(d, "MAT.asc"), c(1, NA, 3, 4))
+  writeGrid(file.path(d, "MAP.asc"), c(100, NA, 300, 400))
+  csv <- fillCsv(withr::local_tempfile(fileext = ".csv"), 2, "-6.8", "250")
+  expect_identical(.fillAscDir(d, csv, grid22), 2L)
+  expect_identical(tokensOf(file.path(d, "MAT.asc"))[2], "-6.8")
+  expect_identical(tokensOf(file.path(d, "MAP.asc"))[2], "250")
+})
+
+test_that(".emptyLandCells finds land cells still NODATA", {
+  d <- withr::local_tempdir()
+  writeGrid(file.path(d, "MAT.asc"), c(1, 2, NA, NA))
+  expect_identical(.emptyLandCells(d, land = 1:3, grid = grid22), 3L)
+  expect_identical(.emptyLandCells(d, land = 1:2, grid = grid22), integer(0))
+})
+
+zipEnv <- function() {
+  e <- fillEnv()
+  sys.source(test_path("..", "..", "data-raw", "pipeline", "R", "zips.R"), envir = e)
+  ## the fixture has only MAT.asc, not a whole ClimateNA output
+  e$.archiveCheck <- function(listing, expected) {
+    data.frame(problem = character(0), item = character(0))
+  }
+  e
+}
+
+normalsFixture <- function(out, mat) {
+  tileDir <- file.path(out, "raw", "historical_normals", "1")
+  writePeriod(tileDir, "Normal_1991_2020Y", mat)
+  list(
+    spec = list(
+      id = "hn1",
+      type = "historical_normals",
+      tile = 1L,
+      gcm = NA,
+      ssp = NA,
+      msy = "Y",
+      decade = NA,
+      periods = "1991_2020"
+    ),
+    masks = list("1" = list(grid = grid22, cells = integer(0), land = 1:4)),
+    tileDir = tileDir
+  )
+}
+
+zipMat <- function(zip) {
+  d <- withr::local_tempdir(.local_envir = parent.frame())
+  utils::unzip(zip, exdir = d)
+  tokensOf(list.files(d, "^MAT[.]asc$", recursive = TRUE, full.names = TRUE))
+}
+
+test_that("zip_batch writes a period's fill CSV into its zip", {
+  e <- zipEnv()
+  out <- withr::local_tempdir()
+  withr::local_envvar(CLIMATENA_WORK_DIR = withr::local_tempdir())
+  x <- normalsFixture(out, c(1, 2, NA, 4))
+  csv <- fillCsv(file.path(x$tileDir, "Normal_1991_2020Y.fill-0123abcd.csv"), 3, "-7.9", "260")
+  expect_no_warning(z <- e$zip_batch(x$spec, "m.tsv", out, x$masks, csv))
+  expect_identical(zipMat(z)[3], "-7.9")
+})
+
+test_that("zip_batch warns about land cells still empty", {
+  e <- zipEnv()
+  out <- withr::local_tempdir()
+  withr::local_envvar(CLIMATENA_WORK_DIR = withr::local_tempdir())
+  x <- normalsFixture(out, c(1, 2, NA, 4))
+  expect_warning(
+    z <- e$zip_batch(x$spec, "m.tsv", out, x$masks, character(0)),
+    "1 land cell.*still empty"
+  )
+  expect_true(file.exists(z))
+})

@@ -112,6 +112,48 @@
   )
 }
 
+#' Fill a period folder's empty land cells from ClimateNA's point-mode output
+#'
+#' Writes each variable's values from `fillCsv` ([.pointValues()]) into `<dir>/<var>.asc`
+#' ([.fillAsc()]), for every `.asc` file in `dir`.
+#'
+#' @param dir character. One period's folder (e.g. `Year_2020MSY`), extracted.
+#' @param fillCsv character. That period's point-mode output for the folder's tile.
+#' @param grid the tile's grid (as from [.maskCells()]).
+#'
+#' @return integer: how many files changed.
+#'
+#' @keywords internal
+.fillAscDir <- function(dir, fillCsv, grid) {
+  files <- list.files(dir, "[.]asc$", full.names = TRUE)
+  vars <- sub("[.]asc$", "", basename(files))
+  v <- .pointValues(fillCsv, vars)
+  changed <- vapply(
+    seq_along(files),
+    function(i) {
+      .fillAsc(files[i], list(grid = grid, cells = v$cells, values = v$values[, vars[i]]))
+    },
+    logical(1)
+  )
+  sum(changed)
+}
+
+#' Land cells still empty in a period folder
+#'
+#' A ClimateNA output is empty in all its variables at once, so `MAT.asc` tells.
+#'
+#' @param dir character. One period's folder, extracted.
+#' @param land integer. The tile's land cells (as from [.maskCells()]).
+#' @param grid the tile's grid.
+#'
+#' @return integer: the land cells whose `MAT.asc` value is NODATA.
+#'
+#' @keywords internal
+.emptyLandCells <- function(dir, land, grid) {
+  a <- .ascRead(file.path(dir, "MAT.asc"), grid)
+  land[substring(a$data, a$start[land], a$end[land] - 1L) == a$header[["nodata_value"]]]
+}
+
 #' Choose each target's source: the nearest candidate ClimateNA gives values at
 #'
 #' Tries every target's nearest candidate in one `check`, then the next candidate for the
