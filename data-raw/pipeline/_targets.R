@@ -262,7 +262,8 @@ list(
       out_root,
       release_id,
       climatena_version,
-      dem_resolution
+      dem_resolution,
+      fill_points
     ),
     format = "file"
   ),

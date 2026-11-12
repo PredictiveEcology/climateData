@@ -295,6 +295,64 @@ checksums_sql <- function(dbfile, type) {
   invisible(db)
 }
 
+## Land cells ClimateNA left empty, filled from its point-mode output at the nearest land cell it
+## covers (data-raw/pipeline/R/fill.R): one row per cell and class (historical: historical years
+## and normals; future: future years and normals). A cell left empty (no source within reach)
+## has NULL src_lon, src_lat and km. Written by the pipeline, read by filledCells().
+.filledCellsColumns <- c(
+  "class",
+  "tileid",
+  "cell",
+  "lon",
+  "lat",
+  "elev",
+  "src_lon",
+  "src_lat",
+  "km"
+)
+
+.filledCellsCreate <- function(db) {
+  DBI::dbExecute(
+    db,
+    "CREATE TABLE IF NOT EXISTS filled_cells (
+      class   TEXT NOT NULL,     -- historical | future
+      tileid  INTEGER NOT NULL,
+      cell    INTEGER NOT NULL,  -- cell in the tile's DEM grid, row by row from the top left
+      lon     REAL NOT NULL,     -- cell centre
+      lat     REAL NOT NULL,
+      elev    REAL NOT NULL,     -- the cell's DEM elevation (m), which ClimateNA was run with
+      src_lon REAL,              -- where ClimateNA was run; NULL if the cell is left empty
+      src_lat REAL,
+      km      REAL,              -- distance from the cell's centre to the source
+      PRIMARY KEY (class, tileid, cell)
+    )"
+  )
+  invisible(db)
+}
+
+## Replace the table's rows with `df` (as pipeline_fill_points() gives it: `tile` for tileid, and
+## the elevation as text).
+.filledCellsWrite <- function(db, df) {
+  if (!"tileid" %in% names(df)) {
+    df$tileid <- df$tile
+  }
+  df$tileid <- as.integer(df$tileid)
+  df$cell <- as.integer(df$cell)
+  df$elev <- as.numeric(df$elev)
+  DBI::dbExecute(db, "DELETE FROM filled_cells")
+  if (nrow(df) > 0) {
+    sql <- paste0(
+      "INSERT INTO filled_cells (",
+      paste(.filledCellsColumns, collapse = ", "),
+      ") VALUES (",
+      paste(rep("?", length(.filledCellsColumns)), collapse = ", "),
+      ")"
+    )
+    DBI::dbExecute(db, sql, params = unname(as.list(df[.filledCellsColumns])))
+  }
+  invisible(db)
+}
+
 ## One fingerprint per published zip (see data-raw/06-archive_fingerprints.R).
 ## Written with explicit SQL types: dplyr::rows_*() would remap them.
 .archivesColumns <- c("gid", "type", "zipfile", "md5", "n_files", "size", "verified")

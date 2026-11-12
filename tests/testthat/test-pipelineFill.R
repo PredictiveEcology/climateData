@@ -404,3 +404,40 @@ test_that("zip_batch warns about land cells still empty", {
   )
   expect_true(file.exists(z))
 })
+
+## the index lists every filled land cell, and those left empty (no source within reach)
+test_that("filled_cells round-trips through the index, with NULL sources for unfilled cells", {
+  db <- sqlite_connect_db(file.path(withr::local_tempdir(), "t.sqlite"))
+  withr::defer(DBI::dbDisconnect(db))
+  .filledCellsCreate(db)
+  info <- DBI::dbGetQuery(db, "PRAGMA table_info(filled_cells)")
+  expect_identical(
+    info$name,
+    c("class", "tileid", "cell", "lon", "lat", "elev", "src_lon", "src_lat", "km")
+  )
+  expect_identical(
+    info$type,
+    c("TEXT", "INTEGER", "INTEGER", "REAL", "REAL", "REAL", "REAL", "REAL", "REAL")
+  )
+
+  ## as pipeline_fill_points() gives them: `tile`, and the elevation as the DEM's text
+  pts <- data.frame(
+    class = "future",
+    tile = 63L,
+    cell = c(14081L, 13905L),
+    lon = -61.425,
+    lat = c(66.675, 66.725),
+    elev = c("461.6809", "204.7481"),
+    src_lon = c(NA, -61.525),
+    src_lat = c(NA, 66.725),
+    km = c(NA, 4.41)
+  )
+  .filledCellsWrite(db, pts)
+  .filledCellsWrite(db, pts) # replaces the rows
+  got <- DBI::dbGetQuery(db, "SELECT * FROM filled_cells ORDER BY cell")
+  expect_identical(nrow(got), 2L)
+  expect_identical(got$tileid, c(63L, 63L))
+  expect_equal(got$elev, c(204.7481, 461.6809))
+  expect_equal(got$km[1], 4.41)
+  expect_true(is.na(got$src_lon[2]) && is.na(got$km[2]))
+})

@@ -40,9 +40,10 @@ pipeline_index_rows <- function(spec, uploads, manifestById, outRoot) {
 }
 
 ## Build <outRoot>/ClimateNA_tiles.sqlite for the release, from scratch: the four tile tables (via
-## ClimateNA_sql(), with each row's ClimateNA version), the archives fingerprints and the release
-## table. Written to a temporary name and renamed, and left in rollback-journal mode with no
-## -wal/-shm files. `uploads`, `specs` and `manifests` are all types' targets combined.
+## ClimateNA_sql(), with each row's ClimateNA version), the archives fingerprints, the release
+## table and the filled land cells (`fillPoints`, from pipeline_fill_points()). Written to a
+## temporary name and renamed, and left in rollback-journal mode with no -wal/-shm files.
+## `uploads`, `specs` and `manifests` are all types' targets combined.
 build_index <- function(
   uploads,
   specs,
@@ -50,7 +51,8 @@ build_index <- function(
   outRoot,
   releaseId,
   climatenaVersion,
-  demResolution
+  demResolution,
+  fillPoints
 ) {
   manifestById <- as.list(manifests)
   names(manifestById) <- sub("[.]tsv$", "", basename(manifests))
@@ -96,6 +98,8 @@ build_index <- function(
       )
     )
   }
+  .filledCellsCreate(db)
+  .filledCellsWrite(db, fillPoints)
   DBI::dbExecute(db, "PRAGMA wal_checkpoint(TRUNCATE)")
   DBI::dbExecute(db, "PRAGMA journal_mode = DELETE")
   DBI::dbDisconnect(db)
