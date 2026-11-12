@@ -106,6 +106,7 @@ pipeline_point_runner <- function(image, climatenaExe, climatenaDir, uid, gid, t
 ## dependency only: the reference outputs are read from `outRoot`.
 pipeline_fill_points <- function(manifests, tileMasks, demFiles, reference, outRoot, maxKm, run) {
   pipeline_load()
+  demFiles <- pipeline_dem_by_tile(demFiles)
   cols <- c("class", "tile", "cell", "lon", "lat", "elev", "src_lon", "src_lat", "km")
   out <- lapply(names(reference), function(cls) {
     ref <- reference[[cls]]

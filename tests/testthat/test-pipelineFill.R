@@ -248,7 +248,8 @@ test_that("pipeline_fill_points finds land cells empty in the reference and give
   p <- e$pipeline_fill_points(
     "m.tsv",
     masks,
-    demFiles,
+    unname(demFiles), # as the format = "file" target gives them
+
     ref,
     out,
     maxKm = 200,

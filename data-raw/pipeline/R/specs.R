@@ -43,14 +43,20 @@ pipeline_dem_files <- function(demDir, tiles) {
   f
 }
 
+## DEM file paths named by tile, from their file names (can_dem_<tile>.asc): the dem_files
+## target returns its paths without names, as every format = "file" target does.
+pipeline_dem_by_tile <- function(demFiles) {
+  stats::setNames(demFiles, sub("^can_dem_([0-9]+)[.]asc$", "\\1", basename(demFiles)))
+}
+
 ## Each tile's cells to set to NODATA when its zips are cut, and its land cells (.maskCells()),
-## named by tile as `demFiles` is (pipeline_dem_files()).
+## named by tile.
 pipeline_tile_masks <- function(canadaFile, demFiles) {
   canada <- readRDS(canadaFile)
   if (inherits(canada, "PackedSpatVector")) {
     canada <- terra::unwrap(canada)
   }
-  lapply(demFiles, function(f) .maskCells(terra::rast(f), canada))
+  lapply(pipeline_dem_by_tile(demFiles), function(f) .maskCells(terra::rast(f), canada))
 }
 
 ## The batch specs for one archive type, from the release settings.

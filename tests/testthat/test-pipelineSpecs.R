@@ -40,6 +40,8 @@ test_that("pipeline_tile_masks names each tile's mask and land cells by its DEM 
 
   m <- e$pipeline_tile_masks(canadaFile, demFiles)
   expect_named(m, c("1", "2"))
+  ## a format = "file" target returns its paths without names: tiles come from the file names
+  expect_named(e$pipeline_tile_masks(canadaFile, unname(demFiles)), c("1", "2"))
   expect_identical(m[["1"]]$land, 1:4)
   expect_identical(m[["2"]]$land, c(2L, 3L))
   expect_identical(m[["2"]]$cells, 4L)
