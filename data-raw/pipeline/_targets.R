@@ -184,9 +184,12 @@ list(
   tar_target(dem_dir, dem_dir_path),
   tar_target(out_root, out_root_path),
   tar_target(tiles, pipeline_tiles(dem_dir, tile_subset)),
-  ## the cells each tile's zips set to NODATA: no DEM elevation, centre outside Canada (#40)
+  ## the DEM files themselves, so what is built from them follows their contents
+  tar_target(dem_files, pipeline_dem_files(dem_dir, tiles), format = "file"),
+  ## the cells each tile's zips set to NODATA (no DEM elevation, centre outside Canada; #40),
+  ## and its land cells
   tar_target(canada, pipeline_canada(out_root), format = "file"),
-  tar_target(tile_masks, pipeline_tile_masks(canada, dem_dir, tiles)),
+  tar_target(tile_masks, pipeline_tile_masks(canada, dem_files)),
   tar_target(previous_index, previous_index_path, format = "file"),
 
   mapped,

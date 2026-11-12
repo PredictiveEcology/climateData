@@ -25,6 +25,8 @@ test_that(".maskCells blanks no-DEM cells outside the boundary only", {
   m <- .maskCells(dem, boundary)
   expect_identical(m$cells, c(4L, 16L))
   expect_equal(m$grid, c(ncols = 4, nrows = 4, xllcorner = 0, yllcorner = 0, cellsize = 1))
+  ## the cells with a DEM elevation: the land cells the zips must have values for
+  expect_identical(m$land, setdiff(1:16, c(1L, 4L, 13L, 16L)))
 })
 
 ## An ASCII grid as ClimateNA writes it: header lines end in CRLF; each data row is the values

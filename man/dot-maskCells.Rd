@@ -14,8 +14,9 @@
 }
 \value{
 list: \code{grid}, the tile's ASCII-grid header values (named \code{ncols}, \code{nrows},
-\code{xllcorner}, \code{yllcorner}, \code{cellsize}); and \code{cells}, the cell numbers to blank (row by row
-from the top left, ascending).
+\code{xllcorner}, \code{yllcorner}, \code{cellsize}); \code{cells}, the cell numbers to blank (row by row from
+the top left, ascending); and \code{land}, the cells with a DEM elevation, which the zips must
+have values for (ascending).
 }
 \description{
 The DEM tiles mark cells with no elevation as NA, and ClimateNA writes values for those cells

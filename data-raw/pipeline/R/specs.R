@@ -32,14 +32,25 @@ pipeline_canada <- function(outRoot) {
   f
 }
 
-## Each tile's cells to set to NODATA when its zips are cut (.maskCells()), named by tile.
-pipeline_tile_masks <- function(canadaFile, demDir, tiles) {
+## Each tile's DEM file, named by tile; stops naming tiles without one. As a `format = "file"`
+## target, it makes the targets built from the DEMs depend on the files' contents.
+pipeline_dem_files <- function(demDir, tiles) {
+  f <- stats::setNames(pipeline_dem_file(demDir, tiles), as.character(tiles))
+  missing <- names(f)[!file.exists(f)]
+  if (length(missing) > 0) {
+    stop("no DEM tile in ", demDir, " for tile(s) ", paste(missing, collapse = ", "))
+  }
+  f
+}
+
+## Each tile's cells to set to NODATA when its zips are cut, and its land cells (.maskCells()),
+## named by tile as `demFiles` is (pipeline_dem_files()).
+pipeline_tile_masks <- function(canadaFile, demFiles) {
   canada <- readRDS(canadaFile)
   if (inherits(canada, "PackedSpatVector")) {
     canada <- terra::unwrap(canada)
   }
-  masks <- lapply(tiles, function(t) .maskCells(terra::rast(pipeline_dem_file(demDir, t)), canada))
-  stats::setNames(masks, as.character(tiles))
+  lapply(demFiles, function(f) .maskCells(terra::rast(f), canada))
 }
 
 ## The batch specs for one archive type, from the release settings.

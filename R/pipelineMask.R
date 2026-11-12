@@ -9,15 +9,18 @@
 #'   (Canada). Holes are filled first.
 #'
 #' @return list: `grid`, the tile's ASCII-grid header values (named `ncols`, `nrows`,
-#'   `xllcorner`, `yllcorner`, `cellsize`); and `cells`, the cell numbers to blank (row by row
-#'   from the top left, ascending).
+#'   `xllcorner`, `yllcorner`, `cellsize`); `cells`, the cell numbers to blank (row by row from
+#'   the top left, ascending); and `land`, the cells with a DEM elevation, which the zips must
+#'   have values for (ascending).
 #'
 #' @keywords internal
 .maskCells <- function(dem, boundary) {
   inside <- terra::rasterize(terra::fillHoles(boundary), dem, touches = FALSE)
-  cells <- which(is.na(terra::values(dem, mat = FALSE)) & is.na(terra::values(inside, mat = FALSE)))
+  noDem <- is.na(terra::values(dem, mat = FALSE))
+  cells <- which(noDem & is.na(terra::values(inside, mat = FALSE)))
   e <- as.vector(terra::ext(dem))
   list(
+    land = which(!noDem),
     grid = c(
       ncols = terra::ncol(dem),
       nrows = terra::nrow(dem),
