@@ -19,6 +19,7 @@ reference:
       - climateLayers
       - available
       - climateDataRelease
+      - filledCells
       - latestHistoricalYear
       - whereAmI
   - title: Derived variables

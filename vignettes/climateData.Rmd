@@ -124,6 +124,17 @@ climateRasters$historical_CMI # one layer per year
 
 Instead of a study area and a raster to match, you can pass `tile =` with one or more tile IDs. That gives you whole tiles, unprojected.
 
+## Filled cells
+
+ClimateNA writes no values at some land cells. Its future climate data miss some coastal cells (for example along the east coast of Baffin Island), and a few cells get no values at all. In the archives, each such cell holds ClimateNA's values for the nearest land cell it covers, computed at the empty cell's own elevation. That point is a median of about 5 km away (at most 25 km for the future gaps). Where both have values, a point that close gives nearly the same climate: mean annual temperature differs by 0.05 degrees C on average and annual precipitation by about 1%.
+
+`filledCells()` lists these cells as points, with where ClimateNA was run for each, so you can map them or leave them out:
+
+```{r, eval = FALSE}
+fc <- filledCells(studyArea = studyArea)
+table(fc$class, fc$filled) # class: "historical" or "future" archives
+```
+
 ## Downloads and caching
 
 - **What gets downloaded:** the archives are grouped by tile and decade. climateData downloads only the archives it needs for your variables and years:

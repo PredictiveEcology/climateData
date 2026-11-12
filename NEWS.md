@@ -1,5 +1,13 @@
 # climateData (development version)
 
+- Land cells where ClimateNA writes no values now have values in every archive: ClimateNA's own
+  values for the nearest land cell it covers, computed at the empty cell's elevation (a median of
+  about 5 km away). ClimateNA's future data miss some coastal cells (e.g. every land cell of tiles
+  53 and 63, on Baffin Island's east coast), and a few cells had no values at all. New
+  `filledCells()` lists the filled cells, with where ClimateNA was run for each.
+- The 3 arcmin release no longer has a tile 53: at 3 arcmin it has no land cell, and its archives
+  had been built from the 1 arcmin DEM tile.
+
 - New `climateDataRelease()` identifies the climate data release behind the installed package
   (e.g. `"cna-v7.70-3arcmin"`). Code that caches `prepClimateLayers()` results can add it to the
   cache key, so a new data release isn't served from an old cache.
