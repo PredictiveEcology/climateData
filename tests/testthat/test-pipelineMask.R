@@ -154,3 +154,70 @@ test_that(".maskAscDir masks every .asc below a folder and nothing else", {
 test_that(".maskAscDir stops when the tile has no mask", {
   expect_error(.maskAscDir(withr::local_tempdir(), NULL), "no mask")
 })
+
+## Land cells ClimateNA leaves empty are filled from its point-mode output: the values are
+## written in place of the NODATA text, every other byte left as it was
+test_that(".fillAsc writes the given values into NODATA cells, keeping all other bytes", {
+  tokens <- c("1", "-9999", "3", "-9999")
+  for (eol in c("\r\n", "\n")) {
+    f <- writeClimatenaAsc(withr::local_tempfile(fileext = ".asc"), tokens, 2, 2, eol = eol)
+    want <- writeClimatenaAsc(
+      withr::local_tempfile(fileext = ".asc"),
+      c("1", "12", "3", "-7.9"),
+      2,
+      2,
+      eol = eol
+    )
+    expect_true(.fillAsc(f, list(grid = gridOf(2, 2), cells = c(4L, 2L), values = c("-7.9", "12"))))
+    expect_identical(bytesOf(f), bytesOf(want))
+  }
+})
+
+test_that(".fillAsc counts values in order across wrapped lines", {
+  f <- writeClimatenaAsc(withr::local_tempfile(fileext = ".asc"), as.character(1:12), 3, 4)
+  wrapped <- withr::local_tempfile(fileext = ".asc")
+  ## 4 x 3 grid written 3 values to a line, with cells 4 and 5 empty
+  txt <- sub(
+    "1 2 3 \r\n4 5 6 \r\n",
+    "1 2 \r\n3 -9999 -9999 \r\n6 ",
+    rawToChar(bytesOf(f)),
+    fixed = TRUE
+  )
+  txt <- sub("ncols        3", "ncols        4", txt, fixed = TRUE)
+  txt <- sub("nrows        4", "nrows        3", txt, fixed = TRUE)
+  writeBin(charToRaw(txt), wrapped)
+  expect_true(.fillAsc(wrapped, list(grid = gridOf(4, 3), cells = c(4L, 5L), values = c("4", "5"))))
+  expect_identical(
+    rawToChar(bytesOf(wrapped)),
+    sub("3 -9999 -9999 \r\n", "3 4 5 \r\n", txt, fixed = TRUE)
+  )
+})
+
+test_that(".fillAsc refuses a cell that has a value", {
+  f <- writeClimatenaAsc(withr::local_tempfile(fileext = ".asc"), c("1", "2", "3", "4"), 2, 2)
+  before <- bytesOf(f)
+  expect_error(
+    .fillAsc(f, list(grid = gridOf(2, 2), cells = 2L, values = "5")),
+    "cell 2 .*not NODATA"
+  )
+  expect_identical(bytesOf(f), before)
+})
+
+test_that(".fillAsc refuses a -9999 value", {
+  f <- writeClimatenaAsc(withr::local_tempfile(fileext = ".asc"), c("1", "-9999", "3", "4"), 2, 2)
+  expect_error(
+    .fillAsc(f, list(grid = gridOf(2, 2), cells = 2L, values = "-9999")),
+    "no value for cell 2"
+  )
+})
+
+test_that(".fillAsc keeps the file's modification time and does nothing for no cells", {
+  f <- writeClimatenaAsc(withr::local_tempfile(fileext = ".asc"), c("1", "-9999", "3", "4"), 2, 2)
+  t0 <- as.POSIXct("2020-01-01 12:34:56", tz = "UTC")
+  Sys.setFileTime(f, t0)
+  before <- bytesOf(f)
+  expect_false(.fillAsc(f, list(grid = gridOf(2, 2), cells = integer(0), values = character(0))))
+  expect_identical(bytesOf(f), before)
+  expect_true(.fillAsc(f, list(grid = gridOf(2, 2), cells = 2L, values = "2")))
+  expect_equal(as.numeric(file.mtime(f)), as.numeric(t0))
+})

@@ -50,6 +50,55 @@
   if (length(mask$cells) == 0) {
     return(invisible(FALSE))
   }
+  a <- .ascRead(file, mask$grid)
+  cells <- sort(unique(mask$cells))
+  invisible(.ascSplice(file, a, cells, rep(a$header[["nodata_value"]], length(cells))))
+}
+
+#' Write values into empty cells of a ClimateNA ASCII grid, in place
+#'
+#' Replaces the text of each listed cell, which must be the file's `NODATA_value`, with the given
+#' value, as ClimateNA's point mode wrote it. Every other byte is left as ClimateNA wrote it, and
+#' the file keeps its modification time (see [.maskAsc()]). Stops, leaving the file unchanged,
+#' if a listed cell has a value (ClimateNA's own values are never overwritten) or a given value
+#' is missing (`-9999` or the file's `NODATA_value`).
+#'
+#' @param file character. A ClimateNA `.asc` file.
+#' @param fill list: `grid` (as from [.maskCells()]) for the file's tile; `cells`, the cell
+#'   numbers to fill; `values`, character, one per cell.
+#'
+#' @return `TRUE` if the file changed, else `FALSE`, invisibly.
+#'
+#' @keywords internal
+.fillAsc <- function(file, fill) {
+  stopifnot(length(fill$cells) == length(fill$values), !anyDuplicated(fill$cells))
+  if (length(fill$cells) == 0) {
+    return(invisible(FALSE))
+  }
+  a <- .ascRead(file, fill$grid)
+  nodata <- a$header[["nodata_value"]]
+  missing <- fill$values %in% c("-9999", nodata) | is.na(fill$values)
+  if (any(missing)) {
+    stop(basename(file), ": no value for cell ", paste(fill$cells[missing], collapse = ", "))
+  }
+  have <- substring(a$data, a$start[fill$cells], a$end[fill$cells] - 1L)
+  if (any(have != nodata)) {
+    stop(
+      basename(file),
+      ": cell ",
+      paste(fill$cells[have != nodata], collapse = ", "),
+      " has a value (not NODATA)"
+    )
+  }
+  o <- order(fill$cells)
+  invisible(.ascSplice(file, a, fill$cells[o], fill$values[o]))
+}
+
+## Read a ClimateNA ASCII grid for .maskAsc() / .fillAsc(): the raw bytes, the header (named by
+## lower-case keyword), the data text and each value's start and end (end exclusive) in it.
+## Stops if the header's grid differs from `grid` (corners within cellsize / 1000) or the value
+## count is not ncols x nrows. Values are counted in order, whatever the line breaks.
+.ascRead <- function(file, grid) {
   bytes <- readBin(file, "raw", file.size(file))
   text <- rawToChar(bytes)
   nl <- gregexpr("\n", text, fixed = TRUE)[[1]]
@@ -59,48 +108,53 @@
 
   kv <- strsplit(trimws(strsplit(substr(text, 1, nl[6]), "\n", fixed = TRUE)[[1]]), "[ \t]+")
   header <- stats::setNames(vapply(kv, `[`, "", 2), tolower(vapply(kv, `[`, "", 1)))
-  grid <- suppressWarnings(as.numeric(header[names(mask$grid)]))
-  tol <- mask$grid[["cellsize"]] / 1000
+  g <- suppressWarnings(as.numeric(header[names(grid)]))
+  tol <- grid[["cellsize"]] / 1000
   if (
-    anyNA(grid) ||
+    anyNA(g) ||
       !is.element("nodata_value", names(header)) ||
-      any(grid[1:2] != mask$grid[1:2]) ||
-      any(abs(grid[3:5] - mask$grid[3:5]) > tol)
+      any(g[1:2] != grid[1:2]) ||
+      any(abs(g[3:5] - grid[3:5]) > tol)
   ) {
     stop(
       basename(file),
       ": its grid (",
       paste(header, collapse = " "),
       ") differs from the DEM tile's (",
-      paste(mask$grid, collapse = " "),
+      paste(grid, collapse = " "),
       ")"
     )
   }
 
   data <- substr(text, nl[6] + 1L, nchar(text))
   m <- gregexpr("[^ \t\r\n]+", data)[[1]]
-  n <- mask$grid[["ncols"]] * mask$grid[["nrows"]]
+  n <- grid[["ncols"]] * grid[["nrows"]]
   if (length(m) != n) {
     stop(basename(file), ": ", length(m), " values, not ", n)
   }
-  ## splice the NODATA value in place of each masked value; the text between them is kept
-  cells <- sort(unique(mask$cells))
-  start <- m[cells]
-  end <- start + attr(m, "match.length")[cells]
-  pieces <- substring(data, c(1L, end), c(start - 1L, nchar(data)))
-  data <- paste(
-    c(rbind(pieces[-length(pieces)], header[["nodata_value"]]), pieces[length(pieces)]),
-    collapse = ""
+  list(
+    bytes = bytes,
+    head = substr(text, 1, nl[6]),
+    header = header,
+    data = data,
+    start = as.integer(m),
+    end = as.integer(m) + attr(m, "match.length")
   )
+}
 
-  out <- charToRaw(paste0(substr(text, 1, nl[6]), data))
-  changed <- !identical(out, bytes)
+## Put `values` in place of the given cells' text (cells ascending, unique) and write the file if
+## that changes it, keeping its modification time. TRUE if the file changed.
+.ascSplice <- function(file, a, cells, values) {
+  pieces <- substring(a$data, c(1L, a$end[cells]), c(a$start[cells] - 1L, nchar(a$data)))
+  data <- paste(c(rbind(pieces[-length(pieces)], values), pieces[length(pieces)]), collapse = "")
+  out <- charToRaw(paste0(a$head, data))
+  changed <- !identical(out, a$bytes)
   if (changed) {
     mtime <- file.mtime(file)
     writeBin(out, file)
     Sys.setFileTime(file, mtime)
   }
-  invisible(changed)
+  changed
 }
 
 #' Blank cells in every ClimateNA ASCII grid below a folder, in place
