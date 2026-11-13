@@ -51,6 +51,7 @@ Suggests:
     rprojroot,
     SpaDES.tools (>= 2.0.4),
     sys,
+    targets,
     testthat (>= 3.0.0),
     withr
 VignetteBuilder:

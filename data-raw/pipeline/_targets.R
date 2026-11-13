@@ -206,13 +206,17 @@ list(
   tar_target(climatena_dir, climatena_dir_path),
   tar_target(dem_dir, dem_dir_path),
   tar_target(out_root, out_root_path),
-  tar_target(tiles, pipeline_tiles(dem_dir, tile_subset)),
-  ## the DEM files themselves, so what is built from them follows their contents
-  tar_target(dem_files, pipeline_dem_files(dem_dir, tiles), format = "file"),
+  ## the DEM folder's tiles, listed on every run: adding or removing a DEM file changes neither
+  ## dem_dir nor the tile subset (an unchanged list rebuilds nothing)
+  tar_target(tiles, pipeline_tiles(dem_dir, tile_subset), cue = tar_cue(mode = "always")),
+  ## the DEM files themselves, so what is built from them follows their contents. This and the
+  ## other release-wide inputs stop the run when they fail: under error = "null" one failure
+  ## would become an error in every branch
+  tar_target(dem_files, pipeline_dem_files(dem_dir, tiles), format = "file", error = "stop"),
   ## the cells each tile's zips set to NODATA (no DEM elevation, centre outside Canada; #40),
   ## and its land cells
   tar_target(canada, pipeline_canada(out_root), format = "file"),
-  tar_target(tile_masks, pipeline_tile_masks(canada, dem_files)),
+  tar_target(tile_masks, pipeline_tile_masks(canada, dem_files), error = "stop"),
   tar_target(previous_index, previous_index_path, format = "file"),
 
   mapped,
@@ -242,7 +246,8 @@ list(
         run_timeout
       )
     ),
-    deployment = "worker"
+    deployment = "worker",
+    error = "stop"
   ),
   tar_target(
     release_folders,
