@@ -1,0 +1,60 @@
+## Machine-specific settings for the ClimateNA pipeline. Copy to _local.R (gitignored) and edit.
+## Run the pipeline from the package root: every process loads the package from there.
+
+local <- list(
+  ## the release settings; NULL for the committed data-raw/pipeline/release.yml
+  release_file = NULL,
+
+  ## an unpacked ClimateNA release, mounted read-only into the containers
+  climatena_dir = "/path/to/ClimateNA_v7.70",
+
+  ## DEM tiles (can_dem_<tile>.asc, Windows line endings) at the release's resolution
+  dem_dir = "/path/to/ClimateNA_data/dem",
+
+  ## everything the pipeline writes: raw/, zips/, _targets/, logs, the index and the report.
+  ## Keep it from one release to the next (one per DEM resolution), so unchanged outputs and
+  ## zips are reused.
+  out_root = "/path/to/ClimateNA_data/pipeline/3arcmin",
+
+  ## node-local directory ClimateNA writes into before each output is copied to out_root
+  ## (ClimateNA writes very slowly to an NFS share); NULL for each worker's tempdir()
+  work_dir = NULL,
+
+  ## user the containers run as (must match the image's build args)
+  uid = 1000L,
+  gid = 1000L,
+
+  ## NULL for all tiles with a DEM, or a subset for testing, e.g. 39L
+  tiles = NULL,
+
+  ## TRUE: build everything but upload nothing to Drive
+  dry_run = TRUE,
+
+  ## TRUE: when a rebuilt zip differs from the file of that name in the release's Drive folder,
+  ## replace that file in place (same Drive ID). FALSE: such an upload stops with an error, so a
+  ## shipped release's files change only when you ask.
+  replace_changed = FALSE,
+
+  ## the Google account for uploads: its OAuth token must be cached on this machine
+  ## (googledrive::drive_auth() once, interactively)
+  drive_email = NULL, # e.g. "you@example.org"
+
+  ## how many uploads at once, on this machine
+  upload_workers = 8L,
+
+  ## the previous release's index: zips identical to its (same path and MD5) reuse its Drive
+  ## files instead of being uploaded again. NULL for the package's shipped index.
+  previous_index = NULL,
+
+  ## seconds before a ClimateNA run is stopped and its period counted as failed
+  run_timeout = 3600,
+
+  ## how many ClimateNA runs at once on this machine. The pipeline uses at most half of each
+  ## node's cores, so this is lowered (with a message) to half the cores less the upload
+  ## workers and the main process.
+  workers = 4L
+  ## ...or across nodes (FOR-CAST/crew.ssh), each capped at half its cores, with the checkout at
+  ## the same path on each:
+  ## ssh_nodes = c(node1 = 60L, node2 = 90L),
+  ## projdir = "/path/to/climateData"
+)

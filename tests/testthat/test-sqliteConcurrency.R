@@ -18,15 +18,21 @@ test_that("parallel latestHistoricalYear() calls on one database do not fail", {
 
   ## R CMD check caps forked workers at 2 (_R_CHECK_LIMIT_CORES_)
   nWorkers <- if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) 2L else 8L
-  res <- parallel::mclapply(seq_len(nWorkers), function(i) {
-    t0 <- Sys.time()
-    out <- character()
-    while (difftime(Sys.time(), t0, units = "secs") < 10) {
-      r <- tryCatch(identical(latestHistoricalYear(), expected), error = function(e) conditionMessage(e))
-      if (!isTRUE(r)) out <- c(out, as.character(r))
-    }
-    out
-  }, mc.cores = nWorkers)
+  res <- parallel::mclapply(
+    seq_len(nWorkers),
+    function(i) {
+      t0 <- Sys.time()
+      out <- character()
+      while (difftime(Sys.time(), t0, units = "secs") < 10) {
+        r <- tryCatch(identical(latestHistoricalYear(), expected), error = function(e) {
+          conditionMessage(e)
+        })
+        if (!isTRUE(r)) out <- c(out, as.character(r))
+      }
+      out
+    },
+    mc.cores = nWorkers
+  )
 
   errs <- unlist(res)
   expect_identical(unique(errs), character(0), info = paste(head(errs, 3), collapse = "; "))
@@ -48,6 +54,24 @@ test_that("a read-only lookup neither writes nor creates tables", {
   con <- DBI::dbConnect(RSQLite::SQLite(), f)
   on.exit(DBI::dbDisconnect(con), add = TRUE)
   expect_false(DBI::dbExistsTable(con, "future_normals"))
+})
+
+test_that("a lookup that fails closes its connection", {
+  f <- dbCopy()
+  on.exit(unlink(paste0(f, c("", "-wal", "-shm"))), add = TRUE)
+  con <- DBI::dbConnect(RSQLite::SQLite(), f)
+  DBI::dbExecute(con, "DROP TABLE future_normals")
+  DBI::dbDisconnect(con)
+
+  realConnect <- sqlite_connect_db
+  opened <- NULL
+  testthat::local_mocked_bindings(sqlite_connect_db = function(...) {
+    opened <<- realConnect(...)
+    opened
+  })
+  on.exit(if (!is.null(opened) && DBI::dbIsValid(opened)) DBI::dbDisconnect(opened), add = TRUE)
+  expect_error(ClimateNA_sql(f, "future_normals", readonly = TRUE))
+  expect_false(DBI::dbIsValid(opened))
 })
 
 test_that("a lookup waits for a lock held by another process instead of failing", {

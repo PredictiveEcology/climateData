@@ -43,11 +43,11 @@ test_that("prepClimateLayers works for multiple variable types", {
       fun = quote(calcAsIs),
       .dots = list(historical_years = historical_yrs)
     ),
-    # future period not supported
-    # future_CMD_sm_normal = list(
-    #   vars = "future_CMD_sm_normal",
-    #   fun = quote(calcAsIs),
-    #   .dots = list(future_period = future_prd),
+    future_MAT_normal = list(
+      vars = "future_MAT_normal",
+      fun = quote(calcAsIs),
+      .dots = list(future_period = future_prd)
+    ),
     future_FFP = list(
       vars = "future_FFP", ## ensure FFP only; not bFFP nor eFFP
       fun = quote(calcAsIs),
@@ -58,7 +58,6 @@ test_that("prepClimateLayers works for multiple variable types", {
       fun = quote(calcMDC),
       .dots = list(historical_years = historical_yrs)
     )
-
   )
 
   ## test with all parallel backends
@@ -84,56 +83,63 @@ test_that("prepClimateLayers works for multiple variable types", {
     expect_s4_class(x, "SpatRaster")
   })
 
+  ## future normals (new in v3.0.0 data releases): one layer per period, and the periods differ
+  fn <- climateRasters[[backend]][["future_MAT_normal"]]
+  expect_equal(terra::nlyr(fn), length(future_prd))
+  fn1 <- fn[[1]]
+  fn2 <- fn[[2]]
+  names(fn2) <- names(fn1) ## compare values, not layer names
+  expect_false(isTRUE(terra::all.equal(fn1, fn2)))
 
-    #new climate variables
+  #new climate variables
 
-    climateVariables <- list(
-      historical_PAS_normal = list(
-        vars = "historical_PAS_normal", ## ensure MAT only; not bMAT nor eMAT
-        fun = quote(calcAsIs),
-        .dots = list(historical_period = historical_prd)
-      ),
-      historical_CMD_normal = list(
-        vars = "historical_CMD_normal", ## ensure MAT only; not bFFP nor eFFP
-        fun = quote(calcAsIs),
-        .dots = list(historical_period = historical_prd)
-      )
+  climateVariables <- list(
+    historical_PAS_normal = list(
+      vars = "historical_PAS_normal", ## ensure MAT only; not bMAT nor eMAT
+      fun = quote(calcAsIs),
+      .dots = list(historical_period = historical_prd)
+    ),
+    historical_CMD_normal = list(
+      vars = "historical_CMD_normal", ## ensure MAT only; not bFFP nor eFFP
+      fun = quote(calcAsIs),
+      .dots = list(historical_period = historical_prd)
     )
+  )
 
-    climateRasters <- list()
-    for (backend in .parallelBackends) {
-      withr::with_options(list(climateData.parallel.backend = backend), {
-        climateRasters[[backend]] <- prepClimateLayers(
-          climateVarsList = climateVariables,
-          srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
-          dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
-          tile = tileIDs,
-          gcm = GCM,
-          ssp = SSP,
-          cl = NULL,
-          studyArea = NULL,
-          studyAreaName = NULL,
-          rasterToMatch = NULL
-        )
-      })
+  climateRasters <- list()
+  for (backend in .parallelBackends) {
+    withr::with_options(list(climateData.parallel.backend = backend), {
+      climateRasters[[backend]] <- prepClimateLayers(
+        climateVarsList = climateVariables,
+        srcdir = climatePath, ## 'src' is the place for raw inputs, downloaded from Google Drive
+        dstdir = climatePathOut, ## 'dst' is the place for intermediate + final outputs
+        tile = tileIDs,
+        gcm = GCM,
+        ssp = SSP,
+        cl = NULL,
+        studyArea = NULL,
+        studyAreaName = NULL,
+        rasterToMatch = NULL
+      )
+    })
 
-      lapply(climateRasters[[backend]], function(x) {
-        expect_s4_class(x, "SpatRaster")
-      })
+    lapply(climateRasters[[backend]], function(x) {
+      expect_s4_class(x, "SpatRaster")
+    })
 
-      ras1a <- climateRasters[[backend]][[1]][[1]]
-      ras1b <- climateRasters[[backend]][[1]][[2]]
-      ras2a <- climateRasters[[backend]][[2]][[1]]
+    ras1a <- climateRasters[[backend]][[1]][[1]]
+    ras1b <- climateRasters[[backend]][[1]][[2]]
+    ras2a <- climateRasters[[backend]][[2]][[1]]
 
-      #avoid false just because of layer name
-      names(ras1a) <- names(ras1b)
-      names(ras2a) <- names(ras1a)
+    #avoid false just because of layer name
+    names(ras1a) <- names(ras1b)
+    names(ras2a) <- names(ras1a)
 
-     #check same var diff normal period
-      expect_false(isTRUE(terra::all.equal(ras1a, ras1b)))
-     #check diff var same normal period
-      expect_false(isTRUE(terra::all.equal(ras1a, ras2a)))
-    }
+    #check same var diff normal period
+    expect_false(isTRUE(terra::all.equal(ras1a, ras1b)))
+    #check diff var same normal period
+    expect_false(isTRUE(terra::all.equal(ras1a, ras2a)))
+  }
 
   ## now test with studyArea and rasterTaMatch
   skip_if_not_installed("SpaDES.tools")
@@ -219,15 +225,17 @@ test_that("prepClimateLayers properly handles unordered tileIDs", {
 })
 
 
-## Layers cached before maskInvalidPPT() (or before the postProcessTo smoothing fix) kept coming back,
-## because the prepClimateLayers() cache key did not change when the builder functions did.
+## Layers cached before the zero-PPT mask (or before the postProcessTo smoothing fix) kept coming
+## back, because the prepClimateLayers() cache key did not change when the builder functions did.
 test_that("the prepClimateLayers cache key changes when a layer-building function changes", {
   env <- new.env()
-  for (nm in .climateBuilders) assign(nm, function(x) x, envir = env)
+  for (nm in .climateBuilders) {
+    assign(nm, function(x) x, envir = env)
+  }
   d1 <- climateBuilderDigest(env)
   expect_identical(d1, climateBuilderDigest(env))
 
-  assign("maskInvalidPPT", function(x) x + 1, envir = env)
+  assign("calcAsIs", function(x) x + 1, envir = env)
   expect_false(identical(d1, climateBuilderDigest(env)))
 
   ## the real functions are covered

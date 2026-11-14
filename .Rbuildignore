@@ -15,3 +15,6 @@
 ^\.claude$
 ^_tmp$
 ^docker$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

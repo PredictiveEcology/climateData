@@ -1,0 +1,144 @@
+---
+title: "Getting climate data for a study area"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting climate data for a study area}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+climateData gives you [ClimateNA](https://climatena.ca/) climate rasters for a study area in Canada. It covers:
+- historical years from 1901 to 2025;
+- future years from 2011 to 2100, for several climate models (GCMs) and emissions scenarios (SSPs);
+- 30-year climate normals, historical and future.
+
+The data are prepared in advance as tiles and stored on Google Drive. climateData downloads only the tiles that cover your study area, then gives you rasters cropped, projected and resampled to match a raster of your own.
+
+The `canClimateData` SpaDES module uses the same functions, so what follows also explains the `climateVariables` it takes.
+
+## Before you start
+
+The archives are downloaded with the googledrive package, so you need a Google account:
+
+```{r, eval = FALSE}
+install.packages("climateData", repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+googledrive::drive_auth() # once per session (or cache a token)
+```
+
+## What is available
+
+```{r}
+library(climateData)
+
+range(available("historical")$years)
+available("historical_normals")$periods
+available("future")[c("gcms", "ssps")]
+available("future_normals")$periods
+
+## the data release behind this version of the package
+climateDataRelease()$release_id
+```
+
+## Naming climate variables
+
+Each variable is named `<historical|future>_<VAR>`, adding `_normal` for a 30-year normal:
+
+| You want | Example | Notes |
+|---|---|---|
+| an annual variable | `historical_CMD`, `future_MAT` | |
+| a seasonal variable | `historical_CMD_sm` | `_wt` winter, `_sp` spring, `_sm` summer, `_at` autumn |
+| a monthly variable | `historical_PPT07`, `future_Tmax04` | months `01` to `12` |
+| a normal | `historical_MAT_normal`, `future_CMI_normal` | annual variables only |
+
+The variables are ClimateNA's; see its [variable list](https://climatena.ca/Help2) for definitions and units. Solar radiation follows ClimateNA v7.60 and later: `rsds`, `rsds_sm`, `rsds07`, and so on (formerly `MAR`, `Rad_sm`, `Rad07`). Asking for an old name stops with a message naming the new one.
+
+## Describing what you want
+
+`prepClimateLayers()` takes a named list. Each element is one output layer:
+- **`vars`:** the ClimateNA variables it is computed from;
+- **`fun`:** a quoted function that computes it;
+- **`.dots`:** which years (`historical_years`, `future_years`) or normals periods (`historical_period`, `future_period`) to use.
+
+```{r, eval = FALSE}
+climateVariables <- list(
+  ## an annual variable, as is
+  historical_CMI = list(
+    vars = "historical_CMI",
+    fun = quote(calcAsIs),
+    .dots = list(historical_years = 1991:2025)
+  ),
+  ## a historical normal
+  historical_CMI_normal = list(
+    vars = "historical_CMI_normal",
+    fun = quote(calcAsIs),
+    .dots = list(historical_period = "1991_2020")
+  ),
+  ## a derived variable: Monthly Drought Code from April-September precipitation and Tmax
+  future_MDC = list(
+    vars = c(sprintf("future_PPT%02d", 4:9), sprintf("future_Tmax%02d", 4:9)),
+    fun = quote(calcMDC),
+    .dots = list(future_years = 2011:2100)
+  ),
+  ## a future normal
+  future_MAT_normal = list(
+    vars = "future_MAT_normal",
+    fun = quote(calcAsIs),
+    .dots = list(future_period = c("2011_2040", "2041_2070"))
+  )
+)
+```
+
+The functions provided are:
+- `calcAsIs()`, the variable as it comes;
+- `calcMDC()`, a Monthly Drought Code;
+- `calcCumMDC()`, a cumulative Monthly Drought Code carried from month to month and year to year.
+
+`climateLayers()` builds this list for common cases. For example, `climateLayers(c("CMD_sm", "cumMDC"))` covers both historical and projected years.
+
+## Getting the rasters
+
+Give a study area (an `sf` or `SpatVector` polygon) and a raster to match. climateData works out which tiles cover the study area, using `whereAmI()`.
+
+```{r, eval = FALSE}
+studyArea <- sf::st_read("my_study_area.gpkg")
+rasterToMatch <- terra::rast("my_raster_to_match.tif")
+
+climateRasters <- prepClimateLayers(
+  climateVarsList = climateVariables,
+  srcdir = "climate/inputs", # downloaded archives and extracted files
+  dstdir = "climate/outputs", # mosaics and the final rasters
+  gcm = "CanESM5", # for future_ variables
+  ssp = 370,
+  studyArea = studyArea,
+  studyAreaName = "my_study_area",
+  rasterToMatch = rasterToMatch
+)
+
+names(climateRasters) # one element per entry of climateVariables
+climateRasters$historical_CMI # one layer per year
+```
+
+Instead of a study area and a raster to match, you can pass `tile =` with one or more tile IDs. That gives you whole tiles, unprojected.
+
+## Filled cells
+
+ClimateNA writes no values at some land cells. Its future climate data miss some coastal cells (for example along the east coast of Baffin Island), and a few cells get no values at all. In the archives, each such cell holds ClimateNA's values for the nearest land cell it covers within 50 km, computed at the empty cell's own elevation. In the 3 arcmin release that point is a median of 3.5 km away, and 90% are within 10 km. Where both have values, a point that close gives nearly the same climate: mean annual temperature differs by 0.05 degrees C on average (at most 0.5) and annual precipitation by about 1%. The 48 cells with no covered land cell within 50 km stay empty (`filled` is `FALSE`).
+
+`filledCells()` lists these cells as points, with where ClimateNA was run for each, so you can map them or leave them out:
+
+```{r, eval = FALSE}
+fc <- filledCells(studyArea = studyArea)
+table(fc$class, fc$filled) # class: "historical" or "future" archives
+```
+
+## Downloads and caching
+
+- **What gets downloaded:** the archives are grouped by tile and decade. climateData downloads only the archives it needs for your variables and years:
+  - only monthly or only annual variables use their own archives;
+  - any request with seasonal variables uses the archive with all variables.
+- **Downloads are kept:** downloaded archives stay in a subfolder of `srcdir` named for the data release (e.g. `climate/inputs/cna-v7.70-3arcmin/`), so later calls reuse them. A new data release downloads into a new subfolder; older ones can be deleted.
+- **Results are cached:** with the reproducible package. If you cache results yourself (as `canClimateData` does), add `climateDataRelease()$release_id` to your cache key, so a new data release replaces your old results.

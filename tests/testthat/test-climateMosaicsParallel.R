@@ -8,16 +8,30 @@ test_that("climateMosaicsParallel only mosaics the requested tiles", {
   src <- withr::local_tempdir("historical")
   dst <- withr::local_tempdir("mosaics")
   tileRaster <- function(tile, xmin) {
-    r <- terra::rast(nrows = 2, ncols = 2, xmin = xmin, xmax = xmin + 2, ymin = 0, ymax = 2, crs = "EPSG:4326")
+    r <- terra::rast(
+      nrows = 2,
+      ncols = 2,
+      xmin = xmin,
+      xmax = xmin + 2,
+      ymin = 0,
+      ymax = 2,
+      crs = "EPSG:4326"
+    )
     terra::values(r) <- tile
     dir.create(file.path(src, tile, "Year_2000MSY"), recursive = TRUE)
     terra::writeRaster(r, file.path(src, tile, "Year_2000MSY", "CMD_sm.asc"), overwrite = TRUE)
   }
   tileRaster(6, xmin = 0)
-  tileRaster(16, xmin = 10)  # a stray directory whose name ends in 6
+  tileRaster(16, xmin = 10) # a stray directory whose name ends in 6
   tileRaster(26, xmin = 20)
 
-  out <- climateMosaicsParallel(y = "2000", climVars = "CMD_sm", tile = 6, srcdir = src, dstdir = dst)
+  out <- climateMosaicsParallel(
+    y = "2000",
+    climVars = "CMD_sm",
+    tile = 6,
+    srcdir = src,
+    dstdir = dst
+  )
 
   expect_length(out, 1)
   expect_match(basename(out), "_t_6[.]tif$")
@@ -36,36 +50,76 @@ test_that("climateMosaicsParallel matches the year in the directory name, not el
   src <- file.path(root, "1990-2020", "historical")
   dst <- withr::local_tempdir("mosaics")
   yearRaster <- function(year, value) {
-    r <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2, crs = "EPSG:4326")
+    r <- terra::rast(
+      nrows = 2,
+      ncols = 2,
+      xmin = 0,
+      xmax = 2,
+      ymin = 0,
+      ymax = 2,
+      crs = "EPSG:4326"
+    )
     terra::values(r) <- value
     dir.create(file.path(src, 6, sprintf("Year_%dMSY", year)), recursive = TRUE)
-    terra::writeRaster(r, file.path(src, 6, sprintf("Year_%dMSY", year), "CMD_sm.asc"), overwrite = TRUE)
+    terra::writeRaster(
+      r,
+      file.path(src, 6, sprintf("Year_%dMSY", year), "CMD_sm.asc"),
+      overwrite = TRUE
+    )
   }
   yearRaster(1990, 100)
   yearRaster(2000, 300)
 
-  m1990 <- terra::rast(climateMosaicsParallel(y = "1990", climVars = "CMD_sm", tile = 6, srcdir = src, dstdir = dst))
-  m2000 <- terra::rast(climateMosaicsParallel(y = "2000", climVars = "CMD_sm", tile = 6, srcdir = src, dstdir = dst))
+  m1990 <- terra::rast(climateMosaicsParallel(
+    y = "1990",
+    climVars = "CMD_sm",
+    tile = 6,
+    srcdir = src,
+    dstdir = dst
+  ))
+  m2000 <- terra::rast(climateMosaicsParallel(
+    y = "2000",
+    climVars = "CMD_sm",
+    tile = 6,
+    srcdir = src,
+    dstdir = dst
+  ))
   expect_true(all(terra::values(m1990) == 100))
   expect_true(all(terra::values(m2000) == 300))
 })
 
-## ClimateNA tiles 6 and 7 hold cells south of the border where PPT01-PPT12 are all 0 and temperatures
-## are nonsense (the DEM is not valid there). They reached the mosaics and gave absurd cumMDC and CMD.
-test_that("climateMosaicsParallel sets every variable to NA where all 12 monthly PPT are 0", {
+## Several scenarios' future normals are extracted into one tile folder, named as ClimateNA
+## writes them (CanESM5_ssp245_2011-2040Y). Each must be mosaicked on its own, to its own file.
+test_that("future normals mosaic only the requested scenario, with distinct names", {
   skip_if_not_installed("withr")
-  src <- withr::local_tempdir("historical")
+  src <- withr::local_tempdir("normals")
   dst <- withr::local_tempdir("mosaics")
-  yd <- file.path(src, 6, "Year_2000MSY")
-  dir.create(yd, recursive = TRUE)
-  mk <- function(v, f) {
-    r <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2, crs = "EPSG:4326")
-    terra::values(r) <- v
-    terra::writeRaster(r, file.path(yd, f), overwrite = TRUE)
+  r <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2, crs = "EPSG:4326")
+  for (s in c("245", "370")) {
+    d <- file.path(src, 39, paste0("CanESM5_ssp", s, "_2011-2040Y"))
+    dir.create(d, recursive = TRUE)
+    terra::values(r) <- as.numeric(s)
+    terra::writeRaster(r, file.path(d, "MAT.asc"), overwrite = TRUE)
   }
-  for (m in 1:12) mk(c(0, 5, 5, 5), sprintf("PPT%02d.asc", m))  # cell 1: all months 0
-  mk(c(40, 10, 10, 10), "Tmax_sm.asc")
-
-  out <- climateMosaicsParallel(y = "2000", climVars = "Tmax_sm", tile = 6, srcdir = src, dstdir = dst)
-  expect_equal(as.vector(terra::values(terra::rast(out))), c(NA, 10, 10, 10))
+  o245 <- climateMosaicsNormalsParallel(
+    "2011_2040",
+    "MAT_normal",
+    39,
+    src,
+    dst,
+    gcm = "CanESM5",
+    ssp = "245"
+  )
+  o370 <- climateMosaicsNormalsParallel(
+    "2011_2040",
+    "MAT_normal",
+    39,
+    src,
+    dst,
+    gcm = "CanESM5",
+    ssp = "370"
+  )
+  expect_false(identical(o245, o370))
+  expect_equal(unique(terra::values(terra::rast(o245), mat = FALSE)), 245)
+  expect_equal(unique(terra::values(terra::rast(o370), mat = FALSE)), 370)
 })

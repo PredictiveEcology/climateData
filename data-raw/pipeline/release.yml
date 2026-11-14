@@ -1,0 +1,36 @@
+## One data release of the ClimateNA archives (committed). Machine-specific paths and the crew
+## controller go in _local.R (gitignored; see _local.R.example).
+
+release_id: cna-v7.70-3arcmin
+climatena_exe: ClimateNA_v7.70.exe
+climatena_version: "7.70"
+dem_resolution: 3arcmin
+
+## which archive types to build
+types: [historical, future, historical_normals, future_normals]
+
+## ranges as [first, last] (inclusive)
+historical_years: [1901, 2025]
+future_years: [2011, 2100]
+gcms: [CanESM5, CNRM-ESM2-1]
+ssps: ["245", "370", "585"]
+## quoted: YAML reads 1901_1930 as the integer 19011930
+historical_periods: ["1901_1930", "1911_1940", "1921_1950", "1931_1960", "1941_1970", "1951_1980", "1971_2000", "1981_2010", "1991_2020"]
+future_periods: ["2011_2040", "2041_2070", "2071_2100"]
+
+## a land cell ClimateNA leaves empty is filled from the nearest land cell it covers, if that is
+## within this many km
+fill_max_km: 50
+
+## a stamped period is reused if its ClimateNA version is at least this; raising it for a type
+## regenerates that type (do this when compat_<type> reports "changed")
+min_version:
+  historical: "7.70"
+  future: "7.70"
+  historical_normals: "7.70"
+  future_normals: "7.70"
+
+image: ghcr.io/predictiveecology/climatena-wine:latest
+
+## Drive folder holding the archives; each release gets a subfolder named release_id
+drive_parent: 1ldnlPHklhJsyJ8YBdI7IqUTxX9aW6UIc

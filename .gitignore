@@ -34,3 +34,9 @@ tmp/
 
 ## scratch: drafts, plans, handoffs
 _tmp/
+
+## pkgdown site (built by GitHub Actions)
+docs/
+
+## per-machine pipeline settings
+data-raw/pipeline/_local.R

@@ -295,25 +295,6 @@ extractJustAFew <- function(workingPath, archiveFile, climateVarsGrep) {
   lala
 }
 
-#' Read a tile's climate file, with invalid cells set to NA
-#'
-#' ClimateNA tiles 6 and 7 have cells south of the Canada/US border where the DEM is not valid:
-#' all 12 monthly `PPT` values are exactly 0 and temperatures are nonsense. Such cells are set
-#' to NA, for every variable, so an overlapping valid tile can show through in the mosaic.
-#' The `PPT01`-`PPT12` files are read from the same year directory as `file`.
-#'
-#' @param file character. A single tile-year climate file.
-#' @return a `SpatRaster`.
-#' @keywords internal
-maskInvalidPPT <- function(file) {
-  r <- terra::rast(file)
-  ppt <- file.path(dirname(file), sprintf("PPT%02d.asc", 1:12))
-  if (all(file.exists(ppt))) {
-    r <- terra::mask(r, sum(terra::rast(ppt)) == 0, maskvalues = TRUE)
-  }
-  r
-}
-
 #' Build climate mosaic rasters from ClimateNA tiles
 #'
 #' Internal functions run in parallel by `buildClimateMosaics()` and
@@ -351,10 +332,11 @@ climateMosaicsParallel <- function(y, climVars, tile, srcdir, dstdir) {
 
       # ss <- mget(ls())
       # save(ss, file = paste0("~/tmp/stuff", basename(tempfile()), ".rda"))
+      ## cells ClimateNA computed without a DEM elevation are already NA in the archives
       if (length(srcfiles) == 1) {
-        newMosaic <- maskInvalidPPT(srcfiles)
+        newMosaic <- terra::rast(srcfiles)
       } else {
-        newMosaic <- lapply(srcfiles, maskInvalidPPT) |> terra::sprc() |> terra::mosaic()
+        newMosaic <- lapply(srcfiles, terra::rast) |> terra::sprc() |> terra::mosaic()
       }
 
       writeRaster(newMosaic, filename = dsttif, overwrite = TRUE)
@@ -472,13 +454,29 @@ buildClimateMosaics <- function(
 #'
 #' @keywords internal
 #' @rdname climateMosaicsParallel
-climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
+climateMosaicsNormalsParallel <- function(
+  p,
+  climVars,
+  tile,
+  srcdir,
+  dstdir,
+  gcm = NULL,
+  ssp = NULL
+) {
+  ## future normals: several scenarios share a tile folder, so select this scenario's period
+  ## folder exactly (named as ClimateNA writes it, e.g. CanESM5_ssp245_2011-2040Y)
+  periodRegexp <- if (is.null(gcm)) {
+    paste0("[^/\\\\]*", p, "[^/\\\\]*$")
+  } else {
+    paste0("(/|\\\\)", .periodFolder("future_normals", p, "Y", gcm, ssp), "$")
+  }
+  scenario <- if (is.null(gcm)) NULL else paste0(gcm, "_ssp", ssp)
   lapply(climVars, function(v) {
     nv <- strsplit(v, "_normal")[[1]]
     srcfiles <- srcdir |>
       ## anchor at the path separator: "6$" alone also matches tile directories 16, 26, ...
       fs::dir_ls(regexp = paste0("(/|\\\\)", tile, "$", collapse = "|"), type = "directory") |>
-      fs::dir_ls(regexp = paste0("[^/\\\\]*", p, "[^/\\\\]*$"), type = "directory") |>
+      fs::dir_ls(regexp = periodRegexp, type = "directory") |>
       fs::dir_ls(regexp = paste0("(/|\\\\)", nv, "[.]asc$"), type = "file")
 
     stopifnot(length(srcfiles) > 0)
@@ -486,7 +484,10 @@ climateMosaicsNormalsParallel <- function(p, climVars, tile, srcdir, dstdir) {
     ## vrts must be a single layer, so need to do e.g. monthly climVars by each month
     lapply(unique(basename(srcfiles)), function(mv) {
       mv <- tools::file_path_sans_ext(mv)
-      fname <- paste(mv, basename(basename(srcdir)), p, "t", paste(tile, collapse = "-"), sep = "_")
+      fname <- paste(
+        c(mv, basename(srcdir), scenario, p, "t", paste(tile, collapse = "-")),
+        collapse = "_"
+      )
       dstvrt <- file.path(tempdir(), paste0(fname, ".vrt"))
       dsttif <- file.path(dstdir, paste0(fname, ".tif"))
 
@@ -554,7 +555,9 @@ buildClimateMosaicsNormals <- function(
       climVars = climVars,
       tile = tile,
       srcdir = srcdir,
-      dstdir = dstdir
+      dstdir = dstdir,
+      gcm = gcm,
+      ssp = ssp
     )
   } else if (getOption("climateData.parallel.backend") == "future") {
     tifs <- future.apply::future_lapply(
@@ -563,7 +566,9 @@ buildClimateMosaicsNormals <- function(
       climVars = climVars,
       tile = tile,
       srcdir = srcdir,
-      dstdir = dstdir
+      dstdir = dstdir,
+      gcm = gcm,
+      ssp = ssp
     )
   } else {
     stopForInvalidBackend()
