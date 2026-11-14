@@ -1,10 +1,11 @@
 # climateData (development version)
 
-- Land cells where ClimateNA writes no values now have values in every archive: ClimateNA's own
-  values for the nearest land cell it covers, computed at the empty cell's elevation (a median of
-  about 5 km away). ClimateNA's future data miss some coastal cells (e.g. every land cell of tiles
-  53 and 63, on Baffin Island's east coast), and a few cells had no values at all. New
-  `filledCells()` lists the filled cells, with where ClimateNA was run for each.
+- Land cells where ClimateNA writes no values now hold ClimateNA's own values for the nearest land
+  cell it covers within 50 km, computed at the empty cell's elevation (in the 3 arcmin release, a
+  median of 3.5 km away; 90% within 10 km). ClimateNA's future data miss some coastal cells (e.g.
+  every land cell of tile 63, on Baffin Island's east coast), and a few cells had no values at all.
+  Of 608 such cells, 48 have no covered land cell within 50 km and stay empty. New `filledCells()`
+  lists these cells, with where ClimateNA was run for each.
 - The 3 arcmin release no longer has a tile 53: at 3 arcmin it has no land cell, and its archives
   had been built from the 1 arcmin DEM tile.
 

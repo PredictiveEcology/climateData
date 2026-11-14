@@ -126,7 +126,7 @@ Instead of a study area and a raster to match, you can pass `tile =` with one or
 
 ## Filled cells
 
-ClimateNA writes no values at some land cells. Its future climate data miss some coastal cells (for example along the east coast of Baffin Island), and a few cells get no values at all. In the archives, each such cell holds ClimateNA's values for the nearest land cell it covers, computed at the empty cell's own elevation. That point is a median of about 5 km away (at most 25 km for the future gaps). Where both have values, a point that close gives nearly the same climate: mean annual temperature differs by 0.05 degrees C on average and annual precipitation by about 1%.
+ClimateNA writes no values at some land cells. Its future climate data miss some coastal cells (for example along the east coast of Baffin Island), and a few cells get no values at all. In the archives, each such cell holds ClimateNA's values for the nearest land cell it covers within 50 km, computed at the empty cell's own elevation. In the 3 arcmin release that point is a median of 3.5 km away, and 90% are within 10 km. Where both have values, a point that close gives nearly the same climate: mean annual temperature differs by 0.05 degrees C on average (at most 0.5) and annual precipitation by about 1%. The 48 cells with no covered land cell within 50 km stay empty (`filled` is `FALSE`).
 
 `filledCells()` lists these cells as points, with where ClimateNA was run for each, so you can map them or leave them out:
 
