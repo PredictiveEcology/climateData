@@ -62,17 +62,23 @@ test_that(".climatenaPointDockerArgs mounts the work dir and runs wine on the CS
   expect_identical(a[i + 1], "sh")
   expect_identical(a[length(a) - 2], "ghcr.io/predictiveecology/climatena-wine:latest")
   expect_identical(a[length(a) - 1], "-c")
+  ## system2() passes arguments to the host shell as they are: the script must reach the
+  ## container whole, with $WINEPREFIX unexpanded. shQuote() quotes for the host's shell:
+  ## single quotes for sh; double quotes, with \" for each quote inside, for cmd (Windows)
   script <- a[length(a)]
+  script_text <- .unquoteShell(script)
+  expect_identical(script, shQuote(script_text))
   expect_match(
-    script,
+    script_text,
     'wine ClimateNA_v7.70.exe /MSY /Year_2020.ann "/Z:\\data\\w\\in.csv" "/Z:\\data\\w\\out.csv"',
     fixed = TRUE
   )
-  expect_match(script, "cd /opt/climatena", fixed = TRUE)
-  ## system2() passes arguments to the host shell as they are: the script must reach the
-  ## container whole, with $WINEPREFIX unexpanded
-  expect_identical(script, shQuote(script_text <- sub("^'(.*)'$", "\\1", script)))
+  expect_match(script_text, "cd /opt/climatena", fixed = TRUE)
   expect_match(script_text, '"$WINEPREFIX"', fixed = TRUE)
+  ## both quotings give back the script, whichever platform runs this
+  for (type in c("sh", "cmd")) {
+    expect_identical(.unquoteShell(shQuote(script_text, type = type), type), script_text)
+  }
 })
 
 test_that(".writePointCsv writes CRLF lines and the elevation text as given", {
