@@ -1,25 +1,49 @@
 # climateData (development version)
 
+- Land cells where ClimateNA writes no values now hold ClimateNA's own values for the nearest land
+  cell it covers within 50 km, computed at the empty cell's elevation (in the 3 arcmin release, a
+  median of 3.5 km away; 90% within 10 km). ClimateNA's future data miss some coastal cells (e.g.
+  every land cell of tile 63, on Baffin Island's east coast), and a few cells had no values at all.
+  Of 608 such cells, 48 have no covered land cell within 50 km and stay empty. New `filledCells()`
+  lists these cells, with where ClimateNA was run for each.
+- The 3 arcmin release no longer has a tile 53: at 3 arcmin it has no land cell, and its archives
+  had been built from the 1 arcmin DEM tile.
+
+- New `climateDataRelease()` identifies the climate data release behind the installed package
+  (e.g. `"cna-v7.70-3arcmin"`). Code that caches `prepClimateLayers()` results can add it to the
+  cache key, so a new data release isn't served from an old cache.
+- Historical data now run to 2025 (ClimateNA v7.70).
+- Future climate normals (2011-2040, 2041-2070, 2071-2100) can be requested, e.g. `future_MAT_normal`
+  with `future_period`. `prepClimateLayers()` used to stop with "future normals not yet implemented".
+- `prepClimateLayers()` downloads and extracts archives to a subfolder of `srcdir` named for the
+  data release (e.g. `<srcdir>/cna-v7.70-3arcmin/historical/39/`). A new release's archives keep
+  the earlier file names: in a `srcdir` that already held them, the download was skipped and the
+  old data were used. Folders from earlier releases are not read and can be deleted.
 - `latestHistoricalYear()` and the tile lookup in `ClimateNA_useTiles()` open the bundled tile index read-only
   and set the SQLite busy timeout before any other statement. Before, many processes opening it together
   (e.g. parallel hindcast jobs parsing fireSense modules on NFS) could fail with "database is locked".
   `ClimateNA_sql()` gets a `readonly` argument; writing connections set WAL only when they create the file.
-
+  The bundled index is no longer in WAL mode, so these lookups also work from a library folder the user
+  cannot write to, and leave no `-wal`/`-shm` files in it.
 - Solar radiation variables now use the ClimateNA v7.60+ names: `rsds` (annual; was `MAR`), `rsds_wt`,
   `rsds_sp`, `rsds_sm`, `rsds_at` (seasonal; were `Rad_*`) and `rsds01`-`rsds12` (monthly; were `Rad01`-`Rad12`).
-  ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. Only the historical
-  2023 and 2024 data were made with v7.60, so radiation can't be requested for other years or for future
-  scenarios until those archives are regenerated. The old radiation layers held values only for 1948-2010.
-
+  ClimateNA v7.60 (April 2025) replaced its RAD variables with rsds, based on CHELSA. All archives were
+  rebuilt with ClimateNA v7.70 (data release `cna-v7.70-3arcmin`), so radiation now has values for every
+  historical year and future scenario. The old radiation layers held values only for 1948-2010.
 - The `prepClimateLayers()` cache key now includes the bodies of the functions that build the layers
-  (`maskInvalidPPT()`, `climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached
-  before the PPT guard or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix kept
-  coming back from the cache. Every existing entry is rebuilt once. Mosaics themselves were always rebuilt
+  (`climateMosaicsParallel()`, the `calc*()` functions ...). Before, layers cached before a change to
+  them, or before the `reproducible` 3.2.1.9060 `postProcessTo()` smoothing fix, kept coming back from
+  the cache. Every existing entry is rebuilt once. Mosaics themselves were always rebuilt
   (`overwrite = TRUE`); only the final cached `postProcessTo()` step was stale.
-
-- `climateMosaicsParallel()` sets every variable to NA, for that year, in cells where all 12 monthly `PPT` values are
-  exactly 0. ClimateNA tiles 6 and 7 have such cells south of the Canada/US border (45.8-49 N), where the DEM is
-  not valid and temperatures are nonsense (Tmax up to 42.7 C); they gave absurd `cumMDC` and `CMD`.
+- Cells outside Canada that have no DEM elevation are NA (#40). The DEM tiles cover Canada and a 3 arcmin
+  margin, but ClimateNA still wrote values beyond it, computed at the wrong elevation: next to the border,
+  US cells were a median 4.5 C warmer than the Canadian cells beside them (tile 6, 1991-2020 normals), and
+  tiles 6 and 7 had cells with no precipitation at all and Tmax up to 42.7 C, which gave absurd `cumMDC`
+  and `CMD`. In data release `cna-v7.70-3arcmin` these cells are NA in every archive, normals included.
+  Canadian coast and lakeshore cells with no DEM value keep their values. This replaces a check on reading
+  (cells whose 12 monthly `PPT` were all 0), which found only the zero-precipitation cells, and only when
+  the monthly files were downloaded. Seasonal variables requested alone now come from the smaller S
+  archives.
 
 - When a seasonal variable is needed, monthly and yearly variables now come from the same MSY ("all")
   archive, which contains all their files. Before, they were also downloaded from their own M and Y archives

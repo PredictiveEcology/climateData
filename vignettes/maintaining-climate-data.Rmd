@@ -1,0 +1,218 @@
+---
+title: "Maintaining the climate data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Maintaining the climate data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+This vignette is for the package's maintainers and developers. It explains how the climate data that climateData serves are built and published, and how to add a year or a climate scenario.
+
+## What a data release is
+
+A *data release* is one full set of ClimateNA outputs, built by one ClimateNA version from DEM tiles at one resolution. It is identified by a `release_id`, such as `cna-v7.70-3arcmin`. A release consists of:
+
+- zip archives on Google Drive: one per tile and decade (historical and future years) or per tile (normals), each in four variable subsets: `MSY` (all), `M` (monthly), `S` (seasonal) and `Y` (annual);
+- the tile index, `inst/extdata/ClimateNA_tiles.sqlite`, which maps each tile, year or period and subset to a Drive file ID.
+
+Users get a release through the index shipped in the package. `climateDataRelease()` reports which release that is; modules that cache climate layers (such as canClimateData) should put `climateDataRelease()$release_id` in their cache keys.
+
+A [targets](https://docs.ropensci.org/targets/) pipeline in `data-raw/pipeline/` builds a release:
+
+1. it runs ClimateNA for every tile and year or period, in a Docker container, and checks each output folder;
+2. it cuts the four subset zips for each tile and decade from the `MSY` output, and checks each zip;
+3. it uploads the zips to Drive, MD5-verified, reusing the previous release's file for any zip that hasn't changed;
+4. it writes the tile index for the release and a report of anything that failed.
+
+targets records what has been built, so a rerun does only what is missing, failed or changed.
+
+## What you need
+
+- A Linux compute node with Docker, where your account can run `docker` without `sudo`.
+- R with targets, tarchetypes, crew, yaml, devtools, googledrive, digest, DBI and RSQLite, and a checkout of this package. Run the pipeline from the package root: every R process loads the package from there with `devtools::load_all()`.
+- The `zip` program, which writes the archives so that a rebuilt zip of unchanged outputs is byte-identical (and so keeps matching the previous release's file).
+- ClimateNA, unpacked onto a shared directory (see below).
+- The DEM tiles, `can_dem_<tile>.asc`, with Windows line endings (`makeClimateDEM()`, `rewrite_asc()`).
+- Write access to the Drive folder that holds the archives, for real uploads.
+
+## The ClimateNA image
+
+ClimateNA is a 32-bit Windows program. The pipeline runs it under Wine in a Docker image that GitHub Actions builds from `docker/climatena/` and publishes as `ghcr.io/predictiveecology/climatena-wine`. Pull it on every node that will run ClimateNA:
+
+```sh
+docker pull ghcr.io/predictiveecology/climatena-wine:latest
+```
+
+or build it locally:
+
+```sh
+docker build -t climatena-wine docker/climatena
+```
+
+The image's Wine prefix belongs to uid/gid 1000, and containers must run as that user (`uid` and `gid` in `_local.R`). If your uid differs, build with `--build-arg UID=... --build-arg GID=...`. A container run as another user stops with exit code 64.
+
+ClimateNA itself is not in the image, because its download requires registration. Each run mounts an unpacked ClimateNA directory read-only. `docker/climatena/README.md` shows how to run a single job by hand, which is useful for testing a new ClimateNA version.
+
+## Unpacking ClimateNA
+
+Download each ClimateNA release from [climatena.ca](https://climatena.ca/) and unzip it once into its own directory on a filesystem every node can read, for example `/path/to/ClimateNA_v7.70/`. The directory holds the executable (`ClimateNA_v7.70.exe`) and its data folders (`GCMdat`, `Perioddat`, `prismdat`, ...). Keep old versions: the compatibility check below compares a new version with the outputs of the old one.
+
+## Settings: `release.yml` and `_local.R`
+
+The pipeline reads two files:
+
+- `data-raw/pipeline/release.yml` (committed) defines the release: `release_id`, the ClimateNA executable and version, the DEM resolution, the archive types, the years, GCMs, SSPs and normals periods, the minimum ClimateNA version to keep per type (`min_version`), the image, and the Drive folder (`drive_parent`).
+- `data-raw/pipeline/_local.R` (gitignored; copy `_local.R.example`) holds what depends on the machine: paths (ClimateNA directory, DEM tiles, output root, and a node-local `work_dir`), the container user, an optional tile subset, `dry_run`, `replace_changed`, `run_timeout`, `previous_index`, the Drive account (`drive_email`), `upload_workers`, and how many ClimateNA runs go at once (`workers`, or `ssh_nodes` across machines). The checkout's own path is in neither file and no target depends on it, so running from a different checkout rebuilds nothing.
+
+ClimateNA writes each output into `work_dir` (by default each worker's temporary directory) on the node's own disk. The pipeline checks it there and stores it in `out_root` as a single zip per tile and year or period. ClimateNA writes very slowly straight to an NFS share, and copying hundreds of small files per run overloads the file server; one zip per run avoids both.
+
+The DEM tiles have no elevation for some cells (`nan`), and ClimateNA writes values there anyway, computed at the wrong elevation. When the zips are cut, those cells are set to NODATA unless their centre lies in Canada (GADM 4.1, level 0, holes filled, downloaded once to `<out_root>/boundary/`). The stored raw outputs keep ClimateNA's values, and a masked file keeps its modification time, so a zip rebuilt from the same outputs is byte-identical. The masking code is in the package (`R/pipelineMask.R`), which targets does not track: after changing it, rerun the zips with `targets::tar_invalidate(tidyselect::starts_with("zips_"))`.
+
+ClimateNA also leaves some land cells (cells with a DEM elevation) empty: its future data miss some coastal cells, and a few cells get no values at all. The pipeline fills each one with ClimateNA's point-mode output at the nearest land cell it covers, run with the empty cell's elevation, if that cell is within `fill_max_km` (`release.yml`, default 50). `fill_points` finds the empty cells and their sources once per release, from one reference period per class (historical: the last historical year; future: the first scenario's first year), and checks each source with a point run; the next nearest is tried when one gives no values. `fills_<type>` runs ClimateNA in point mode for every period of a tile with empty cells and stores the output beside the raw period zip (`<folder>.fill-<hash>.csv`); `zip_batch()` writes those values into the zips, after the mask. A land cell still empty when a zip is cut is reported as a warning (it appears in `report.csv`). The index lists every filled cell, and any left empty, in `filled_cells`; users read it with `filledCells()`.
+
+`out_root` in `_local.R` holds everything a release writes: raw ClimateNA outputs (`raw/`, one zip and one stamp per tile and year or period), the published zips (`zips/`), the targets store (`_targets/`), logs, the index and the report. **Keep the same `out_root` from one release to the next**: the next release then reuses the raw outputs and zips that haven't changed, and their Drive files.
+
+## Where it runs
+
+`workers` in `_local.R` sets how many ClimateNA runs go at once on the main node. Each run is a single-threaded container limited to 1 CPU and 1 GB. The pipeline uses at most half of each node's cores: on the main node, `workers` is lowered (with a message) to half the cores less the upload workers and the main process.
+
+```r
+workers = 60L
+```
+
+Across several machines, use [crew.ssh](https://github.com/FOR-CAST/crew.ssh) instead; each node's count is lowered to half its cores. Don't list the main node there: its uploads and main process are not counted.
+
+```r
+ssh_nodes = c(node1 = 60L, node2 = 90L), # host name = workers on that host
+projdir = "/path/to/climateData" # the package checkout, at the same path on every node
+```
+
+The older `controller` setting is no longer read: the pipeline stops and asks for `workers`.
+
+With several nodes, the package checkout, ClimateNA, the DEM tiles and `out_root` must be at the same paths on every node (a shared filesystem), and every node needs Docker and the image.
+
+Uploads always run on the main node, where the Drive token is: in parallel on a separate set of local workers (`upload_workers`, 8 by default), after the main process has created the release's Drive folders. The index is built in the main process.
+
+## Running the pipeline
+
+Start with a dry run (`dry_run = TRUE`, the default): it builds everything except the uploads, and writes an index whose Drive IDs are missing (or are the previous release's, for unchanged zips). A dry run on one tile (`tiles = 39L`) is a quick check of a new setup.
+
+From the package root on the main node, start the run as its own systemd unit, so it survives the end of your session and is easy to stop:
+
+```sh
+systemd-run --user --unit=cna-release --same-dir \
+  -p StandardOutput=file:/path/to/out_root/tar_make.log -p StandardError=inherit \
+  Rscript -e 'targets::tar_make(script = "data-raw/pipeline/_targets.R",
+    store = "/path/to/out_root/_targets", reporter = "timestamp")'
+```
+
+(Your account needs lingering enabled for the unit to outlive your login: `loginctl show-user $USER -p Linger`.) Follow it with `tail -f /path/to/out_root/tar_make.log`, or in R:
+
+```r
+targets::tar_progress_summary(store = "/path/to/out_root/_targets")
+```
+
+To stop it, run `systemctl --user stop cna-release`. Containers belong to the Docker daemon rather than the unit, so check for any left running afterwards with `docker ps --filter name=cna-`: the pipeline names its containers `cna-<batch>-<year>`.
+
+ClimateNA takes about 45 seconds per tile and year at 3 arcmin, so a decade batch takes about 8 minutes, and a full 3 arcmin release about 1,000 CPU-hours.
+
+## Checking a run
+
+When a run ends, read `report.csv` in `out_root`. It is empty when everything was built and uploaded. Otherwise it lists:
+
+- every error and warning that targets recorded, with the target that raised it;
+- every zip that is missing from the release, because its batch, zip or upload failed.
+
+The same errors are in the targets metadata:
+
+```r
+m <- targets::tar_meta(fields = c(error, warnings), store = "/path/to/out_root/_targets")
+m[!is.na(m$error) | !is.na(m$warnings), ]
+```
+
+Common errors:
+
+- `ClimateNA failed or wrote incomplete output for <batch>: <folders>`: the run crashed, timed out (`run_timeout`), or left files missing. The container log is in `out_root/logs/<batch>.log`. That batch's zips are not cut.
+- `ClimateNA <version> changes <type> outputs`: see "Adding a year" below.
+- `MD5 mismatch after uploading ...`: the upload was corrupted; rerunning uploads the zip again.
+
+Fix the cause and run `tar_make()` again. Only what failed reruns. Every run also re-checks each batch's output folders, so a deleted or damaged folder is found and rerun.
+
+## Adding a year
+
+Each new year of data comes with a new ClimateNA release.
+
+1. Unpack the new ClimateNA next to the old one, and point `climatena_dir` in `_local.R` at it.
+2. In `release.yml`, set a new `release_id` (e.g. `cna-v7.80-3arcmin`), `climatena_exe`, `climatena_version`, and extend `historical_years`. Leave `min_version` alone.
+3. In `R/available.R`, extend the historical years in `available()`.
+4. Run the pipeline as above (dry run first).
+
+Before any batch runs, `compat_<type>` reruns a sample of the stored outputs with the new ClimateNA (tiles 6, 39 and 77 when present; each tile's first and last year or period) and compares them with the stored ones:
+
+- **compatible** (the same files, at most 1 in 100,000 cells differ, and none by more than 1): the stored outputs are kept, only the new year runs, and only the zips for the decade that gained the year are cut and uploaded. Every other zip reuses the previous release's Drive file.
+- **changed**: the pipeline stops with a message naming the type. If the differences are real, regenerate that type: set its `min_version` to the new version in `release.yml` and run again. Every period of that type is then rerun with the new ClimateNA, and all its zips are uploaded as new files.
+
+## Adding a GCM or SSP
+
+Add it to `gcms` or `ssps` in `release.yml`, and to the lists in `available()` (`R/available.R`). Only the new scenario's batches run; existing scenarios are untouched.
+
+## Uploading
+
+Set `dry_run = FALSE` in `_local.R` for the real run. Uploads use your Google account's OAuth token: authenticate once, interactively, on the main node with `googledrive::drive_auth()`, and set `drive_email = "you@example.org"` in `_local.R` so the pipeline finds the cached token.
+
+Each zip is, in order of preference:
+
+- **reused**: the previous release's index (`previous_index`; by default the index shipped in the package checkout) has the identical zip (same path and MD5), and its Drive file still exists;
+- **found**: the release folder already has the file, from an interrupted run;
+- **updated**: the release folder has a file of that name with another MD5, because the zip was rebuilt (as for the mask in #40). Only with `replace_changed = TRUE` in `_local.R`: the file's content is replaced in place and MD5-checked, and its Drive ID stays the same, so the index still points to it. Without it, the upload stops with an error naming the zip;
+- **uploaded** as a new file and MD5-checked.
+
+The pipeline never deletes a file on Drive, and it replaces one only in the release's own folder and only when you set `replace_changed`, so the indexes of older package versions keep working. Set it for the one run that needs it, then back to `FALSE`. Drive keeps a replaced file's previous content as an older revision for a while.
+
+## The release folder on Drive
+
+New files go into a folder for the release inside the archive folder (`drive_parent`):
+
+```
+<drive_parent>/<release_id>/<type>[/<gcm>_ssp<ssp>]/<subset>/<zip>
+```
+
+for example `cna-v7.70-3arcmin/future/CanESM5_ssp245/MSY/39_CanESM5_245_MSY_2050.zip`. The index's `zipfile` column holds the path below the release folder. A release folder holds only the zips that release uploaded; reused zips stay in the folder of the release that first uploaded them. Don't delete an old release's folder while any shipped index still points into it.
+
+## Shipping a release
+
+1. Audit the release (below).
+2. Copy the index into the package:
+
+   ```r
+   file.copy("/path/to/out_root/ClimateNA_tiles.sqlite", "inst/extdata/ClimateNA_tiles.sqlite",
+             overwrite = TRUE)
+   climateDataRelease() # after devtools::load_all(): shows the new release_id
+   ```
+
+3. Update `available()` if you haven't, add a `NEWS.md` entry, and bump the version.
+4. Run `devtools::test()` and `devtools::check()` on a compute node, then open a pull request into `development`.
+5. Once it is released, update the modules that depend on the data (e.g. canClimateData's version requirement).
+
+The copied index becomes the next release's `previous_index`.
+
+## Auditing a release
+
+`data-raw/04-audit_archives.R` checks the published archives independently of the pipeline. For every zip in an index, it checks that the file on Drive holds every year or period folder the index claims, with every variable file present and non-empty, downloading the Drive copy when the local zip differs from it. It writes its findings (`zips.csv`, `report.csv`, `summary.md`) and changes nothing. Audit a release's index before copying it into the package. From the package root, on the main node:
+
+```r
+googledrive::drive_auth(email = "you@example.org")
+auditIndex <- "/path/to/out_root/ClimateNA_tiles.sqlite"
+auditZipRoot <- "/path/to/out_root/zips"
+auditDriveFolders <- list(release = "<Drive ID of the release folder>")
+auditDir <- file.path("/path/to/out_root/_audit", format(Sys.Date()))
+auditTypes <- c("historical", "historical_normals", "future", "future_normals")
+source("data-raw/04-audit_archives.R")
+```
+
+Zips that the release reused from an earlier release are outside its folder; the script looks those up by their Drive IDs. Every zip should come out complete; any that doesn't is classed `rerun_pipeline`.

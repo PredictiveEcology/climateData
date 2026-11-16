@@ -2,6 +2,12 @@
 ## 2. Download and process data for each tile using ClimateNA;
 ## 3. Archive and upload each set of tiles for use with canClimateData.
 
+stop(
+  "Superseded by the targets pipeline in data-raw/pipeline/ (vignette 'maintaining-climate-data'). ",
+  "This script ends by copying its working index over the shipped release index.",
+  call. = FALSE
+)
+
 # setup ---------------------------------------------------------------------------------------
 
 source("data-raw/01-ClimateNA_setup.R")
@@ -179,7 +185,12 @@ checksums_futu_normals <- future.apply::future_lapply(
   dplyr::bind_rows()
 
 if (!"id" %in% colnames(checksums_futu_normals)) {
-  dplyr::rows_append(checksums_futu_normals_df, checksums_futu_normals, copy = TRUE, in_place = TRUE)
+  dplyr::rows_append(
+    checksums_futu_normals_df,
+    checksums_futu_normals,
+    copy = TRUE,
+    in_place = TRUE
+  )
 } else {
   dplyr::rows_update(
     checksums_futu_normals_df,

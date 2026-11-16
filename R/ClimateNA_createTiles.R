@@ -138,6 +138,10 @@ sqlite_connect_db <- function(dbfile, readonly = FALSE) {
 ## dbplyr is an Import: without it every tile lookup fails, as R CMD check without Suggests showed.
 ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
   db <- sqlite_connect_db(dbfile, readonly = readonly)
+  ## the caller owns the connection once it is returned; close it if anything below fails
+  ## (e.g. a read-only lookup of a table the file lacks)
+  returned <- FALSE
+  on.exit(if (!returned) DBI::dbDisconnect(db), add = TRUE)
 
   df_template <- switch(
     type,
@@ -150,7 +154,8 @@ ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     ),
     future_normals = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
@@ -163,7 +168,8 @@ ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     ),
     historical = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
@@ -174,7 +180,8 @@ ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     ),
     future = c(
       id = "INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE",
@@ -187,7 +194,8 @@ ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
       zipfile = "CHARACTER", ## relative file path
       archived = "DATETIME", ## timestamp of when tile set archive was created (zipped)
       gid = "CHARACTER", ## google drive file id; archives built by decade, so there will be dupe gids
-      uploaded = "DATETIME" ## timestamp of when archive uploaded to google drive
+      uploaded = "DATETIME", ## timestamp of when archive uploaded to google drive
+      climatena_version = "CHARACTER" ## ClimateNA version that produced this year/period
     )
   )
 
@@ -199,6 +207,7 @@ ClimateNA_sql <- function(dbfile, type, readonly = FALSE) {
 
   df <- dplyr::tbl(db, tbl)
 
+  returned <- TRUE
   return(list(db = db, df = df))
 }
 
@@ -256,6 +265,92 @@ checksums_sql <- function(dbfile, type) {
   df <- dplyr::tbl(db, tbl)
 
   return(list(db = db, df = df))
+}
+
+## The data release behind an index: one row, written by the pipeline (data-raw/pipeline/) and
+## read by climateDataRelease(). Written with explicit SQL types.
+.releaseCreate <- function(db) {
+  DBI::dbExecute(
+    db,
+    "CREATE TABLE IF NOT EXISTS release (
+      release_id        TEXT NOT NULL,  -- e.g. cna-v7.70-3arcmin
+      climatena_version TEXT NOT NULL,  -- ClimateNA release that produced the data
+      dem_resolution    TEXT NOT NULL,  -- e.g. 3arcmin, 1arcmin
+      created           REAL NOT NULL   -- epoch seconds
+    )"
+  )
+  invisible(db)
+}
+
+.releaseWrite <- function(db, df) {
+  DBI::dbExecute(db, "DELETE FROM release")
+  DBI::dbExecute(
+    db,
+    "INSERT INTO release (release_id, climatena_version, dem_resolution, created) VALUES (?, ?, ?, ?)",
+    params = unname(as.list(df[
+      1,
+      c("release_id", "climatena_version", "dem_resolution", "created")
+    ]))
+  )
+  invisible(db)
+}
+
+## Land cells ClimateNA left empty, filled from its point-mode output at the nearest land cell it
+## covers (data-raw/pipeline/R/fill.R): one row per cell and class (historical: historical years
+## and normals; future: future years and normals). A cell left empty (no source within reach)
+## has NULL src_lon, src_lat and km. Written by the pipeline, read by filledCells().
+.filledCellsColumns <- c(
+  "class",
+  "tileid",
+  "cell",
+  "lon",
+  "lat",
+  "elev",
+  "src_lon",
+  "src_lat",
+  "km"
+)
+
+.filledCellsCreate <- function(db) {
+  DBI::dbExecute(
+    db,
+    "CREATE TABLE IF NOT EXISTS filled_cells (
+      class   TEXT NOT NULL,     -- historical | future
+      tileid  INTEGER NOT NULL,
+      cell    INTEGER NOT NULL,  -- cell in the tile's DEM grid, row by row from the top left
+      lon     REAL NOT NULL,     -- cell centre
+      lat     REAL NOT NULL,
+      elev    REAL NOT NULL,     -- the cell's DEM elevation (m), which ClimateNA was run with
+      src_lon REAL,              -- where ClimateNA was run; NULL if the cell is left empty
+      src_lat REAL,
+      km      REAL,              -- distance from the cell's centre to the source
+      PRIMARY KEY (class, tileid, cell)
+    )"
+  )
+  invisible(db)
+}
+
+## Replace the table's rows with `df` (as pipeline_fill_points() gives it: `tile` for tileid, and
+## the elevation as text).
+.filledCellsWrite <- function(db, df) {
+  if (!"tileid" %in% names(df)) {
+    df$tileid <- df$tile
+  }
+  df$tileid <- as.integer(df$tileid)
+  df$cell <- as.integer(df$cell)
+  df$elev <- as.numeric(df$elev)
+  DBI::dbExecute(db, "DELETE FROM filled_cells")
+  if (nrow(df) > 0) {
+    sql <- paste0(
+      "INSERT INTO filled_cells (",
+      paste(.filledCellsColumns, collapse = ", "),
+      ") VALUES (",
+      paste(rep("?", length(.filledCellsColumns)), collapse = ", "),
+      ")"
+    )
+    DBI::dbExecute(db, sql, params = unname(as.list(df[.filledCellsColumns])))
+  }
+  invisible(db)
 }
 
 ## One fingerprint per published zip (see data-raw/06-archive_fingerprints.R).

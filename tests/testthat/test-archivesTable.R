@@ -38,14 +38,19 @@ test_that("shipped index: one archives row per published zip", {
   con <- DBI::dbConnect(RSQLite::SQLite(), f, flags = RSQLite::SQLITE_RO)
   withr::defer(DBI::dbDisconnect(con))
   skip_if_not("archives" %in% DBI::dbListTables(con), "archives table not yet filled")
-  gids <- DBI::dbGetQuery(
-    con,
-    paste(
-      "SELECT gid FROM historical UNION SELECT gid FROM historical_normals",
-      "UNION SELECT gid FROM future"
-    )
-  )$gid
+  types <- intersect(.allowedClimateTypes, DBI::dbListTables(con))
+  gids <- DBI::dbGetQuery(con, paste("SELECT gid FROM", types, collapse = " UNION "))$gid
   a <- DBI::dbGetQuery(con, "SELECT gid, md5 FROM archives")
   expect_setequal(a$gid, gids)
   expect_match(a$md5, "^[0-9a-f]{32}$")
+})
+
+test_that("index tables declare a climatena_version column", {
+  skip_if_not_installed("withr")
+  f <- file.path(withr::local_tempdir(), "t.sqlite")
+  for (type in c("historical", "historical_normals", "future", "future_normals")) {
+    x <- ClimateNA_sql(f, type)
+    expect_contains(DBI::dbListFields(x$db, type), "climatena_version")
+    DBI::dbDisconnect(x$db)
+  }
 })

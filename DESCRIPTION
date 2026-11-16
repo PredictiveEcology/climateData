@@ -1,6 +1,6 @@
 Package: climateData
 Title: Utilities For Working With North American Climate Data
-Version: 2.2.3.9011
+Version: 2.2.3.9012
 Date: 2026-04-15
 Authors@R: c(
     person("Alex M", "Chubaty", email = "achubaty@for-cast.ca",
@@ -13,7 +13,8 @@ Authors@R: c(
 Description: Utilities for working with North American climate data from
     'ClimateNA' <https://climatena.ca/>.
 License: GPL-3
-URL: https://github.com/PredictiveEcology/climateData
+URL: https://predictiveecology.github.io/climateData/,
+    https://github.com/PredictiveEcology/climateData
 BugReports: https://github.com/PredictiveEcology/climateData/issues
 Depends:
     R (>= 4.4)
@@ -50,10 +51,12 @@ Suggests:
     rprojroot,
     SpaDES.tools (>= 2.0.4),
     sys,
+    targets,
     testthat (>= 3.0.0),
     withr
 VignetteBuilder:
-    knitr
+    knitr,
+    rmarkdown
 Remotes:
     PredictiveEcology/reproducible@development,
     PredictiveEcology/SpaDES.tools@development

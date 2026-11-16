@@ -67,7 +67,10 @@ used to tag \code{Cache} entries.}
 \item{...}{additional arguments (not used)}
 }
 \description{
-Prepare rasters for derived and 'as-is' climate variables
+Archives are downloaded and extracted to a subfolder of \code{srcdir} named for the data release
+(\code{climateDataRelease()$release_id}, e.g. \verb{cna-v7.70-3arcmin}). A new release's archives keep
+the earlier names, so they would otherwise not replace files already in \code{srcdir}. Folders
+from earlier releases are not used again and can be deleted.
 }
 \examples{
 if (require("archive", quietly = TRUE) &&

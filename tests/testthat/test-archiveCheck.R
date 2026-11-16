@@ -123,11 +123,44 @@ test_that(".zipListing reads an empty zip as an empty listing", {
   expect_equal(p$item, "Year_2100Y")
 })
 
+test_that(".archiveExpected names future normals folders as ClimateNA writes them", {
+  e <- .archiveExpected(
+    data.frame(
+      zipfile = "z",
+      tileid = 39L,
+      msy = "Y",
+      gcm = "CanESM5",
+      ssp = "245",
+      period = c("2011_2040", "2041_2070")
+    ),
+    "future_normals"
+  )
+  expect_length(e, 50)
+  expect_contains(e, "CanESM5_ssp245_2011-2040Y/rsds.asc")
+})
+
 test_that(".archiveIndexGaps finds years the index lacks", {
   idx <- rowsH(setdiff(available("historical")$years, 2013L))
   g <- .archiveIndexGaps(idx, "historical")
   expect_equal(g$year, 2013L)
   expect_equal(g$tileid, 39L)
+})
+
+test_that(".archiveIndexGaps finds future normals scenarios the index lacks", {
+  av <- available("future_normals")
+  full <- expand.grid(
+    tileid = 39L,
+    msy = "Y",
+    gcm = av$gcms,
+    ssp = av$ssps,
+    period = av$periods,
+    stringsAsFactors = FALSE
+  )
+  idx <- full[!(full$gcm == av$gcms[1] & full$ssp == av$ssps[1]), ]
+  g <- .archiveIndexGaps(idx, "future_normals")
+  expect_equal(nrow(g), length(av$periods))
+  expect_equal(unique(g$gcm), av$gcms[1])
+  expect_equal(unique(g$ssp), av$ssps[1])
 })
 
 test_that(".driveProblems classifies missing, trashed and renamed files", {

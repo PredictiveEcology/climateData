@@ -2,6 +2,12 @@
 ## 2. Download and process data for each tile using ClimateNA;
 ## 3. Archive and upload each set of tiles for use with canClimateData.
 
+stop(
+  "Superseded by the targets pipeline in data-raw/pipeline/ (vignette 'maintaining-climate-data'). ",
+  "This script ends by copying its working index over the shipped release index.",
+  call. = FALSE
+)
+
 # setup ---------------------------------------------------------------------------------------
 
 source("data-raw/01-ClimateNA_setup.R")
@@ -277,7 +283,14 @@ if (createZips) {
 
         return(z)
       },
-      future.globals = c("ClimateNAdata", "climateType", "historical_decades", "MSYs", "p", "wrkngDBfile"),
+      future.globals = c(
+        "ClimateNAdata",
+        "climateType",
+        "historical_decades",
+        "MSYs",
+        "p",
+        "wrkngDBfile"
+      ),
       future.seed = NULL
     )
   })
@@ -323,7 +336,12 @@ if (uploadArchives) {
         tile <- normalizePath(f) |> climateData::tileID()
 
         z <- lapply(MSYs, function(msy) {
-          ClimateNAout <- climateData::ClimateNA_path(ClimateNAdata, tile = tile, type = climateType, msy)
+          ClimateNAout <- climateData::ClimateNA_path(
+            ClimateNAdata,
+            tile = tile,
+            type = climateType,
+            msy
+          )
 
           gid <- googledrive::as_id(gids_historic[[msy]])
           drivefiles <- googledrive::drive_ls(gid)
@@ -362,8 +380,18 @@ if (uploadArchives) {
 
         return(z)
       },
-      future.globals = c("ClimateNAdata", "climateType", "gids_historic", "historical_decades",
-                         "MSYs", "oauthCachePath", "p", "reuploadArchives", "userEmail", "wrkngDBfile"),
+      future.globals = c(
+        "ClimateNAdata",
+        "climateType",
+        "gids_historic",
+        "historical_decades",
+        "MSYs",
+        "oauthCachePath",
+        "p",
+        "reuploadArchives",
+        "userEmail",
+        "wrkngDBfile"
+      ),
       future.seed = NULL
     )
   })
